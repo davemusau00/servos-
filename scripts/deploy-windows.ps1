@@ -200,7 +200,11 @@ Write-Section 'Build Windows installer'
 $bundle = if ($Msi) { 'msi' } else { 'nsis' }
 Invoke-Checked -Command 'npm.cmd' -Arguments @('run', 'native:build', '--', '--bundles', $bundle)
 
-$bundleDirectory = Join-Path $Repo 'src-tauri\target\release\bundle'
+$cargoTargetDirectory = Join-Path $Repo 'src-tauri\target'
+if (-not [string]::IsNullOrWhiteSpace($env:CARGO_TARGET_DIR)) {
+    $cargoTargetDirectory = [IO.Path]::GetFullPath($env:CARGO_TARGET_DIR)
+}
+$bundleDirectory = Join-Path $cargoTargetDirectory 'release\bundle'
 $installer = Get-ChildItem -LiteralPath $bundleDirectory -File -Recurse -ErrorAction SilentlyContinue |
     Where-Object {
         if ($Msi) { $_.Extension -eq '.msi' }
