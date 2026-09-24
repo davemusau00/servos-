@@ -1,2 +1,4 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
-fn main() { servos_lib::run() }
+fn main() {
+    servos_lib::run()
+}

@@ -8,11 +8,11 @@ No module is deployment verified. The generated UI inventory does not establish 
 |---|---|---|
 | Local runtime | Tauri scaffold, SQLite migration, owner enrollment, PIN sessions, command audit/outbox | Native builds, device smoke, recovery and secure credential storage |
 | Catalog | Native product and stock master save/archive, version checks | Recipes/modifiers/portions, price rules, reference constraints |
-| POS | Native order creation, simple item add/remove, firing, partial cash/card/manual M-Pesa payments, atomic split tender | Discounts, comps, transfer/merge, item refunds, tax policy, real receipts |
+| POS | Native simple orders, firing, unpaid transfer/merge, partial/manual payments, atomic split tender, internal receipts | Discounts, comps, item refunds, fired void stock disposition and full workflow acceptance |
 | KDS | Native ready/recall commands | Item/station routing and all lifecycle transitions |
-| Inventory | Stock depletion at firing | Transfers, counts, waste, production and opening-balance controls |
+| Inventory | Fire-time depletion, counts, transfers and waste commands | Production, approvals, reversal rules and full ledger acceptance |
 | Reconciliation | Native receipt allocation and manager statement confirmation | Statement entry/import, discrepancies, reversals and customer credit UX |
-| Accounting | Balanced receipt journal records | Tax allocation, period locks, receivables, accrual recognition and ledger controls |
+| Accounting | Balanced payment journals with inclusive tax snapshots and partial-payment allocation | Period locks, receivables, accrual recognition and ledger controls |
 | Staff/till | Local staff enrollment, till opening/closing and variance restriction | Staff lifecycle, shifts, leave, advances, payroll and disbursements |
 | Host and reservations | Prototype | Native lifecycle and conflicts |
 | Hotel | Prototype | Reservations, folios, deposits, check-in/out and room status workflows |
@@ -23,5 +23,5 @@ No module is deployment verified. The generated UI inventory does not establish 
 | Reports/command centre | Prototype | Shared queries, drilldowns and export parity |
 | Settings/control | Partial native business administration | Configuration, permissions, approvals, derived alerts and audit browser |
 | Guest ordering | Prototype | Restricted online endpoint, heartbeat, acknowledgement and duplicate handling |
-| Remote management | Database request queue only | Manager app, polling, version conflicts and applied acknowledgements |
+| Remote management | Manager UI, replica queries, request polling, version checks and upload-dependent acknowledgement | Live policy, conflict, replay and recovery acceptance; aggregate reporting |
 | Hardware/external services | Unconfigured | Real adapters require separate evidence; no simulated success |

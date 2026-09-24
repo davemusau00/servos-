@@ -16,7 +16,7 @@ Commands carry a UUID, schema version, operation, payload and optional expected 
 
 Uploads contain ordered operation envelopes. The server serializes each terminal stream, rejects sequence gaps and changed replays, and commits the batch before returning an acknowledgement. The terminal acknowledges only uploaded operations. Scheduled foreground sync uses backoff; resume and reconnection trigger retries. Native background execution is not guaranteed on Android.
 
-The server migration also stores remote change requests. Terminal polling/application and the remote manager web application remain unfinished; requests must not be represented as applied.
+The server stores remote change requests. An online manager UI browses replicas and requests selected master changes. The terminal uploads local work before polling requests, checks expected versions and persists outcomes. Applied acknowledgement waits until the resulting local command has uploaded. This protocol exists in source but has not passed live server acceptance.
 
 ## Security and limitations
 
