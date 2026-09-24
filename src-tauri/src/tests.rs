@@ -424,6 +424,32 @@ fn trading_is_blocked_until_native_go_live() {
 }
 
 #[test]
+fn payment_reverse_uses_its_declared_permission_and_requires_go_live() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut prelive = open(&dir.path().join("reverse-prelive.sqlite")).unwrap();
+    initialize(&mut prelive, "terminal-prelive", "Owner", "827193", "Prelive business").unwrap();
+    let owner_id: String = prelive.query_row("SELECT id FROM staff", [], |r| r.get(0)).unwrap();
+    let owner = login(&prelive, &owner_id, "827193").unwrap();
+    let blocked = execute(&mut prelive, &owner.token, cmd("payment.reverse", json!({"paymentId":"missing","reason":"Test"}))).unwrap_err();
+    assert!(blocked.to_string().contains("Complete business setup"));
+
+    let (_, mut db, admin) = setup();
+    run(&mut db, &admin, "staff.create", json!({"name":"Cashier","pin":"123987","role":"Server"}));
+    run(&mut db, &admin, "till.open", json!({"floatAmount":100}));
+    let admin_id: String = db.query_row("SELECT id FROM staff WHERE role='Admin'", [], |r| r.get(0)).unwrap();
+    let cashier_id: String = db.query_row("SELECT id FROM staff WHERE role='Server'", [], |r| r.get(0)).unwrap();
+    let cashier = login(&db, &cashier_id, "123987").unwrap();
+    let order_id = run(&mut db, &cashier, "order.create", json!({"outletId":"main","name":"Reverse permission"}))["recordIds"][0].as_str().unwrap().to_string();
+    run(&mut db, &cashier, "order.addItem", json!({"orderId":order_id,"productId":"setup-product"}));
+    run(&mut db, &cashier, "order.fire", json!({"orderId":order_id}));
+    run(&mut db, &cashier, "payment.record", json!({"orderId":order_id,"method":"CASH","amount":1,"cashTendered":1}));
+    let payment_id = list(&db, "payments").unwrap().last().unwrap()["id"].as_str().unwrap().to_string();
+    let approval = create_approval(&db, &cashier.token, &admin_id, "827193", "payment.reverse", Some(&payment_id)).unwrap();
+    run(&mut db, &cashier, "payment.reverse", json!({"paymentId":payment_id,"reason":"Approved reversal","approvalToken":approval["token"]}));
+    assert_eq!(list(&db, "refunds").unwrap().last().unwrap()["data"]["amount"], 1.0);
+}
+
+#[test]
 fn manager_approval_is_targeted_and_single_use() {
     let (_, mut db, admin) = setup();
     run(&mut db,&admin,"staff.create",json!({"name":"Manager","pin":"654321","role":"Manager","jobTitle":"Supervisor"}));

@@ -129,7 +129,7 @@ fn live_required(tx: &Transaction, operation: &str) -> Result<()> {
     const TRADING: &[&str] = &[
         "till.open","till.cashMovement","till.close","order.create","order.addItem","order.updateItem",
         "order.removeItem","order.fire","order.kds","order.transfer","order.merge","order.void","order.discount",
-        "order.compItem","payment.record","payment.split","payment.refund","mpesa.reconcile",
+        "order.compItem","payment.record","payment.split","payment.refund","payment.reverse","mpesa.reconcile",
         "inventory.receive","inventory.adjust","inventory.waste","inventory.transfer","table.ready","closeDay.generate"
     ];
     if TRADING.contains(&operation) && installation_stage(tx)? != "LIVE" {
@@ -1087,7 +1087,8 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
         }
         "payment.refund" | "payment.reverse" => {
             let payment_id=text(p,"paymentId")?;
-            authorize(&tx,user,"order.refund",p,Some(payment_id))?;
+            let permission=if cmd.operation=="payment.reverse" { "payment.reverse" } else { "order.refund" };
+            authorize(&tx,user,permission,p,Some(payment_id))?;
             let (_,payment_record)=get(&tx,"payments",payment_id)?;
             if payment_record["status"]!="PAID"{return Err("Only paid transactions can be refunded".into());}
             let original=money(&payment_record,"amount")?;
