@@ -642,7 +642,9 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
                 text(table, "section")?;
                 money(table, "minimumSpend")?;
                 let archived: bool = tx.query_row("SELECT EXISTS(SELECT 1 FROM records WHERE collection='tables' AND id=? AND archived=1)", [key], |r| r.get(0)).map_err(error)?;
-                if archived { return Err("Archived table IDs cannot be reused".into()); }
+                if archived {
+                    return Err("Archived table IDs cannot be reused".into());
+                }
                 let prior = get(&tx, "tables", key).ok();
                 if prior.is_some() && !current.iter().any(|r| r["id"] == key) {
                     return Err("Table belongs to another outlet".into());

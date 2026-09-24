@@ -1,7 +1,7 @@
 {
   "generatedBy": "npm run audit:ui",
   "scope": "Static controls, handlers and route cases; runtime card and modal review still required",
-  "count": 1206,
+  "count": 1209,
   "interactions": [
     {
       "id": "src/App.tsx:98:12",
@@ -7432,9 +7432,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/FloorPlanDesignerView.tsx:116:10",
+      "id": "src/components/pos/FloorPlanDesignerView.tsx:129:10",
       "file": "src/components/pos/FloorPlanDesignerView.tsx",
-      "line": 116,
+      "line": 129,
       "kind": "button",
       "source": "<button",
       "status": "unverified",
@@ -7444,9 +7444,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/FloorPlanDesignerView.tsx:117:12",
+      "id": "src/components/pos/FloorPlanDesignerView.tsx:130:12",
       "file": "src/components/pos/FloorPlanDesignerView.tsx",
-      "line": 117,
+      "line": 130,
       "kind": "onClick",
       "source": "onClick={onClose}",
       "status": "unverified",
@@ -7456,9 +7456,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/FloorPlanDesignerView.tsx:122:10",
+      "id": "src/components/pos/FloorPlanDesignerView.tsx:136:10",
       "file": "src/components/pos/FloorPlanDesignerView.tsx",
-      "line": 122,
+      "line": 136,
       "kind": "button",
       "source": "<button",
       "status": "unverified",
@@ -7468,9 +7468,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/FloorPlanDesignerView.tsx:123:12",
+      "id": "src/components/pos/FloorPlanDesignerView.tsx:137:12",
       "file": "src/components/pos/FloorPlanDesignerView.tsx",
-      "line": 123,
+      "line": 137,
       "kind": "onClick",
       "source": "onClick={handleSaveLayout}",
       "status": "unverified",
@@ -7480,9 +7480,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/FloorPlanDesignerView.tsx:148:16",
+      "id": "src/components/pos/FloorPlanDesignerView.tsx:164:16",
       "file": "src/components/pos/FloorPlanDesignerView.tsx",
-      "line": 148,
+      "line": 164,
       "kind": "button",
       "source": "<button",
       "status": "unverified",
@@ -7492,9 +7492,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/FloorPlanDesignerView.tsx:150:18",
+      "id": "src/components/pos/FloorPlanDesignerView.tsx:166:18",
       "file": "src/components/pos/FloorPlanDesignerView.tsx",
-      "line": 150,
+      "line": 166,
       "kind": "onClick",
       "source": "onClick={() => setSelectedSection(sec.id)}",
       "status": "unverified",
@@ -7504,9 +7504,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/FloorPlanDesignerView.tsx:170:14",
+      "id": "src/components/pos/FloorPlanDesignerView.tsx:186:14",
       "file": "src/components/pos/FloorPlanDesignerView.tsx",
-      "line": 170,
+      "line": 186,
       "kind": "button",
       "source": "<button",
       "status": "unverified",
@@ -7516,9 +7516,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/FloorPlanDesignerView.tsx:171:16",
+      "id": "src/components/pos/FloorPlanDesignerView.tsx:187:16",
       "file": "src/components/pos/FloorPlanDesignerView.tsx",
-      "line": 171,
+      "line": 187,
       "kind": "onClick",
       "source": "onClick={() => handleAddTable('ROUND', 2)}",
       "status": "unverified",
@@ -7528,9 +7528,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/FloorPlanDesignerView.tsx:180:14",
+      "id": "src/components/pos/FloorPlanDesignerView.tsx:196:14",
       "file": "src/components/pos/FloorPlanDesignerView.tsx",
-      "line": 180,
+      "line": 196,
       "kind": "button",
       "source": "<button",
       "status": "unverified",
@@ -7540,9 +7540,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/FloorPlanDesignerView.tsx:181:16",
+      "id": "src/components/pos/FloorPlanDesignerView.tsx:197:16",
       "file": "src/components/pos/FloorPlanDesignerView.tsx",
-      "line": 181,
+      "line": 197,
       "kind": "onClick",
       "source": "onClick={() => handleAddTable('SQUARE', 4)}",
       "status": "unverified",
@@ -7552,9 +7552,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/FloorPlanDesignerView.tsx:190:14",
+      "id": "src/components/pos/FloorPlanDesignerView.tsx:206:14",
       "file": "src/components/pos/FloorPlanDesignerView.tsx",
-      "line": 190,
+      "line": 206,
       "kind": "button",
       "source": "<button",
       "status": "unverified",
@@ -7564,9 +7564,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/FloorPlanDesignerView.tsx:191:16",
+      "id": "src/components/pos/FloorPlanDesignerView.tsx:207:16",
       "file": "src/components/pos/FloorPlanDesignerView.tsx",
-      "line": 191,
+      "line": 207,
       "kind": "onClick",
       "source": "onClick={() => handleAddTable('RECTANGLE', 8)}",
       "status": "unverified",
@@ -7576,9 +7576,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/FloorPlanDesignerView.tsx:200:14",
+      "id": "src/components/pos/FloorPlanDesignerView.tsx:216:14",
       "file": "src/components/pos/FloorPlanDesignerView.tsx",
-      "line": 200,
+      "line": 216,
       "kind": "button",
       "source": "<button",
       "status": "unverified",
@@ -7588,9 +7588,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/FloorPlanDesignerView.tsx:201:16",
+      "id": "src/components/pos/FloorPlanDesignerView.tsx:217:16",
       "file": "src/components/pos/FloorPlanDesignerView.tsx",
-      "line": 201,
+      "line": 217,
       "kind": "onClick",
       "source": "onClick={() => handleAddTable('BAR_TOP', 1)}",
       "status": "unverified",
@@ -7600,21 +7600,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/FloorPlanDesignerView.tsx:241:20",
+      "id": "src/components/pos/FloorPlanDesignerView.tsx:255:18",
       "file": "src/components/pos/FloorPlanDesignerView.tsx",
-      "line": 241,
-      "kind": "onClick",
-      "source": "onClick={() => setEditingTableId(table.id)}",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/components/pos/FloorPlanDesignerView.tsx:291:16",
-      "file": "src/components/pos/FloorPlanDesignerView.tsx",
-      "line": 291,
+      "line": 255,
       "kind": "button",
       "source": "<button",
       "status": "unverified",
@@ -7624,9 +7612,33 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/FloorPlanDesignerView.tsx:292:18",
+      "id": "src/components/pos/FloorPlanDesignerView.tsx:258:20",
       "file": "src/components/pos/FloorPlanDesignerView.tsx",
-      "line": 292,
+      "line": 258,
+      "kind": "onClick",
+      "source": "onClick={() => setEditingTableId(table.id)}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/components/pos/FloorPlanDesignerView.tsx:308:16",
+      "file": "src/components/pos/FloorPlanDesignerView.tsx",
+      "line": 308,
+      "kind": "button",
+      "source": "<button",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/components/pos/FloorPlanDesignerView.tsx:309:18",
+      "file": "src/components/pos/FloorPlanDesignerView.tsx",
+      "line": 309,
       "kind": "onClick",
       "source": "onClick={() => handleDeleteTable(selectedTable.id)}",
       "status": "unverified",
@@ -7636,9 +7648,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/FloorPlanDesignerView.tsx:303:18",
+      "id": "src/components/pos/FloorPlanDesignerView.tsx:320:18",
       "file": "src/components/pos/FloorPlanDesignerView.tsx",
-      "line": 303,
+      "line": 320,
       "kind": "input",
       "source": "<input",
       "status": "unverified",
@@ -7648,9 +7660,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/FloorPlanDesignerView.tsx:306:20",
+      "id": "src/components/pos/FloorPlanDesignerView.tsx:323:20",
       "file": "src/components/pos/FloorPlanDesignerView.tsx",
-      "line": 306,
+      "line": 323,
       "kind": "onChange",
       "source": "onChange={e => handleUpdateTableProps({ label: e.target.value })}",
       "status": "unverified",
@@ -7660,9 +7672,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/FloorPlanDesignerView.tsx:314:20",
+      "id": "src/components/pos/FloorPlanDesignerView.tsx:331:20",
       "file": "src/components/pos/FloorPlanDesignerView.tsx",
-      "line": 314,
+      "line": 331,
       "kind": "input",
       "source": "<input",
       "status": "unverified",
@@ -7672,47 +7684,11 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/FloorPlanDesignerView.tsx:319:22",
+      "id": "src/components/pos/FloorPlanDesignerView.tsx:336:22",
       "file": "src/components/pos/FloorPlanDesignerView.tsx",
-      "line": 319,
+      "line": 336,
       "kind": "onChange",
       "source": "onChange={e => handleUpdateTableProps({ capacity: Number(e.target.value) })}",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/components/pos/FloorPlanDesignerView.tsx:325:20",
-      "file": "src/components/pos/FloorPlanDesignerView.tsx",
-      "line": 325,
-      "kind": "select",
-      "source": "<select",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/components/pos/FloorPlanDesignerView.tsx:327:22",
-      "file": "src/components/pos/FloorPlanDesignerView.tsx",
-      "line": 327,
-      "kind": "onChange",
-      "source": "onChange={e => handleUpdateTableProps({ shape: e.target.value as any })}",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/components/pos/FloorPlanDesignerView.tsx:340:18",
-      "file": "src/components/pos/FloorPlanDesignerView.tsx",
-      "line": 340,
-      "kind": "select",
-      "source": "<select",
       "status": "unverified",
       "permission": "requires workflow review",
       "persistence": "requires workflow review",
@@ -7723,8 +7699,8 @@
       "id": "src/components/pos/FloorPlanDesignerView.tsx:342:20",
       "file": "src/components/pos/FloorPlanDesignerView.tsx",
       "line": 342,
-      "kind": "onChange",
-      "source": "onChange={e => handleUpdateTableProps({ assignedServerName: e.target.value })}",
+      "kind": "select",
+      "source": "<select",
       "status": "unverified",
       "permission": "requires workflow review",
       "persistence": "requires workflow review",
@@ -7732,9 +7708,69 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/FloorPlanDesignerView.tsx:354:18",
+      "id": "src/components/pos/FloorPlanDesignerView.tsx:344:22",
       "file": "src/components/pos/FloorPlanDesignerView.tsx",
-      "line": 354,
+      "line": 344,
+      "kind": "onChange",
+      "source": "onChange={e => handleUpdateTableProps({ shape: e.target.value as any })}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/components/pos/FloorPlanDesignerView.tsx:356:175",
+      "file": "src/components/pos/FloorPlanDesignerView.tsx",
+      "line": 356,
+      "kind": "input",
+      "source": "{(['posX', 'posY'] as const).map(axis => <label key={axis} className=\"text-slate-400\">{axis === 'posX' ? 'Horizontal position (%)' : 'Vertical position (%)'}<input type=\"number\" min=\"0\" max=\"100\" value={selectedTable[axis] ?? 0} onChange={event => handleUpdateTableProps({ [axis]: Number(event.target.value) })} className=\"w-full p-2 mt-1 bg-slate-950 border border-slate-800 rounded text-white\" /></label>)}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/components/pos/FloorPlanDesignerView.tsx:356:247",
+      "file": "src/components/pos/FloorPlanDesignerView.tsx",
+      "line": 356,
+      "kind": "onChange",
+      "source": "{(['posX', 'posY'] as const).map(axis => <label key={axis} className=\"text-slate-400\">{axis === 'posX' ? 'Horizontal position (%)' : 'Vertical position (%)'}<input type=\"number\" min=\"0\" max=\"100\" value={selectedTable[axis] ?? 0} onChange={event => handleUpdateTableProps({ [axis]: Number(event.target.value) })} className=\"w-full p-2 mt-1 bg-slate-950 border border-slate-800 rounded text-white\" /></label>)}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/components/pos/FloorPlanDesignerView.tsx:360:18",
+      "file": "src/components/pos/FloorPlanDesignerView.tsx",
+      "line": 360,
+      "kind": "select",
+      "source": "<select",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/components/pos/FloorPlanDesignerView.tsx:362:20",
+      "file": "src/components/pos/FloorPlanDesignerView.tsx",
+      "line": 362,
+      "kind": "onChange",
+      "source": "onChange={e => handleUpdateTableProps({ assignedServerId: e.target.value, assignedServerName: employees.find(employee => employee.id === e.target.value)?.name || 'Unassigned' })}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/components/pos/FloorPlanDesignerView.tsx:372:18",
+      "file": "src/components/pos/FloorPlanDesignerView.tsx",
+      "line": 372,
       "kind": "input",
       "source": "<input",
       "status": "unverified",
@@ -7744,9 +7780,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/FloorPlanDesignerView.tsx:358:20",
+      "id": "src/components/pos/FloorPlanDesignerView.tsx:376:20",
       "file": "src/components/pos/FloorPlanDesignerView.tsx",
-      "line": 358,
+      "line": 376,
       "kind": "onChange",
       "source": "onChange={e => handleUpdateTableProps({ minimumSpendKes: Number(e.target.value) })}",
       "status": "unverified",
@@ -7756,9 +7792,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/FloorPlanDesignerView.tsx:364:18",
+      "id": "src/components/pos/FloorPlanDesignerView.tsx:382:18",
       "file": "src/components/pos/FloorPlanDesignerView.tsx",
-      "line": 364,
+      "line": 382,
       "kind": "input",
       "source": "<input",
       "status": "unverified",
@@ -7768,9 +7804,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/FloorPlanDesignerView.tsx:368:20",
+      "id": "src/components/pos/FloorPlanDesignerView.tsx:386:20",
       "file": "src/components/pos/FloorPlanDesignerView.tsx",
-      "line": 368,
+      "line": 386,
       "kind": "onChange",
       "source": "onChange={e => handleUpdateTableProps({ isJoinable: e.target.checked })}",
       "status": "unverified",
@@ -8020,9 +8056,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:260:10",
+      "id": "src/components/pos/POSView.tsx:264:10",
       "file": "src/components/pos/POSView.tsx",
-      "line": 260,
+      "line": 264,
       "kind": "button",
       "source": "<button",
       "status": "unverified",
@@ -8032,9 +8068,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:261:12",
+      "id": "src/components/pos/POSView.tsx:265:12",
       "file": "src/components/pos/POSView.tsx",
-      "line": 261,
+      "line": 265,
       "kind": "onClick",
       "source": "onClick={() => setMobileViewMode('CATALOG')}",
       "status": "unverified",
@@ -8044,9 +8080,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:272:10",
+      "id": "src/components/pos/POSView.tsx:276:10",
       "file": "src/components/pos/POSView.tsx",
-      "line": 272,
+      "line": 276,
       "kind": "button",
       "source": "<button",
       "status": "unverified",
@@ -8056,9 +8092,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:273:12",
+      "id": "src/components/pos/POSView.tsx:277:12",
       "file": "src/components/pos/POSView.tsx",
-      "line": 273,
+      "line": 277,
       "kind": "onClick",
       "source": "onClick={() => setMobileViewMode('TICKET')}",
       "status": "unverified",
@@ -8068,9 +8104,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:307:16",
+      "id": "src/components/pos/POSView.tsx:311:16",
       "file": "src/components/pos/POSView.tsx",
-      "line": 307,
+      "line": 311,
       "kind": "button",
       "source": "<button",
       "status": "unverified",
@@ -8080,11 +8116,11 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:309:18",
+      "id": "src/components/pos/POSView.tsx:314:18",
       "file": "src/components/pos/POSView.tsx",
-      "line": 309,
+      "line": 314,
       "kind": "onClick",
-      "source": "onClick={() => {",
+      "source": "onClick={async () => {",
       "status": "unverified",
       "permission": "requires workflow review",
       "persistence": "requires workflow review",
@@ -8092,9 +8128,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:341:12",
+      "id": "src/components/pos/POSView.tsx:358:12",
       "file": "src/components/pos/POSView.tsx",
-      "line": 341,
+      "line": 358,
       "kind": "button",
       "source": "<button",
       "status": "unverified",
@@ -8104,9 +8140,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:342:14",
+      "id": "src/components/pos/POSView.tsx:359:14",
       "file": "src/components/pos/POSView.tsx",
-      "line": 342,
+      "line": 359,
       "kind": "onClick",
       "source": "onClick={() => setIsQrOrderingOpen(true)}",
       "status": "unverified",
@@ -8116,9 +8152,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:349:12",
+      "id": "src/components/pos/POSView.tsx:366:12",
       "file": "src/components/pos/POSView.tsx",
-      "line": 349,
+      "line": 366,
       "kind": "button",
       "source": "<button",
       "status": "unverified",
@@ -8128,9 +8164,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:350:14",
+      "id": "src/components/pos/POSView.tsx:367:14",
       "file": "src/components/pos/POSView.tsx",
-      "line": 350,
+      "line": 367,
       "kind": "onClick",
       "source": "onClick={() => setIsFloorDesignerOpen(true)}",
       "status": "unverified",
@@ -8140,9 +8176,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:357:12",
+      "id": "src/components/pos/POSView.tsx:374:12",
       "file": "src/components/pos/POSView.tsx",
-      "line": 357,
+      "line": 374,
       "kind": "button",
       "source": "<button",
       "status": "unverified",
@@ -8152,9 +8188,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:358:14",
+      "id": "src/components/pos/POSView.tsx:375:14",
       "file": "src/components/pos/POSView.tsx",
-      "line": 358,
+      "line": 375,
       "kind": "onClick",
       "source": "onClick={() => createQuickBarTab(`Walk-in Tab #${Math.floor(100 + Math.random() * 900)}`)}",
       "status": "unverified",
@@ -8164,9 +8200,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:371:12",
+      "id": "src/components/pos/POSView.tsx:389:12",
       "file": "src/components/pos/POSView.tsx",
-      "line": 371,
+      "line": 389,
       "kind": "input",
       "source": "<input",
       "status": "unverified",
@@ -8176,9 +8212,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:374:14",
+      "id": "src/components/pos/POSView.tsx:392:14",
       "file": "src/components/pos/POSView.tsx",
-      "line": 374,
+      "line": 392,
       "kind": "onChange",
       "source": "onChange={e => setSearchQuery(e.target.value)}",
       "status": "unverified",
@@ -8188,9 +8224,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:379:14",
+      "id": "src/components/pos/POSView.tsx:397:14",
       "file": "src/components/pos/POSView.tsx",
-      "line": 379,
+      "line": 397,
       "kind": "button",
       "source": "<button",
       "status": "unverified",
@@ -8200,9 +8236,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:380:16",
+      "id": "src/components/pos/POSView.tsx:398:16",
       "file": "src/components/pos/POSView.tsx",
-      "line": 380,
+      "line": 398,
       "kind": "onClick",
       "source": "onClick={() => setSearchQuery('')}",
       "status": "unverified",
@@ -8212,9 +8248,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:391:14",
+      "id": "src/components/pos/POSView.tsx:409:14",
       "file": "src/components/pos/POSView.tsx",
-      "line": 391,
+      "line": 409,
       "kind": "button",
       "source": "<button",
       "status": "unverified",
@@ -8224,9 +8260,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:393:16",
+      "id": "src/components/pos/POSView.tsx:411:16",
       "file": "src/components/pos/POSView.tsx",
-      "line": 393,
+      "line": 411,
       "kind": "onClick",
       "source": "onClick={() => setSelectedCategory(cat.id)}",
       "status": "unverified",
@@ -8236,9 +8272,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:419:16",
+      "id": "src/components/pos/POSView.tsx:437:16",
       "file": "src/components/pos/POSView.tsx",
-      "line": 419,
+      "line": 437,
       "kind": "button",
       "source": "<button",
       "status": "unverified",
@@ -8248,9 +8284,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:421:18",
+      "id": "src/components/pos/POSView.tsx:439:18",
       "file": "src/components/pos/POSView.tsx",
-      "line": 421,
+      "line": 439,
       "kind": "onClick",
       "source": "onClick={() => handleProductClick(prod)}",
       "status": "unverified",
@@ -8260,9 +8296,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:479:12",
+      "id": "src/components/pos/POSView.tsx:497:12",
       "file": "src/components/pos/POSView.tsx",
-      "line": 479,
+      "line": 497,
       "kind": "button",
       "source": "<button",
       "status": "unverified",
@@ -8272,9 +8308,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:480:14",
+      "id": "src/components/pos/POSView.tsx:498:14",
       "file": "src/components/pos/POSView.tsx",
-      "line": 480,
+      "line": 498,
       "kind": "onClick",
       "source": "onClick={() => setMobileViewMode('TICKET')}",
       "status": "unverified",
@@ -8284,9 +8320,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:519:14",
+      "id": "src/components/pos/POSView.tsx:537:14",
       "file": "src/components/pos/POSView.tsx",
-      "line": 519,
+      "line": 537,
       "kind": "button",
       "source": "<button",
       "status": "unverified",
@@ -8296,59 +8332,11 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:520:16",
+      "id": "src/components/pos/POSView.tsx:538:16",
       "file": "src/components/pos/POSView.tsx",
-      "line": 520,
+      "line": 538,
       "kind": "onClick",
       "source": "onClick={() => {",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/components/pos/POSView.tsx:531:14",
-      "file": "src/components/pos/POSView.tsx",
-      "line": 531,
-      "kind": "button",
-      "source": "<button",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/components/pos/POSView.tsx:532:16",
-      "file": "src/components/pos/POSView.tsx",
-      "line": 532,
-      "kind": "onClick",
-      "source": "onClick={() => setIsSplitModalOpen(true)}",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/components/pos/POSView.tsx:540:14",
-      "file": "src/components/pos/POSView.tsx",
-      "line": 540,
-      "kind": "button",
-      "source": "<button",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/components/pos/POSView.tsx:541:16",
-      "file": "src/components/pos/POSView.tsx",
-      "line": 541,
-      "kind": "onClick",
-      "source": "onClick={() => setIsMergeModalOpen(true)}",
       "status": "unverified",
       "permission": "requires workflow review",
       "persistence": "requires workflow review",
@@ -8372,7 +8360,7 @@
       "file": "src/components/pos/POSView.tsx",
       "line": 550,
       "kind": "onClick",
-      "source": "onClick={() => setIsRefundModalOpen(true)}",
+      "source": "onClick={() => setIsSplitModalOpen(true)}",
       "status": "unverified",
       "permission": "requires workflow review",
       "persistence": "requires workflow review",
@@ -8396,7 +8384,7 @@
       "file": "src/components/pos/POSView.tsx",
       "line": 559,
       "kind": "onClick",
-      "source": "onClick={handleOpenProFormaPrint}",
+      "source": "onClick={() => setIsMergeModalOpen(true)}",
       "status": "unverified",
       "permission": "requires workflow review",
       "persistence": "requires workflow review",
@@ -8420,7 +8408,7 @@
       "file": "src/components/pos/POSView.tsx",
       "line": 568,
       "kind": "onClick",
-      "source": "onClick={() => {",
+      "source": "onClick={() => setIsRefundModalOpen(true)}",
       "status": "unverified",
       "permission": "requires workflow review",
       "persistence": "requires workflow review",
@@ -8428,9 +8416,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:589:18",
+      "id": "src/components/pos/POSView.tsx:576:14",
       "file": "src/components/pos/POSView.tsx",
-      "line": 589,
+      "line": 576,
       "kind": "button",
       "source": "<button",
       "status": "unverified",
@@ -8440,177 +8428,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:591:20",
+      "id": "src/components/pos/POSView.tsx:577:16",
       "file": "src/components/pos/POSView.tsx",
-      "line": 591,
-      "kind": "onClick",
-      "source": "onClick={() => fireHeldCourse(c)}",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/components/pos/POSView.tsx:647:22",
-      "file": "src/components/pos/POSView.tsx",
-      "line": 647,
-      "kind": "select",
-      "source": "<select",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/components/pos/POSView.tsx:649:24",
-      "file": "src/components/pos/POSView.tsx",
-      "line": 649,
-      "kind": "onChange",
-      "source": "onChange={(e) => updateItemSeatAndCourse(item.id, e.target.value)}",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/components/pos/POSView.tsx:659:22",
-      "file": "src/components/pos/POSView.tsx",
-      "line": 659,
-      "kind": "select",
-      "source": "<select",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/components/pos/POSView.tsx:661:24",
-      "file": "src/components/pos/POSView.tsx",
-      "line": 661,
-      "kind": "onChange",
-      "source": "onChange={(e) => updateItemSeatAndCourse(item.id, undefined, e.target.value as any)}",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/components/pos/POSView.tsx:670:22",
-      "file": "src/components/pos/POSView.tsx",
-      "line": 670,
-      "kind": "button",
-      "source": "<button",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/components/pos/POSView.tsx:671:24",
-      "file": "src/components/pos/POSView.tsx",
-      "line": 671,
-      "kind": "onClick",
-      "source": "onClick={() => updateItemSeatAndCourse(item.id, undefined, undefined, item.courseStatus === 'HELD' ? 'FIRED' : 'HELD')}",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/components/pos/POSView.tsx:720:22",
-      "file": "src/components/pos/POSView.tsx",
-      "line": 720,
-      "kind": "button",
-      "source": "<button",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/components/pos/POSView.tsx:721:24",
-      "file": "src/components/pos/POSView.tsx",
-      "line": 721,
-      "kind": "onClick",
-      "source": "onClick={() => {",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/components/pos/POSView.tsx:730:20",
-      "file": "src/components/pos/POSView.tsx",
-      "line": 730,
-      "kind": "button",
-      "source": "<button",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/components/pos/POSView.tsx:731:22",
-      "file": "src/components/pos/POSView.tsx",
-      "line": 731,
-      "kind": "onClick",
-      "source": "onClick={() => removeItemFromOrder(item.id)}",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/components/pos/POSView.tsx:786:14",
-      "file": "src/components/pos/POSView.tsx",
-      "line": 786,
-      "kind": "button",
-      "source": "<button",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/components/pos/POSView.tsx:787:16",
-      "file": "src/components/pos/POSView.tsx",
-      "line": 787,
-      "kind": "onClick",
-      "source": "onClick={sendOrderToKitchenAndBar}",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/components/pos/POSView.tsx:796:14",
-      "file": "src/components/pos/POSView.tsx",
-      "line": 796,
-      "kind": "button",
-      "source": "<button",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/components/pos/POSView.tsx:797:16",
-      "file": "src/components/pos/POSView.tsx",
-      "line": 797,
+      "line": 577,
       "kind": "onClick",
       "source": "onClick={handleOpenProFormaPrint}",
       "status": "unverified",
@@ -8620,9 +8440,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:806:14",
+      "id": "src/components/pos/POSView.tsx:585:14",
       "file": "src/components/pos/POSView.tsx",
-      "line": 806,
+      "line": 585,
       "kind": "button",
       "source": "<button",
       "status": "unverified",
@@ -8632,9 +8452,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:807:16",
+      "id": "src/components/pos/POSView.tsx:586:16",
       "file": "src/components/pos/POSView.tsx",
-      "line": 807,
+      "line": 586,
       "kind": "onClick",
       "source": "onClick={() => {",
       "status": "unverified",
@@ -8644,9 +8464,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:820:14",
+      "id": "src/components/pos/POSView.tsx:607:18",
       "file": "src/components/pos/POSView.tsx",
-      "line": 820,
+      "line": 607,
       "kind": "button",
       "source": "<button",
       "status": "unverified",
@@ -8656,11 +8476,11 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:821:16",
+      "id": "src/components/pos/POSView.tsx:609:20",
       "file": "src/components/pos/POSView.tsx",
-      "line": 821,
+      "line": 609,
       "kind": "onClick",
-      "source": "onClick={() => {",
+      "source": "onClick={() => fireHeldCourse(c)}",
       "status": "unverified",
       "permission": "requires workflow review",
       "persistence": "requires workflow review",
@@ -8668,225 +8488,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:847:14",
+      "id": "src/components/pos/POSView.tsx:665:22",
       "file": "src/components/pos/POSView.tsx",
-      "line": 847,
-      "kind": "button",
-      "source": "<button",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/components/pos/POSView.tsx:848:16",
-      "file": "src/components/pos/POSView.tsx",
-      "line": 848,
-      "kind": "onClick",
-      "source": "onClick={() => setActivePortionProduct(null)}",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/components/pos/POSView.tsx:856:14",
-      "file": "src/components/pos/POSView.tsx",
-      "line": 856,
-      "kind": "button",
-      "source": "<button",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/components/pos/POSView.tsx:857:16",
-      "file": "src/components/pos/POSView.tsx",
-      "line": 857,
-      "kind": "onClick",
-      "source": "onClick={() => {",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/components/pos/POSView.tsx:872:14",
-      "file": "src/components/pos/POSView.tsx",
-      "line": 872,
-      "kind": "button",
-      "source": "<button",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/components/pos/POSView.tsx:873:16",
-      "file": "src/components/pos/POSView.tsx",
-      "line": 873,
-      "kind": "onClick",
-      "source": "onClick={() => {",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/components/pos/POSView.tsx:888:14",
-      "file": "src/components/pos/POSView.tsx",
-      "line": 888,
-      "kind": "button",
-      "source": "<button",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/components/pos/POSView.tsx:889:16",
-      "file": "src/components/pos/POSView.tsx",
-      "line": 889,
-      "kind": "onClick",
-      "source": "onClick={() => {",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/components/pos/POSView.tsx:917:14",
-      "file": "src/components/pos/POSView.tsx",
-      "line": 917,
-      "kind": "button",
-      "source": "<button",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/components/pos/POSView.tsx:918:16",
-      "file": "src/components/pos/POSView.tsx",
-      "line": 918,
-      "kind": "onClick",
-      "source": "onClick={() => setActiveModifierProduct(null)}",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/components/pos/POSView.tsx:943:24",
-      "file": "src/components/pos/POSView.tsx",
-      "line": 943,
-      "kind": "input",
-      "source": "<input",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/components/pos/POSView.tsx:946:26",
-      "file": "src/components/pos/POSView.tsx",
-      "line": 946,
-      "kind": "onChange",
-      "source": "onChange={e => {",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/components/pos/POSView.tsx:984:14",
-      "file": "src/components/pos/POSView.tsx",
-      "line": 984,
-      "kind": "button",
-      "source": "<button",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/components/pos/POSView.tsx:985:16",
-      "file": "src/components/pos/POSView.tsx",
-      "line": 985,
-      "kind": "onClick",
-      "source": "onClick={() => setActiveModifierProduct(null)}",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/components/pos/POSView.tsx:990:14",
-      "file": "src/components/pos/POSView.tsx",
-      "line": 990,
-      "kind": "button",
-      "source": "<button",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/components/pos/POSView.tsx:991:16",
-      "file": "src/components/pos/POSView.tsx",
-      "line": 991,
-      "kind": "onClick",
-      "source": "onClick={handleConfirmModifiers}",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/components/pos/POSView.tsx:1013:14",
-      "file": "src/components/pos/POSView.tsx",
-      "line": 1013,
-      "kind": "button",
-      "source": "<button onClick={() => setIsTransferModalOpen(false)} className=\"text-slate-400 hover:text-white\">",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/components/pos/POSView.tsx:1013:22",
-      "file": "src/components/pos/POSView.tsx",
-      "line": 1013,
-      "kind": "onClick",
-      "source": "<button onClick={() => setIsTransferModalOpen(false)} className=\"text-slate-400 hover:text-white\">",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/components/pos/POSView.tsx:1021:16",
-      "file": "src/components/pos/POSView.tsx",
-      "line": 1021,
+      "line": 665,
       "kind": "select",
       "source": "<select",
       "status": "unverified",
@@ -8896,9 +8500,441 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1023:18",
+      "id": "src/components/pos/POSView.tsx:667:24",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1023,
+      "line": 667,
+      "kind": "onChange",
+      "source": "onChange={(e) => updateItemSeatAndCourse(item.id, e.target.value)}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/components/pos/POSView.tsx:677:22",
+      "file": "src/components/pos/POSView.tsx",
+      "line": 677,
+      "kind": "select",
+      "source": "<select",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/components/pos/POSView.tsx:679:24",
+      "file": "src/components/pos/POSView.tsx",
+      "line": 679,
+      "kind": "onChange",
+      "source": "onChange={(e) => updateItemSeatAndCourse(item.id, undefined, e.target.value as any)}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/components/pos/POSView.tsx:688:22",
+      "file": "src/components/pos/POSView.tsx",
+      "line": 688,
+      "kind": "button",
+      "source": "<button",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/components/pos/POSView.tsx:689:24",
+      "file": "src/components/pos/POSView.tsx",
+      "line": 689,
+      "kind": "onClick",
+      "source": "onClick={() => updateItemSeatAndCourse(item.id, undefined, undefined, item.courseStatus === 'HELD' ? 'FIRED' : 'HELD')}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/components/pos/POSView.tsx:738:22",
+      "file": "src/components/pos/POSView.tsx",
+      "line": 738,
+      "kind": "button",
+      "source": "<button",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/components/pos/POSView.tsx:739:24",
+      "file": "src/components/pos/POSView.tsx",
+      "line": 739,
+      "kind": "onClick",
+      "source": "onClick={() => {",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/components/pos/POSView.tsx:748:20",
+      "file": "src/components/pos/POSView.tsx",
+      "line": 748,
+      "kind": "button",
+      "source": "<button",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/components/pos/POSView.tsx:749:22",
+      "file": "src/components/pos/POSView.tsx",
+      "line": 749,
+      "kind": "onClick",
+      "source": "onClick={() => removeItemFromOrder(item.id)}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/components/pos/POSView.tsx:804:14",
+      "file": "src/components/pos/POSView.tsx",
+      "line": 804,
+      "kind": "button",
+      "source": "<button",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/components/pos/POSView.tsx:805:16",
+      "file": "src/components/pos/POSView.tsx",
+      "line": 805,
+      "kind": "onClick",
+      "source": "onClick={sendOrderToKitchenAndBar}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/components/pos/POSView.tsx:814:14",
+      "file": "src/components/pos/POSView.tsx",
+      "line": 814,
+      "kind": "button",
+      "source": "<button",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/components/pos/POSView.tsx:815:16",
+      "file": "src/components/pos/POSView.tsx",
+      "line": 815,
+      "kind": "onClick",
+      "source": "onClick={handleOpenProFormaPrint}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/components/pos/POSView.tsx:824:14",
+      "file": "src/components/pos/POSView.tsx",
+      "line": 824,
+      "kind": "button",
+      "source": "<button",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/components/pos/POSView.tsx:825:16",
+      "file": "src/components/pos/POSView.tsx",
+      "line": 825,
+      "kind": "onClick",
+      "source": "onClick={() => {",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/components/pos/POSView.tsx:838:14",
+      "file": "src/components/pos/POSView.tsx",
+      "line": 838,
+      "kind": "button",
+      "source": "<button",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/components/pos/POSView.tsx:839:16",
+      "file": "src/components/pos/POSView.tsx",
+      "line": 839,
+      "kind": "onClick",
+      "source": "onClick={() => {",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/components/pos/POSView.tsx:865:14",
+      "file": "src/components/pos/POSView.tsx",
+      "line": 865,
+      "kind": "button",
+      "source": "<button",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/components/pos/POSView.tsx:866:16",
+      "file": "src/components/pos/POSView.tsx",
+      "line": 866,
+      "kind": "onClick",
+      "source": "onClick={() => setActivePortionProduct(null)}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/components/pos/POSView.tsx:874:14",
+      "file": "src/components/pos/POSView.tsx",
+      "line": 874,
+      "kind": "button",
+      "source": "<button",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/components/pos/POSView.tsx:875:16",
+      "file": "src/components/pos/POSView.tsx",
+      "line": 875,
+      "kind": "onClick",
+      "source": "onClick={() => {",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/components/pos/POSView.tsx:890:14",
+      "file": "src/components/pos/POSView.tsx",
+      "line": 890,
+      "kind": "button",
+      "source": "<button",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/components/pos/POSView.tsx:891:16",
+      "file": "src/components/pos/POSView.tsx",
+      "line": 891,
+      "kind": "onClick",
+      "source": "onClick={() => {",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/components/pos/POSView.tsx:906:14",
+      "file": "src/components/pos/POSView.tsx",
+      "line": 906,
+      "kind": "button",
+      "source": "<button",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/components/pos/POSView.tsx:907:16",
+      "file": "src/components/pos/POSView.tsx",
+      "line": 907,
+      "kind": "onClick",
+      "source": "onClick={() => {",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/components/pos/POSView.tsx:935:14",
+      "file": "src/components/pos/POSView.tsx",
+      "line": 935,
+      "kind": "button",
+      "source": "<button",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/components/pos/POSView.tsx:936:16",
+      "file": "src/components/pos/POSView.tsx",
+      "line": 936,
+      "kind": "onClick",
+      "source": "onClick={() => setActiveModifierProduct(null)}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/components/pos/POSView.tsx:961:24",
+      "file": "src/components/pos/POSView.tsx",
+      "line": 961,
+      "kind": "input",
+      "source": "<input",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/components/pos/POSView.tsx:964:26",
+      "file": "src/components/pos/POSView.tsx",
+      "line": 964,
+      "kind": "onChange",
+      "source": "onChange={e => {",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/components/pos/POSView.tsx:1002:14",
+      "file": "src/components/pos/POSView.tsx",
+      "line": 1002,
+      "kind": "button",
+      "source": "<button",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/components/pos/POSView.tsx:1003:16",
+      "file": "src/components/pos/POSView.tsx",
+      "line": 1003,
+      "kind": "onClick",
+      "source": "onClick={() => setActiveModifierProduct(null)}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/components/pos/POSView.tsx:1008:14",
+      "file": "src/components/pos/POSView.tsx",
+      "line": 1008,
+      "kind": "button",
+      "source": "<button",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/components/pos/POSView.tsx:1009:16",
+      "file": "src/components/pos/POSView.tsx",
+      "line": 1009,
+      "kind": "onClick",
+      "source": "onClick={handleConfirmModifiers}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/components/pos/POSView.tsx:1031:14",
+      "file": "src/components/pos/POSView.tsx",
+      "line": 1031,
+      "kind": "button",
+      "source": "<button onClick={() => setIsTransferModalOpen(false)} className=\"text-slate-400 hover:text-white\">",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/components/pos/POSView.tsx:1031:22",
+      "file": "src/components/pos/POSView.tsx",
+      "line": 1031,
+      "kind": "onClick",
+      "source": "<button onClick={() => setIsTransferModalOpen(false)} className=\"text-slate-400 hover:text-white\">",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/components/pos/POSView.tsx:1039:16",
+      "file": "src/components/pos/POSView.tsx",
+      "line": 1039,
+      "kind": "select",
+      "source": "<select",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/components/pos/POSView.tsx:1041:18",
+      "file": "src/components/pos/POSView.tsx",
+      "line": 1041,
       "kind": "onChange",
       "source": "onChange={e => setTransferTargetTableId(e.target.value)}",
       "status": "unverified",
@@ -8908,9 +8944,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1043:14",
+      "id": "src/components/pos/POSView.tsx:1061:14",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1043,
+      "line": 1061,
       "kind": "button",
       "source": "<button",
       "status": "unverified",
@@ -8920,9 +8956,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1044:16",
+      "id": "src/components/pos/POSView.tsx:1062:16",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1044,
+      "line": 1062,
       "kind": "onClick",
       "source": "onClick={() => setIsTransferModalOpen(false)}",
       "status": "unverified",
@@ -8932,9 +8968,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1049:14",
+      "id": "src/components/pos/POSView.tsx:1067:14",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1049,
+      "line": 1067,
       "kind": "button",
       "source": "<button",
       "status": "unverified",
@@ -8944,9 +8980,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1050:16",
+      "id": "src/components/pos/POSView.tsx:1068:16",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1050,
+      "line": 1068,
       "kind": "onClick",
       "source": "onClick={handleTransferTableConfirm}",
       "status": "unverified",
@@ -8956,9 +8992,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1073:14",
+      "id": "src/components/pos/POSView.tsx:1091:14",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1073,
+      "line": 1091,
       "kind": "button",
       "source": "<button onClick={() => setIsSplitModalOpen(false)} className=\"text-slate-400 hover:text-white\">",
       "status": "unverified",
@@ -8968,9 +9004,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1073:22",
+      "id": "src/components/pos/POSView.tsx:1091:22",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1073,
+      "line": 1091,
       "kind": "onClick",
       "source": "<button onClick={() => setIsSplitModalOpen(false)} className=\"text-slate-400 hover:text-white\">",
       "status": "unverified",
@@ -8980,9 +9016,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1083:20",
+      "id": "src/components/pos/POSView.tsx:1101:20",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1083,
+      "line": 1101,
       "kind": "button",
       "source": "<button",
       "status": "unverified",
@@ -8992,9 +9028,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1085:22",
+      "id": "src/components/pos/POSView.tsx:1103:22",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1085,
+      "line": 1103,
       "kind": "onClick",
       "source": "onClick={() => setSplitCount(n)}",
       "status": "unverified",
@@ -9004,9 +9040,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1110:14",
+      "id": "src/components/pos/POSView.tsx:1128:14",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1110,
+      "line": 1128,
       "kind": "button",
       "source": "<button",
       "status": "unverified",
@@ -9016,9 +9052,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1111:16",
+      "id": "src/components/pos/POSView.tsx:1129:16",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1111,
+      "line": 1129,
       "kind": "onClick",
       "source": "onClick={() => setIsSplitModalOpen(false)}",
       "status": "unverified",
@@ -9028,9 +9064,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1132:16",
+      "id": "src/components/pos/POSView.tsx:1150:16",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1132,
+      "line": 1150,
       "kind": "input",
       "source": "<input",
       "status": "unverified",
@@ -9040,9 +9076,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1135:18",
+      "id": "src/components/pos/POSView.tsx:1153:18",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1135,
+      "line": 1153,
       "kind": "onChange",
       "source": "onChange={e => setCompReason(e.target.value)}",
       "status": "unverified",
@@ -9052,9 +9088,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1140:16",
+      "id": "src/components/pos/POSView.tsx:1158:16",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1140,
+      "line": 1158,
       "kind": "button",
       "source": "<button",
       "status": "unverified",
@@ -9064,9 +9100,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1141:18",
+      "id": "src/components/pos/POSView.tsx:1159:18",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1141,
+      "line": 1159,
       "kind": "onClick",
       "source": "onClick={() => setIsCompModalOpen(false)}",
       "status": "unverified",
@@ -9076,9 +9112,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1146:16",
+      "id": "src/components/pos/POSView.tsx:1164:16",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1146,
+      "line": 1164,
       "kind": "button",
       "source": "<button",
       "status": "unverified",
@@ -9088,9 +9124,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1147:18",
+      "id": "src/components/pos/POSView.tsx:1165:18",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1147,
+      "line": 1165,
       "kind": "onClick",
       "source": "onClick={() => {",
       "status": "unverified",
@@ -9100,9 +9136,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1173:14",
+      "id": "src/components/pos/POSView.tsx:1191:14",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1173,
+      "line": 1191,
       "kind": "button",
       "source": "<button onClick={() => setIsDiscountModalOpen(false)} className=\"text-slate-400 hover:text-white\">",
       "status": "unverified",
@@ -9112,9 +9148,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1173:22",
+      "id": "src/components/pos/POSView.tsx:1191:22",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1173,
+      "line": 1191,
       "kind": "onClick",
       "source": "<button onClick={() => setIsDiscountModalOpen(false)} className=\"text-slate-400 hover:text-white\">",
       "status": "unverified",
@@ -9124,9 +9160,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1183:20",
+      "id": "src/components/pos/POSView.tsx:1201:20",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1183,
+      "line": 1201,
       "kind": "button",
       "source": "<button",
       "status": "unverified",
@@ -9136,9 +9172,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1186:22",
+      "id": "src/components/pos/POSView.tsx:1204:22",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1186,
+      "line": 1204,
       "kind": "onClick",
       "source": "onClick={() => setDiscountPercent(pct)}",
       "status": "unverified",
@@ -9148,9 +9184,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1198:18",
+      "id": "src/components/pos/POSView.tsx:1216:18",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1198,
+      "line": 1216,
       "kind": "input",
       "source": "<input",
       "status": "unverified",
@@ -9160,9 +9196,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1203:20",
+      "id": "src/components/pos/POSView.tsx:1221:20",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1203,
+      "line": 1221,
       "kind": "onChange",
       "source": "onChange={e => setDiscountPercent(Math.min(100, Math.max(1, parseFloat(e.target.value) || 0)))}",
       "status": "unverified",
@@ -9172,9 +9208,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1212:16",
+      "id": "src/components/pos/POSView.tsx:1230:16",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1212,
+      "line": 1230,
       "kind": "input",
       "source": "<input",
       "status": "unverified",
@@ -9184,9 +9220,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1215:18",
+      "id": "src/components/pos/POSView.tsx:1233:18",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1215,
+      "line": 1233,
       "kind": "onChange",
       "source": "onChange={e => setDiscountReason(e.target.value)}",
       "status": "unverified",
@@ -9196,9 +9232,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1234:14",
+      "id": "src/components/pos/POSView.tsx:1252:14",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1234,
+      "line": 1252,
       "kind": "button",
       "source": "<button",
       "status": "unverified",
@@ -9208,9 +9244,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1235:16",
+      "id": "src/components/pos/POSView.tsx:1253:16",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1235,
+      "line": 1253,
       "kind": "onClick",
       "source": "onClick={() => setIsDiscountModalOpen(false)}",
       "status": "unverified",
@@ -9220,9 +9256,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1240:14",
+      "id": "src/components/pos/POSView.tsx:1258:14",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1240,
+      "line": 1258,
       "kind": "button",
       "source": "<button",
       "status": "unverified",
@@ -9232,9 +9268,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1241:16",
+      "id": "src/components/pos/POSView.tsx:1259:16",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1241,
+      "line": 1259,
       "kind": "onClick",
       "source": "onClick={() => {",
       "status": "unverified",
@@ -9244,9 +9280,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1270:14",
+      "id": "src/components/pos/POSView.tsx:1288:14",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1270,
+      "line": 1288,
       "kind": "button",
       "source": "<button onClick={() => setIsVoidModalOpen(false)} className=\"text-slate-400 hover:text-white\">",
       "status": "unverified",
@@ -9256,9 +9292,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1270:22",
+      "id": "src/components/pos/POSView.tsx:1288:22",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1270,
+      "line": 1288,
       "kind": "onClick",
       "source": "<button onClick={() => setIsVoidModalOpen(false)} className=\"text-slate-400 hover:text-white\">",
       "status": "unverified",
@@ -9268,9 +9304,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1282:16",
+      "id": "src/components/pos/POSView.tsx:1300:16",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1282,
+      "line": 1300,
       "kind": "input",
       "source": "<input",
       "status": "unverified",
@@ -9280,9 +9316,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1285:18",
+      "id": "src/components/pos/POSView.tsx:1303:18",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1285,
+      "line": 1303,
       "kind": "onChange",
       "source": "onChange={e => setVoidReason(e.target.value)}",
       "status": "unverified",
@@ -9292,9 +9328,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1292:14",
+      "id": "src/components/pos/POSView.tsx:1310:14",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1292,
+      "line": 1310,
       "kind": "button",
       "source": "<button",
       "status": "unverified",
@@ -9304,9 +9340,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1293:16",
+      "id": "src/components/pos/POSView.tsx:1311:16",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1293,
+      "line": 1311,
       "kind": "onClick",
       "source": "onClick={() => setIsVoidModalOpen(false)}",
       "status": "unverified",
@@ -9316,9 +9352,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1298:14",
+      "id": "src/components/pos/POSView.tsx:1316:14",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1298,
+      "line": 1316,
       "kind": "button",
       "source": "<button",
       "status": "unverified",
@@ -9328,9 +9364,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1299:16",
+      "id": "src/components/pos/POSView.tsx:1317:16",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1299,
+      "line": 1317,
       "kind": "onClick",
       "source": "onClick={() => {",
       "status": "unverified",
@@ -9340,9 +9376,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1329:14",
+      "id": "src/components/pos/POSView.tsx:1347:14",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1329,
+      "line": 1347,
       "kind": "button",
       "source": "<button",
       "status": "unverified",
@@ -9352,9 +9388,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1330:16",
+      "id": "src/components/pos/POSView.tsx:1348:16",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1330,
+      "line": 1348,
       "kind": "onClick",
       "source": "onClick={() => {",
       "status": "unverified",
@@ -9364,9 +9400,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1378:20",
+      "id": "src/components/pos/POSView.tsx:1396:20",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1378,
+      "line": 1396,
       "kind": "button",
       "source": "<button",
       "status": "unverified",
@@ -9376,9 +9412,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1379:22",
+      "id": "src/components/pos/POSView.tsx:1397:22",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1379,
+      "line": 1397,
       "kind": "onClick",
       "source": "onClick={handleOpenSettledReceiptPrint}",
       "status": "unverified",
@@ -9388,9 +9424,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1387:18",
+      "id": "src/components/pos/POSView.tsx:1405:18",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1387,
+      "line": 1405,
       "kind": "button",
       "source": "<button",
       "status": "unverified",
@@ -9400,9 +9436,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1388:20",
+      "id": "src/components/pos/POSView.tsx:1406:20",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1388,
+      "line": 1406,
       "kind": "onClick",
       "source": "onClick={() => {",
       "status": "unverified",
@@ -9412,9 +9448,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1403:18",
+      "id": "src/components/pos/POSView.tsx:1421:18",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1403,
+      "line": 1421,
       "kind": "button",
       "source": "<button",
       "status": "unverified",
@@ -9424,9 +9460,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1404:20",
+      "id": "src/components/pos/POSView.tsx:1422:20",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1404,
+      "line": 1422,
       "kind": "onClick",
       "source": "onClick={() => setTenderType('MPESA')}",
       "status": "unverified",
@@ -9436,9 +9472,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1415:18",
+      "id": "src/components/pos/POSView.tsx:1433:18",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1415,
+      "line": 1433,
       "kind": "button",
       "source": "<button",
       "status": "unverified",
@@ -9448,35 +9484,11 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1416:20",
+      "id": "src/components/pos/POSView.tsx:1434:20",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1416,
+      "line": 1434,
       "kind": "onClick",
       "source": "onClick={() => setTenderType('CASH')}",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/components/pos/POSView.tsx:1427:18",
-      "file": "src/components/pos/POSView.tsx",
-      "line": 1427,
-      "kind": "button",
-      "source": "<button",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/components/pos/POSView.tsx:1428:20",
-      "file": "src/components/pos/POSView.tsx",
-      "line": 1428,
-      "kind": "onClick",
-      "source": "onClick={() => {",
       "status": "unverified",
       "permission": "requires workflow review",
       "persistence": "requires workflow review",
@@ -9500,7 +9512,7 @@
       "file": "src/components/pos/POSView.tsx",
       "line": 1446,
       "kind": "onClick",
-      "source": "onClick={() => setTenderType('CARD')}",
+      "source": "onClick={() => {",
       "status": "unverified",
       "permission": "requires workflow review",
       "persistence": "requires workflow review",
@@ -9508,9 +9520,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1457:18",
+      "id": "src/components/pos/POSView.tsx:1463:18",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1457,
+      "line": 1463,
       "kind": "button",
       "source": "<button",
       "status": "unverified",
@@ -9520,9 +9532,33 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1458:20",
+      "id": "src/components/pos/POSView.tsx:1464:20",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1458,
+      "line": 1464,
+      "kind": "onClick",
+      "source": "onClick={() => setTenderType('CARD')}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/components/pos/POSView.tsx:1475:18",
+      "file": "src/components/pos/POSView.tsx",
+      "line": 1475,
+      "kind": "button",
+      "source": "<button",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/components/pos/POSView.tsx:1476:20",
+      "file": "src/components/pos/POSView.tsx",
+      "line": 1476,
       "kind": "onClick",
       "source": "onClick={() => {",
       "status": "unverified",
@@ -9532,9 +9568,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1482:60",
+      "id": "src/components/pos/POSView.tsx:1500:60",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1482,
+      "line": 1500,
       "kind": "onChange",
       "source": "<ManualMpesaFields value={mpesaReceipt} onChange={setMpesaReceipt} />",
       "status": "unverified",
@@ -9544,9 +9580,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1485:22",
+      "id": "src/components/pos/POSView.tsx:1503:22",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1485,
+      "line": 1503,
       "kind": "input",
       "source": "<input",
       "status": "unverified",
@@ -9556,9 +9592,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1488:24",
+      "id": "src/components/pos/POSView.tsx:1506:24",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1488,
+      "line": 1506,
       "kind": "onChange",
       "source": "onChange={e => setMpesaPhone(e.target.value)}",
       "status": "unverified",
@@ -9568,9 +9604,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1514:22",
+      "id": "src/components/pos/POSView.tsx:1532:22",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1514,
+      "line": 1532,
       "kind": "input",
       "source": "<input",
       "status": "unverified",
@@ -9580,9 +9616,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1517:24",
+      "id": "src/components/pos/POSView.tsx:1535:24",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1517,
+      "line": 1535,
       "kind": "onChange",
       "source": "onChange={e => setCashTendered(parseFloat(e.target.value) || 0)}",
       "status": "unverified",
@@ -9592,9 +9628,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1524:24",
+      "id": "src/components/pos/POSView.tsx:1542:24",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1524,
+      "line": 1542,
       "kind": "button",
       "source": "<button",
       "status": "unverified",
@@ -9604,9 +9640,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1527:26",
+      "id": "src/components/pos/POSView.tsx:1545:26",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1527,
+      "line": 1545,
       "kind": "onClick",
       "source": "onClick={() => setCashTendered(amt)}",
       "status": "unverified",
@@ -9616,9 +9652,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1553:22",
+      "id": "src/components/pos/POSView.tsx:1571:22",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1553,
+      "line": 1571,
       "kind": "select",
       "source": "<select",
       "status": "unverified",
@@ -9628,9 +9664,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1555:24",
+      "id": "src/components/pos/POSView.tsx:1573:24",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1555,
+      "line": 1573,
       "kind": "onChange",
       "source": "onChange={e => setSelectedGuestStayId(e.target.value)}",
       "status": "unverified",
@@ -9640,9 +9676,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1587:22",
+      "id": "src/components/pos/POSView.tsx:1605:22",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1587,
+      "line": 1605,
       "kind": "input",
       "source": "<input",
       "status": "unverified",
@@ -9652,9 +9688,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1590:24",
+      "id": "src/components/pos/POSView.tsx:1608:24",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1590,
+      "line": 1608,
       "kind": "onChange",
       "source": "onChange={e => setCardAuthCode(e.target.value)}",
       "status": "unverified",
@@ -9664,9 +9700,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1599:18",
+      "id": "src/components/pos/POSView.tsx:1617:18",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1599,
+      "line": 1617,
       "kind": "button",
       "source": "<button",
       "status": "unverified",
@@ -9676,9 +9712,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/components/pos/POSView.tsx:1600:20",
+      "id": "src/components/pos/POSView.tsx:1618:20",
       "file": "src/components/pos/POSView.tsx",
-      "line": 1600,
+      "line": 1618,
       "kind": "onClick",
       "source": "onClick={handleExecutePayment}",
       "status": "unverified",

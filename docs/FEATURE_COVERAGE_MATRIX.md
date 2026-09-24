@@ -9,6 +9,7 @@ No module is deployment verified. The generated UI inventory does not establish 
 | Local runtime | Tauri scaffold, SQLite migration, owner enrollment, PIN sessions, command audit/outbox | Native builds, device smoke, recovery and secure credential storage |
 | Catalog | Native product and stock master save/archive, version checks | Recipes/modifiers/portions, price rules, reference constraints |
 | POS | Native simple orders, firing, unpaid transfer/merge, partial/manual payments, atomic split tender, internal receipts | Discounts, comps, item refunds, fired void stock disposition and full workflow acceptance |
+| Floorplan | Implemented atomic outlet layout save/archive, version checks, real staff assignments and audited cleaning completion | Native UI/restart rehearsal, section CRUD, minimum-spend enforcement and synced layout acceptance |
 | KDS | Native ready/recall commands | Item/station routing and all lifecycle transitions |
 | Inventory | Fire-time depletion, counts, transfers and waste commands | Production, approvals, reversal rules and full ledger acceptance |
 | Reconciliation | Native receipt allocation and manager statement confirmation | Statement entry/import, discrepancies, reversals and customer credit UX |
@@ -23,5 +24,5 @@ No module is deployment verified. The generated UI inventory does not establish 
 | Reports/command centre | Prototype | Shared queries, drilldowns and export parity |
 | Settings/control | Partial native business administration | Configuration, permissions, approvals, derived alerts and audit browser |
 | Guest ordering | Prototype | Restricted online endpoint, heartbeat, acknowledgement and duplicate handling |
-| Remote management | Manager UI, replica queries, request polling, version checks and upload-dependent acknowledgement | Live policy, conflict, replay and recovery acceptance; aggregate reporting |
+| Remote management | Manager UI, replica queries, request polling, version checks and upload-dependent acknowledgement; SQL protocol/policies locally verified in disposable PostgreSQL | Live Auth/HTTP, conflicts and recovery acceptance; aggregate reporting |
 | Hardware/external services | Unconfigured | Real adapters require separate evidence; no simulated success |

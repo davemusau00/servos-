@@ -8,8 +8,9 @@ Before changing a project, inspect existing tables and migration history and pre
 
 1. `supabase/migrations/202609240001_terminal_replica.sql`
 2. `supabase/migrations/202609240002_remote_requests.sql`
+3. `supabase/migrations/202609240003_request_validation.sql`
 
-These are initial migrations, not scripts to rerun over an existing installation. They have not yet passed live policy/integration acceptance. Create the owner's Supabase Auth account, then a project operator provisions membership using its actual Auth UUID:
+The first two are initial migrations, not scripts to rerun over an existing installation. The third replaces only the request-validation function and preserves records. Apply only migrations absent from the project's migration history. They pass the local PostgreSQL harness but have not passed live authenticated integration acceptance. Create the owner's Supabase Auth account, then a project operator provisions membership using its actual Auth UUID:
 
 ```sql
 insert into servos_private.managers (user_id, role)
@@ -22,7 +23,13 @@ Build the native package with a supported Rust/Tauri platform toolchain. Sign in
 
 Browser remote management requires connectivity and provisioned manager membership. It can browse replicated records and request selected master changes. Requests stay pending until the terminal processes them; applied status follows upload of the resulting operation. Test duplicate batches, lost acknowledgements, version conflicts, expired authentication and revoked authors before claiming synchronization works.
 
-Current project probe: Auth settings returned HTTP 200; the replica table endpoint returned HTTP 404. No schema was deployed by this patch. Existing project business data has not been inspected.
+Latest project probe: Auth settings returned HTTP 200; anonymous replica access now returns HTTP 401 with PostgreSQL code 42501, permission denied for business_records. This establishes that the table is exposed and anonymous access is denied, replacing the earlier 404 observation. This agent has not deployed migrations or inspected business data. Owner membership, terminal enrollment and real synchronization still require verification.
+
+## Reproducible local checks
+
+Run `npm run lint`, `npm run build`, `npm test` and `npm run test:browser`. With Docker running, `npm run test:cloud` creates a disposable PostgreSQL container, applies minimal Auth test fixtures and all migrations, then checks replay, transactional rollback, authorization and request processing. It exposes no host port, stops its own container afterward and does not use the configured Supabase project. Its Auth fixtures do not test Supabase JWT issuance or HTTP behavior.
+
+`npm run test:native:container` runs the real Rust store tests in a Linux Rust container, with the checkout mounted read-only and build/registry caches in dedicated Docker volumes. This is an alternative to the local `npm run test:native` toolchain. Neither domain-test command establishes desktop or Android package acceptance.
 
 ## Backup and recovery
 

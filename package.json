@@ -14,7 +14,9 @@
     "native:dev": "tauri dev",
     "native:build": "tauri build",
     "test:native": "cargo test --manifest-path native-tests/Cargo.toml",
+    "test:native:container": "node scripts/test-native-container.mjs",
     "test:desktop": "cargo test --manifest-path src-tauri/Cargo.toml --lib",
+    "test:cloud": "node scripts/test-supabase.mjs",
     "test": "node --test tests/*.test.mjs",
     "test:browser": "playwright test"
   },

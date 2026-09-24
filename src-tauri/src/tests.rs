@@ -269,3 +269,141 @@ fn tax_snapshots_and_partial_payment_rounding_preserve_totals() {
         "COMPLETED"
     );
 }
+
+fn layout_table(key: &str, label: &str) -> Value {
+    json!({"id":key,"label":label,"capacity":4,"section":"MAIN_DECK","shape":"SQUARE","posX":10,"posY":20,"minimumSpend":0,"isJoinable":true})
+}
+fn layout(db: &rusqlite::Connection, tables: Value) -> BusinessCommand {
+    let baseline: Vec<Value> = list(db, "tables")
+        .unwrap()
+        .into_iter()
+        .filter(|r| r["data"]["outletId"] == "main")
+        .map(|r| json!({"id":r["id"],"version":r["version"]}))
+        .collect();
+    cmd(
+        "floorplan.save",
+        json!({"outletId":"main","baseline":baseline,"tables":tables}),
+    )
+}
+#[test]
+fn paid_table_requires_cleaning_and_readiness_survives_restart() {
+    let (dir, mut db, s) = setup();
+    let key = Uuid::new_v4().to_string();
+    let create = layout(&db, json!([layout_table(&key, "1")]));
+    execute(&mut db, &s.token, create).unwrap();
+    let product = Uuid::new_v4().to_string();
+    run(
+        &mut db,
+        &s,
+        "record.save",
+        json!({"collection":"products","id":product,"data":{"name":"Service","code":product,"price":100,"routeTo":"SERVICE","outletIds":["main"]}}),
+    );
+    run(&mut db, &s, "till.open", json!({"floatAmount":0}));
+    let result = run(&mut db, &s, "order.create", json!({"tableId":key}));
+    let order_id = result["recordIds"][0].as_str().unwrap();
+    run(
+        &mut db,
+        &s,
+        "order.addItem",
+        json!({"orderId":order_id,"productId":product}),
+    );
+    run(
+        &mut db,
+        &s,
+        "payment.record",
+        json!({"orderId":order_id,"method":"CASH","amount":100,"cashTendered":100}),
+    );
+    let (version, table) = get(&db, "tables", &key).unwrap();
+    assert_eq!(table["state"], "CLEANING");
+    assert!(execute(
+        &mut db,
+        &s.token,
+        cmd("order.create", json!({"tableId":key}))
+    )
+    .is_err());
+    let mut ready = cmd("table.ready", json!({"tableId":key}));
+    ready.target_version = Some(version - 1);
+    assert!(execute(&mut db, &s.token, ready.clone()).is_err());
+    ready.target_version = Some(version);
+    let result = execute(&mut db, &s.token, ready.clone()).unwrap();
+    assert_eq!(execute(&mut db, &s.token, ready).unwrap(), result);
+    drop(db);
+    let mut db = open(&dir.path().join("test.sqlite")).unwrap();
+    let table = get(&db, "tables", &key).unwrap().1;
+    assert_eq!(table["state"], "AVAILABLE");
+    assert_eq!(table["cleanedBy"], s.staff_id);
+    run(&mut db, &s, "order.create", json!({"tableId":key}));
+    assert_eq!(list(&db, "orders").unwrap().len(), 2);
+}
+#[test]
+fn floorplan_rejects_stale_saves_and_rolls_back_active_table_removal() {
+    let (_, mut db, s) = setup();
+    let a = Uuid::new_v4().to_string();
+    let b = Uuid::new_v4().to_string();
+    let create = layout(&db, json!([layout_table(&a, "1"), layout_table(&b, "2")]));
+    execute(&mut db, &s.token, create).unwrap();
+    let stale = layout(
+        &db,
+        json!([layout_table(&a, "Changed"), layout_table(&b, "2")]),
+    );
+    run(&mut db, &s, "order.create", json!({"tableId":b}));
+    assert!(execute(&mut db, &s.token, stale).is_err());
+    let before = list(&db, "tables").unwrap();
+    let audit_before: i64 = db
+        .query_row("SELECT count(*) FROM audit", [], |r| r.get(0))
+        .unwrap();
+    let remove = layout(&db, json!([layout_table(&a, "Changed")]));
+    assert!(execute(&mut db, &s.token, remove).is_err());
+    assert_eq!(list(&db, "tables").unwrap(), before);
+    assert_eq!(
+        db.query_row("SELECT count(*) FROM audit", [], |r| r.get::<_, i64>(0))
+            .unwrap(),
+        audit_before
+    );
+}
+#[test]
+fn floorplan_changes_preserve_occupied_table_and_archive_removed_table() {
+    let (dir, mut db, s) = setup();
+    let a = Uuid::new_v4().to_string();
+    let b = Uuid::new_v4().to_string();
+    let create = layout(&db, json!([layout_table(&a, "1"), layout_table(&b, "2")]));
+    execute(&mut db, &s.token, create).unwrap();
+    let order = run(&mut db, &s, "order.create", json!({"tableId":a}))["recordIds"][0].clone();
+    let mut moved = layout_table(&a, "Patio 1");
+    moved["posX"] = json!(80);
+    moved["state"] = json!("AVAILABLE");
+    moved["currentOrderId"] = Value::Null;
+    let save = layout(&db, json!([moved]));
+    execute(&mut db, &s.token, save).unwrap();
+    drop(db);
+    let db = open(&dir.path().join("test.sqlite")).unwrap();
+    let table = get(&db, "tables", &a).unwrap().1;
+    assert_eq!(table["currentOrderId"], order);
+    assert_eq!(table["state"], "ORDERING");
+    assert_eq!(table["posX"], 80);
+    assert!(get(&db, "tables", &b).is_err());
+}
+#[test]
+fn floorplan_requires_manager_and_prevents_duplicate_labels() {
+    let (_, mut db, s) = setup();
+    let a = Uuid::new_v4().to_string();
+    let b = Uuid::new_v4().to_string();
+    let duplicate = layout(
+        &db,
+        json!([layout_table(&a, "Table 1"), layout_table(&b, " table 1 ")]),
+    );
+    assert!(execute(&mut db, &s.token, duplicate).is_err());
+    assert!(list(&db, "tables").unwrap().is_empty());
+    run(
+        &mut db,
+        &s,
+        "staff.create",
+        json!({"name":"Server","pin":"123987","role":"Server"}),
+    );
+    let staff: String = db
+        .query_row("SELECT id FROM staff WHERE role='Server'", [], |r| r.get(0))
+        .unwrap();
+    let server = login(&db, &staff, "123987").unwrap();
+    let create = layout(&db, json!([layout_table(&a, "1")]));
+    assert!(execute(&mut db, &server.token, create).is_err());
+}

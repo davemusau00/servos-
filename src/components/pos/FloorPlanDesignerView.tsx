@@ -104,9 +104,9 @@ export const FloorPlanDesignerView: React.FC<{ onClose: () => void }> = ({ onClo
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-md flex flex-col font-sans text-slate-100 overflow-hidden">
+    <div role="dialog" aria-modal="true" aria-label="Floorplan designer" className="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-md flex flex-col font-sans text-slate-100 overflow-hidden">
       {/* Top Header */}
-      <div className="px-6 py-4 bg-slate-900 border-b border-slate-800 flex items-center justify-between">
+      <div className="px-4 py-4 bg-slate-900 border-b border-slate-800 flex flex-wrap gap-3 items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-400">
             <LayoutGrid className="w-6 h-6" />
@@ -146,9 +146,9 @@ export const FloorPlanDesignerView: React.FC<{ onClose: () => void }> = ({ onClo
 
       {saveError && <p role="alert" className="p-3 text-sm text-red-300 bg-red-950/40">{saveError}</p>}
       {/* Main Workspace Layout */}
-      <div className="flex-1 grid grid-cols-12 overflow-hidden">
+      <div className={`flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-auto ${saving ? 'pointer-events-none opacity-70' : ''}`} aria-busy={saving}>
         {/* Left Toolbar: Add Objects & Section Selector (Cols 3) */}
-        <div className="col-span-3 border-r border-slate-800 bg-slate-900/60 p-4 space-y-6 overflow-y-auto font-mono text-xs">
+        <div className="lg:col-span-3 border-r border-slate-800 bg-slate-900/60 p-4 space-y-6 lg:overflow-y-auto font-mono text-xs">
           {/* Section Selector */}
           <div>
             <label className="block text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-2">
@@ -233,7 +233,7 @@ export const FloorPlanDesignerView: React.FC<{ onClose: () => void }> = ({ onClo
         </div>
 
         {/* Center Canvas (Cols 6) */}
-        <div className="col-span-6 bg-slate-950 p-6 flex flex-col justify-between overflow-hidden relative border-r border-slate-800">
+        <div className="lg:col-span-6 min-h-[450px] bg-slate-950 p-6 flex flex-col justify-between overflow-hidden relative border-r border-slate-800">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-mono font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
               <Eye className="w-4 h-4" />
@@ -252,8 +252,9 @@ export const FloorPlanDesignerView: React.FC<{ onClose: () => void }> = ({ onClo
                 const isSelected = table.id === editingTableId;
 
                 return (
-                  <div
+                  <button
                     key={table.id}
+                    aria-label={`Edit table ${table.label}`}
                     onClick={() => setEditingTableId(table.id)}
                     style={{
                       left: `${table.posX}%`,
@@ -283,20 +284,20 @@ export const FloorPlanDesignerView: React.FC<{ onClose: () => void }> = ({ onClo
                         KES {table.minimumSpendKes / 1000}k min
                       </span>
                     ) : null}
-                  </div>
+                  </button>
                 );
               })}
           </div>
 
           {/* Canvas Footer Bar */}
           <div className="flex items-center justify-between text-xs font-mono text-slate-500 pt-2 border-t border-slate-800/80">
-            <span>Grid Snap: 10px</span>
+            <span>Position is a percentage of the floor</span>
             <span>Capacity Totals: {layoutTables.reduce((acc, t) => acc + t.capacity, 0)} Seats</span>
           </div>
         </div>
 
         {/* Right Inspector Drawer (Cols 3) */}
-        <div className="col-span-3 bg-slate-900/60 p-5 space-y-5 overflow-y-auto font-mono text-xs">
+        <div className="lg:col-span-3 bg-slate-900/60 p-5 space-y-5 lg:overflow-y-auto font-mono text-xs">
           {selectedTable ? (
             <div>
               <div className="flex items-center justify-between pb-3 border-b border-slate-800">
@@ -351,6 +352,9 @@ export const FloorPlanDesignerView: React.FC<{ onClose: () => void }> = ({ onClo
                   </div>
                 </div>
 
+                <div className="grid grid-cols-2 gap-3">
+                  {(['posX', 'posY'] as const).map(axis => <label key={axis} className="text-slate-400">{axis === 'posX' ? 'Horizontal position (%)' : 'Vertical position (%)'}<input type="number" min="0" max="100" value={selectedTable[axis] ?? 0} onChange={event => handleUpdateTableProps({ [axis]: Number(event.target.value) })} className="w-full p-2 mt-1 bg-slate-950 border border-slate-800 rounded text-white" /></label>)}
+                </div>
                 <div>
                   <label className="block text-slate-400 text-[10px] uppercase mb-1">ASSIGNED SERVER ZONE</label>
                   <select

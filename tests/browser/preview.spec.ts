@@ -16,3 +16,18 @@ test('browser preview is explicit and all retained module routes render', async 
   expect(errors).toEqual([]);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
+
+test('floorplan drafts are editable and preview cannot claim a saved layout', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Open UI preview' }).click();
+  await page.getByRole('button', { name: 'Floor Studio' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Floorplan designer' });
+  await dialog.getByRole('button', { name: 'Round 2-Seat' }).click();
+  await dialog.getByLabel('Horizontal position (%)').fill('25');
+  await dialog.getByLabel('Vertical position (%)').fill('35');
+  await dialog.getByRole('button', { name: 'Save layout' }).click();
+  await expect(dialog.getByRole('alert')).toContainText('Saving requires the installed application');
+  expect(await dialog.evaluate(element => element.scrollWidth <= window.innerWidth)).toBe(true);
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+  await expect(dialog).not.toBeVisible();
+});

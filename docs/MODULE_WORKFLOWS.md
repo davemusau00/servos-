@@ -8,6 +8,8 @@ Enroll owner -> configure outlets, stock locations, catalog, taxes and opening b
 
 Reservations progress booked/confirmed/arrived/seated/completed, with cancelled/no-show alternatives. Waitlist parties seat against actual availability. Floorplan edits preserve active orders. Splits and merges preserve item ownership and payment allocation. Fired voids require return-versus-waste disposition. Refunds reverse money without automatically returning stock.
 
+The implemented table lifecycle is AVAILABLE -> ORDERING -> CLEANING after payment, transfer or eligible void -> AVAILABLE after staff select Mark clean. Cleaning confirmation does not open a new order. Floor Studio saves all changes together, preserves occupied table ownership and rejects stale layout versions. Failed saves leave the draft open with an error. Preview saves explicitly require the installed application.
+
 ## Manual M-Pesa
 
 Cashier checks the business receipt, enters code/account/amount/time and confirms it. The terminal records the payment as manually confirmed, with reconciliation pending. Codes are normalized and unique per account. Allocations cannot exceed the recorded receipt; surplus needs a customer credit owner. Managers compare statement evidence and confirm matching amounts. Discrepancy and reversal workflows remain required before full release.
