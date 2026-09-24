@@ -136,6 +136,7 @@ pub fn execute_as(db:&mut Connection,user:&Session,cmd:BusinessCommand)->Result<
                 let (version,data)=existing.unwrap(); changes.push(json!({"collection":collection,"id":record_id,"version":version+1,"data":data,"archived":true}));
             } else {
                 let mut data=p.get("data").filter(|v|v.is_object()).ok_or("Record data is required")?.clone();
+                if let Some((_,prior))=&existing {if let (Some(target),Some(source))=(data.as_object_mut(),prior.as_object()){for (key,value) in source {target.entry(key.clone()).or_insert_with(||value.clone());}}}
                 if collection=="tables" {text(&data,"label")?;} else {text(&data,"name")?;}
                 if collection=="property" && data["taxConfigured"]==true {
                     if quantity(&data,"vatRatePct")?>100.0 || quantity(&data,"levyRatePct")?>100.0 {return Err("Tax rates must be between 0 and 100".into());}
@@ -213,8 +214,8 @@ pub fn execute_as(db:&mut Connection,user:&Session,cmd:BusinessCommand)->Result<
                 if policy["taxConfigured"]!=true{return Err("An owner must configure the business tax rates before trading".into());}
                 let vat=if ["B_0","C_EXEMPT"].contains(&product["taxClassId"].as_str().unwrap_or("")){0.0}else{quantity(&policy,"vatRatePct")?/100.0};
                 let levy=quantity(&policy,"levyRatePct")?/100.0;
-                let net=(price as f64/(1.0+vat+levy)).round() as i64;
-                let vat_amount=(net as f64*vat).round() as i64;let levy_amount=price-net-vat_amount;
+                let vat_amount=(price as f64*vat/(1.0+vat+levy)).round() as i64;
+                let levy_amount=(price as f64*levy/(1.0+vat+levy)).round() as i64;let net=price-vat_amount-levy_amount;
                 let item_id=id();
                 items.push(json!({"id":item_id,"productId":product_id,"productName":product["name"],"quantity":1,"unitPrice":price as f64/100.0,"lineTotal":price as f64/100.0,"totalPrice":price as f64/100.0,"netMinor":net,"vatMinor":vat_amount,"levyMinor":levy_amount,"taxPolicySnapshot":policy,"state":"OPEN","courseStatus":"HELD","courseName":p.get("courseName").cloned().unwrap_or(json!("Mains")),"seatLabel":p.get("seatLabel"),"productSnapshot":product,"productVersion":version,"taxAmount":vat_amount as f64/100.0,"cateringLevy":levy_amount as f64/100.0,"stockFired":false,"modifiers":[]}));
             } else if cmd.operation=="order.removeItem" {
@@ -316,8 +317,14 @@ fn payment(tx:&Transaction,user:&Session,p:&Value,changes:&mut Vec<Value>)->Resu
     }
     let payment_id=id(); let journal_id=id(); let stamp=now();
     put(tx,"payments",&payment_id,json!({"id":payment_id,"orderId":order_id,"propertyId":"property","tillSessionId":active["id"],"tenderType":method,"amount":amount as f64/100.0,"amountMinor":amount,"currency":"KES","status":"PAID","referenceNumber":reference,"mpesaReceiptId":receipt_id,"occurredAt":stamp,"cashierId":user.staff_id,"cashierName":user.name,"confirmation":"MANUAL"}),changes)?;
-    // Each payment recognizes only its allocated amount. No journal is posted again during sync.
-    put(tx,"journalEntries",&journal_id,json!({"id":journal_id,"entryNumber":format!("JE-{}",&journal_id[..8]),"propertyId":"property","occurredAt":stamp,"postedAt":stamp,"sourceType":"PAYMENT","sourceId":payment_id,"memo":format!("Manual {} receipt for {}",method,order["orderNumber"]),"lines":[{"id":id(),"accountId":method,"accountCode":method,"accountName":method,"debit":amount as f64/100.0,"credit":0,"debitMinor":amount,"creditMinor":0,"description":"Receipt"},{"id":id(),"accountId":"SALES","accountCode":"4000","accountName":"Sales pending tax configuration","debit":0,"credit":amount as f64/100.0,"debitMinor":0,"creditMinor":amount,"description":"Sale"}],"totalDebit":amount as f64/100.0,"totalCredit":amount as f64/100.0,"balanced":true}),changes)?;
+    // Cumulative allocation prevents tax rounding drift across partial payments.
+    let allocate=|tax:i64|((tax as f64*(paid+amount) as f64/total as f64).round()-(tax as f64*paid as f64/total as f64).round()) as i64;
+    let vat=allocate(money(&order,"taxTotal")?);let levy=allocate(money(&order,"cateringLevyTotal")?);let net=amount-vat-levy;
+    let mut lines=vec![json!({"id":id(),"accountId":method,"accountCode":method,"accountName":method,"debit":amount as f64/100.0,"credit":0,"debitMinor":amount,"creditMinor":0,"description":"Receipt"})];
+    for (account,code,title,credit) in [("SALES","4000","Sales",net),("VAT","2100","VAT payable",vat),("LEVY","2110","Levy payable",levy)] {
+        if credit!=0 {lines.push(json!({"id":id(),"accountId":account,"accountCode":code,"accountName":title,"debit":0,"credit":credit as f64/100.0,"debitMinor":0,"creditMinor":credit,"description":"Sale allocation"}));}
+    }
+    put(tx,"journalEntries",&journal_id,json!({"id":journal_id,"entryNumber":format!("JE-{}",&journal_id[..8]),"propertyId":"property","occurredAt":stamp,"postedAt":stamp,"sourceType":"PAYMENT","sourceId":payment_id,"memo":format!("Manual {} receipt for {}",method,order["orderNumber"]),"lines":lines,"totalDebit":amount as f64/100.0,"totalCredit":amount as f64/100.0,"balanced":true}),changes)?;
     order["amountPaid"]=json!((paid+amount) as f64/100.0); order["paymentMethod"]=json!(method);
     if paid+amount==total {order["state"]=json!("COMPLETED"); order["completedAt"]=json!(stamp); if let Some(table_id)=order["tableId"].as_str(){let (_,mut table)=get(tx,"tables",table_id)?; table["currentOrderId"]=Value::Null; table["state"]=json!("CLEANING"); put(tx,"tables",table_id,table,changes)?;}}
     put(tx,"orders",order_id,order,changes)
