@@ -255,6 +255,35 @@ pub fn execute_as(db:&mut Connection,user:&Session,cmd:BusinessCommand)->Result<
             put(&tx,"orders",order_id,order,&mut changes)?;
         },
         "payment.record" => payment(&tx,&user,p,&mut changes)?,
+        "order.transfer"|"order.merge"|"order.void" => {
+            if user.role=="Server"{return Err("Manager permission required".into());}
+            let order_id=text(p,"orderId")?;let (_,mut order)=get(&tx,"orders",order_id)?;
+            if ["COMPLETED","VOIDED"].contains(&order["state"].as_str().unwrap_or(""))||money(&order,"amountPaid")?>0{return Err("Only unpaid open orders can be moved, merged or voided".into());}
+            let source_table=order["tableId"].as_str().map(str::to_string);
+            if cmd.operation=="order.void" {
+                let reason=text(p,"reason")?;
+                if order["items"].as_array().unwrap().iter().any(|i|i["stockFired"]==true){return Err("Fired items require a stock-disposition workflow before voiding".into());}
+                order["state"]=json!("VOIDED");order["voidReason"]=json!(reason);order["voidedBy"]=json!(user.staff_id);order["voidedAt"]=json!(now());
+            }else{
+                let target_id=text(p,"targetTableId")?;
+                if source_table.as_deref()==Some(target_id){return Err("Choose a different table".into());}
+                let (_,mut target)=get(&tx,"tables",target_id)?;
+                if cmd.operation=="order.transfer" {
+                    if target["currentOrderId"].as_str().is_some(){return Err("Destination already has an order; use merge".into());}
+                    order["tableId"]=json!(target_id);order["tableName"]=target["label"].clone();target["currentOrderId"]=json!(order_id);target["state"]=json!("ORDERING");
+                }else{
+                    let target_order_id=text(&target,"currentOrderId")?.to_string();let (_,mut target_order)=get(&tx,"orders",&target_order_id)?;
+                    if ["COMPLETED","VOIDED"].contains(&target_order["state"].as_str().unwrap_or(""))||money(&target_order,"amountPaid")?>0{return Err("Destination must have an unpaid open order".into());}
+                    let moved=order["items"].as_array().ok_or("Invalid source items")?.clone();target_order["items"].as_array_mut().ok_or("Invalid destination items")?.extend(moved);
+                    for key in ["subtotal","taxTotal","cateringLevyTotal","discountTotal","grandTotal"]{target_order[key]=json!((money(&target_order,key)?+money(&order,key)?) as f64/100.0);}
+                    order["state"]=json!("VOIDED");order["mergedInto"]=json!(target_order_id);order["items"]=json!([]);order["grandTotal"]=json!(0);
+                    put(&tx,"orders",&target_order_id,target_order,&mut changes)?;
+                }
+                put(&tx,"tables",target_id,target,&mut changes)?;
+            }
+            if let Some(source)=source_table {let (_,mut table)=get(&tx,"tables",&source)?;table["currentOrderId"]=Value::Null;table["state"]=json!("CLEANING");put(&tx,"tables",&source,table,&mut changes)?;}
+            put(&tx,"orders",order_id,order,&mut changes)?;
+        },
         "payment.split" => {
             let splits=p["payments"].as_array().ok_or("Payment lines are required")?;
             if splits.is_empty() || splits.len()>10 {return Err("Use between one and ten payment lines".into());}

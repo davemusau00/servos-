@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useRuntime } from '../../runtime/RuntimeProvider';
 import { useServOS } from '../../context/ServOSContext';
 import { 
   GitMerge, 
@@ -22,12 +23,14 @@ export const TableMergeModal: React.FC<TableMergeModalProps> = ({
   currentTableId
 }) => {
   const { tables, showToast } = useServOS();
+  const runtime = useRuntime();
+  const [busy, setBusy] = useState(false);
   const [sourceTableId, setSourceTableId] = useState<string>(currentTableId || (tables[0]?.id || 'tbl-1'));
   const [targetTableId, setTargetTableId] = useState<string>(tables[1]?.id || 'tbl-2');
 
   if (!isOpen) return null;
 
-  const handleMergeTables = () => {
+  const handleMergeTables = async () => {
     if (sourceTableId === targetTableId) {
       showToast('Source and target tables must be different', 'error');
       return;
@@ -38,8 +41,12 @@ export const TableMergeModal: React.FC<TableMergeModalProps> = ({
     const src = srcTable ? srcTable.label : 'Source Table';
     const tgt = tgtTable ? tgtTable.label : 'Target Table';
 
-    showToast(`Items and folio from ${src} successfully combined into ${tgt}!`, 'success');
-    onClose();
+    if (!runtime || !srcTable?.currentOrderId || !tgtTable?.currentOrderId) {
+      showToast('Merging requires two persisted open orders in the installed application.', 'error'); return;
+    }
+    setBusy(true);
+    try { await runtime.command('order.merge', { orderId: srcTable.currentOrderId, targetTableId }); showToast(`Merged ${src} into ${tgt}; saved locally.`, 'success'); onClose(); }
+    catch (e) {showToast(String(e), 'error');} finally {setBusy(false);}
   };
 
   return (
@@ -107,6 +114,7 @@ export const TableMergeModal: React.FC<TableMergeModalProps> = ({
           </button>
           <button
             onClick={handleMergeTables}
+            disabled={busy}
             className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition-colors font-mono"
           >
             <GitMerge className="w-3.5 h-3.5" />

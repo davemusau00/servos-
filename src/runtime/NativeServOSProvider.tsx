@@ -79,7 +79,9 @@ export const NativeServOSProvider = ({ children }: { children: React.ReactNode }
     removeItemFromOrder: (itemId: string) => void run('order.removeItem', { orderId: activeId, itemId }),
     sendOrderToKitchenAndBar: () => void run('order.fire', { orderId: activeId }),
     fireHeldCourse: (courseName: string) => void run('order.fire', { orderId: activeId, courseName }),
-    updateItemSeatAndCourse: unavailable, applyCompToItem: unavailable, applyOrderDiscount: unavailable, voidOrder: unavailable, transferOrderToTable: unavailable,
+    updateItemSeatAndCourse: unavailable, applyCompToItem: unavailable, applyOrderDiscount: unavailable,
+    voidOrder: (orderId: string, reason: string) => void run('order.void', { orderId, reason }),
+    transferOrderToTable: (orderId: string, targetTableId: string) => void run('order.transfer', { orderId, targetTableId }),
     bumpKdsTicket: (orderId: string) => void run('order.kds', { orderId, status: 'READY' }), recallKdsTicket: (orderId: string) => void run('order.kds', { orderId, status: 'PREPARING' }),
     processPayment: async (orderId: string, tenderType: string, amount: number, options?: Record<string, unknown>) => {
       const result = await run('payment.record', { orderId, method: tenderType, amount, ...options });

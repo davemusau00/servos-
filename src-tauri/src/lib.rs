@@ -14,13 +14,13 @@ fn runtime_status(state:State<Runtime>)->store::Result<Value>{
     Ok(json!({"enrolled":store::meta(&db,"terminal_id")?.is_some(),"staff":staff}))
 }
 #[tauri::command]
-fn runtime_login(state:State<Runtime>,staff_id:String,pin:String)->store::Result<store::Session>{store::login(&state.db.lock().map_err(|e|e.to_string())?,&staff_id,&pin)}
+fn runtime_login(state:State<Runtime>,staff_id:String,pin:String)->store::Result<store::Session>{let db=state.db.lock().map_err(|e|e.to_string())?;store::login(&db,&staff_id,&pin)}
 #[tauri::command]
 fn runtime_lock(state:State<Runtime>,token:String)->store::Result<()>{state.db.lock().map_err(|e|e.to_string())?.execute("DELETE FROM sessions WHERE token=?",[token]).map_err(|e|e.to_string())?;Ok(())}
 #[tauri::command]
-fn runtime_snapshot(state:State<Runtime>,token:String)->store::Result<Value>{store::snapshot(&state.db.lock().map_err(|e|e.to_string())?,&token)}
+fn runtime_snapshot(state:State<Runtime>,token:String)->store::Result<Value>{let db=state.db.lock().map_err(|e|e.to_string())?;store::snapshot(&db,&token)}
 #[tauri::command]
-fn runtime_command(state:State<Runtime>,token:String,command:store::BusinessCommand)->store::Result<Value>{store::execute(&mut state.db.lock().map_err(|e|e.to_string())?,&token,command)}
+fn runtime_command(state:State<Runtime>,token:String,command:store::BusinessCommand)->store::Result<Value>{let mut db=state.db.lock().map_err(|e|e.to_string())?;store::execute(&mut db,&token,command)}
 
 fn validate_url(url:&str)->store::Result<String>{
     let parsed=reqwest::Url::parse(url).map_err(|_|"Invalid Supabase URL")?;
@@ -38,12 +38,21 @@ async fn rpc(url:&str,key:&str,auth:Option<&str>,name:&str,body:Value)->store::R
 #[tauri::command]
 async fn runtime_enroll(state:State<'_,Runtime>,url:String,publishable_key:String,access_token:String,owner_name:String,pin:String,business_name:String)->store::Result<()> {
     let url=validate_url(&url)?; store::hash_pin(&pin)?;
-    {let db=state.db.lock().map_err(|e|e.to_string())?; if store::meta(&db,"terminal_id")?.is_some(){return Err("Already enrolled".into());}}
-    let result=rpc(&url,&publishable_key,Some(&access_token),"servos_enroll",json!({"business_name":business_name})).await?;
-    let terminal=store::text(&result,"terminalId")?;let credential=store::text(&result,"deviceToken")?;
+    if owner_name.trim().is_empty()||business_name.trim().is_empty(){return Err("Owner and business names are required".into());}
+    let (terminal,credential)={
+        let mut db=state.db.lock().map_err(|e|e.to_string())?;
+        if store::meta(&db,"terminal_id")?.is_some(){return Err("Already enrolled".into());}
+        let tx=db.transaction().map_err(|e|e.to_string())?;
+        let terminal=store::meta(&tx,"pending_terminal")?.unwrap_or_else(||uuid::Uuid::new_v4().to_string());
+        let credential=store::meta(&tx,"device_token")?.unwrap_or_else(||format!("{}{}",uuid::Uuid::new_v4().simple(),uuid::Uuid::new_v4().simple()));
+        store::set_meta(&tx,"pending_terminal",&terminal)?;store::set_meta(&tx,"device_token",&credential)?;
+        store::set_meta(&tx,"cloud_url",&url)?;store::set_meta(&tx,"cloud_key",&publishable_key)?;
+        tx.commit().map_err(|e|e.to_string())?;(terminal,credential)
+    };
+    let result=rpc(&url,&publishable_key,Some(&access_token),"servos_enroll",json!({"business_name":business_name,"installation_id":terminal,"device_secret":credential})).await?;
+    if store::text(&result,"terminalId")?!=terminal{return Err("Unexpected enrollment response".into());}
     let mut db=state.db.lock().map_err(|e|e.to_string())?;
-    store::initialize(&mut db,terminal,&owner_name,&pin,&business_name)?;
-    store::set_meta(&db,"cloud_url",&url)?;store::set_meta(&db,"cloud_key",&publishable_key)?;store::set_meta(&db,"device_token",credential)?;
+    store::initialize(&mut db,&terminal,&owner_name,&pin,&business_name)?;
     Ok(())
 }
 #[tauri::command]

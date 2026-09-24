@@ -2,7 +2,7 @@
 create schema if not exists servos_private;
 create extension if not exists pgcrypto with schema extensions;
 create table servos_private.managers(user_id uuid primary key references auth.users(id), role text not null check(role in ('owner','manager')));
-create table servos_private.terminal(id uuid primary key, token_hash text not null, active boolean not null default true, last_sequence bigint not null default 0, last_seen timestamptz);
+create table servos_private.terminal(id uuid primary key, owner_id uuid not null references auth.users(id), token_hash text not null, active boolean not null default true, last_sequence bigint not null default 0, last_seen timestamptz);
 create unique index one_active_terminal on servos_private.terminal(active) where active;
 create table servos_private.operations(terminal_id uuid references servos_private.terminal(id), sequence bigint not null, command_id uuid not null unique, envelope jsonb not null, primary key(terminal_id,sequence));
 create table public.business_records(collection text not null,id text not null,version bigint not null,data jsonb not null,archived boolean not null default false,primary key(collection,id));
@@ -19,16 +19,20 @@ grant select on public.business_records,public.remote_change_requests to authent
 create policy manager_read on public.business_records for select to authenticated using(public.servos_is_manager());
 create policy manager_requests_read on public.remote_change_requests for select to authenticated using(public.servos_is_manager());
 
-create function public.servos_enroll(business_name text) returns jsonb language plpgsql security definer set search_path='' as $$
-declare terminal_id uuid:=gen_random_uuid(); device_token text:=encode(extensions.gen_random_bytes(32),'hex');
+create function public.servos_enroll(business_name text,installation_id uuid,device_secret text) returns jsonb language plpgsql security definer set search_path='' as $$
 begin
  if not exists(select 1 from servos_private.managers where user_id=auth.uid() and role='owner') then raise exception 'Owner enrollment required'; end if;
  if length(trim(business_name))=0 then raise exception 'Business name required'; end if;
- insert into servos_private.terminal(id,token_hash) values(terminal_id,encode(extensions.digest(device_token,'sha256'),'hex'));
- return jsonb_build_object('terminalId',terminal_id,'deviceToken',device_token);
+ if installation_id is null or device_secret is null or length(device_secret)<64 then raise exception 'Installation credentials required'; end if;
+ if exists(select 1 from servos_private.terminal t where t.id=installation_id) then
+  if not exists(select 1 from servos_private.terminal t where t.id=installation_id and t.active and t.owner_id=auth.uid() and t.token_hash=encode(extensions.digest(device_secret,'sha256'),'hex')) then raise exception 'Installation enrollment mismatch'; end if;
+ else
+  insert into servos_private.terminal(id,owner_id,token_hash) values(installation_id,auth.uid(),encode(extensions.digest(device_secret,'sha256'),'hex'));
+ end if;
+ return jsonb_build_object('terminalId',installation_id);
 end $$;
-revoke all on function public.servos_enroll(text) from public;
-grant execute on function public.servos_enroll(text) to authenticated;
+revoke all on function public.servos_enroll(text,uuid,text) from public;
+grant execute on function public.servos_enroll(text,uuid,text) to authenticated;
 
 create function public.servos_upload(terminal_id uuid,device_token text,operations jsonb) returns jsonb language plpgsql security definer set search_path='' as $$
 declare current_sequence bigint; op jsonb; change jsonb; op_sequence bigint; prior jsonb;
