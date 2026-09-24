@@ -49,6 +49,8 @@ export interface RuntimeStatus {
   staff: Array<{ id: string; name: string; role: StaffRole }>;
   intakeProfile?: IntakeProfile | null;
 }
+export type PrinterJobState = 'SENT' | 'QUEUED' | 'DELIVERY_UNCERTAIN' | 'SENDING' | 'OS_DIALOG' | 'MANUAL';
+export interface PrinterJobResult { jobId?: string; orderId?: string; state: PrinterJobState; message?: string; createdAt?: string }
 export interface IntakeProfile {
   venueType: 'BAR' | 'PUB' | 'LOUNGE' | 'CLUB' | 'RESTAURANT_BAR' | 'OTHER';
   serviceModes: Array<'COUNTER' | 'TABS' | 'TABLES'>;

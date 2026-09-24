@@ -17,8 +17,10 @@ Status vocabulary: **prototype** = preview/local-only behavior; **source impleme
 | Refunds/voids/comps/discounts | source implemented | native reversal/disposition tests and manager-approval acceptance |
 | M-Pesa reconciliation | source implemented | statement discrepancy/reversal operational rehearsal |
 | Till/close day | source implemented | blind count, variance approval and complete end-of-day rehearsal |
+| XP-80T receipts | source implemented | administrator queue helper, LAN/USB paper output, two-copy/cut behavior, and retry/restart acceptance |
 | Reports | source implemented close-day reports | report parity/export acceptance |
 | Help Center | locally generatable from Markdown | packaged offline search/context help acceptance |
+| Fresh Windows terminal setup | source implemented | PowerShell bootstrap, Bash wrapper, USB queue helper, fresh x64 Windows prerequisite install, NSIS/MSI package and installed-app rehearsal |
 | Remote management/sync | existing source implemented | live policy/replay/conflict/recovery acceptance |
 | Backup | local consistent SQLite copy source implemented | encryption/rotation/upload/restore verification |
 | Restaurant/procurement/production/CRM/events/hotel/HR/guest order | browser prototypes or future scope | begins only after bar deployment gate |

@@ -1,4 +1,5 @@
 mod store;
+mod printer;
 #[cfg(test)]
 mod tests;
 use rusqlite::{Connection, OptionalExtension};
@@ -362,6 +363,129 @@ fn runtime_backup(state: State<Runtime>, token: String) -> store::Result<String>
     store::set_meta(&db,"last_backup",&chrono::Utc::now().to_rfc3339())?;
     Ok(path.to_string_lossy().into())
 }
+
+fn printer_policy(db: &Connection) -> Value {
+    store::get(db, "tillPolicy", "main")
+        .map(|(_, policy)| policy)
+        .unwrap_or_else(|_| json!({}))
+}
+
+fn require_printer_permission(db: &Connection, token: &str, permission: &str) -> store::Result<store::Session> {
+    let actor = store::actor(db, token, true)?;
+    if !store::permissions(&actor.role).contains(&permission) {
+        return Err(format!("Permission required: {permission}"));
+    }
+    Ok(actor)
+}
+
+fn execute_printer_job(state: &Runtime, job_id: &str) -> store::Result<Value> {
+    let (policy, payload, order_id) = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        let row: (String, String, String) = db.query_row(
+            "SELECT profile,payload,order_id FROM receipt_print_jobs WHERE id=?",
+            [job_id],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+        ).map_err(|e| e.to_string())?;
+        db.execute("UPDATE receipt_print_jobs SET state='SENDING',message='Sending to printer',updated_at=? WHERE id=?", rusqlite::params![chrono::Utc::now().to_rfc3339(), job_id]).map_err(|e| e.to_string())?;
+        (
+            serde_json::from_str::<Value>(&row.0).map_err(|e| e.to_string())?,
+            serde_json::from_str::<Value>(&row.1).map_err(|e| e.to_string())?,
+            row.2,
+        )
+    };
+
+    let result = match printer::PrinterProfile::from_policy(&policy) {
+        Ok(profile) => {
+            let customer = payload["customerLines"].as_array().map(|lines| lines.iter().filter_map(Value::as_str).map(str::to_string).collect::<Vec<_>>()).unwrap_or_default();
+            let business = payload["businessLines"].as_array().map(|lines| lines.iter().filter_map(Value::as_str).map(str::to_string).collect::<Vec<_>>()).unwrap_or_default();
+            let bytes = printer::encode_receipt(&customer, &business, &profile);
+            match printer::send(&profile, &bytes) {
+                Ok(message) => ("SENT", message.to_string()),
+                Err(printer::SendFailure::Queued(message)) => ("QUEUED", message),
+                Err(printer::SendFailure::Uncertain(message)) => ("DELIVERY_UNCERTAIN", message),
+            }
+        }
+        Err(message) => ("QUEUED", message),
+    };
+
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    db.execute("UPDATE receipt_print_jobs SET state=?,message=?,updated_at=? WHERE id=?", rusqlite::params![result.0,result.1,chrono::Utc::now().to_rfc3339(),job_id]).map_err(|e| e.to_string())?;
+    Ok(json!({"jobId":job_id,"orderId":order_id,"state":result.0,"message":result.1}))
+}
+
+fn queue_printer_job(state: &Runtime, job_id: String, order_id: String, policy: Value, customer_lines: Vec<String>, business_lines: Vec<String>) -> store::Result<Value> {
+    let payload = json!({"customerLines":customer_lines,"businessLines":business_lines});
+    {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        let existing: Option<(String,String)> = db.query_row("SELECT state,message FROM receipt_print_jobs WHERE id=?", [&job_id], |r| Ok((r.get(0)?,r.get(1)?))).optional().map_err(|e| e.to_string())?;
+        if let Some((state,message)) = existing {
+            return Ok(json!({"jobId":job_id,"orderId":order_id,"state":state,"message":message}));
+        }
+        db.execute("INSERT INTO receipt_print_jobs(id,order_id,profile,payload,state,message,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)", rusqlite::params![job_id,order_id,policy.to_string(),payload.to_string(),"QUEUED","Waiting to send",chrono::Utc::now().to_rfc3339(),chrono::Utc::now().to_rfc3339()]).map_err(|e| e.to_string())?;
+    }
+    execute_printer_job(state, &job_id)
+}
+
+#[tauri::command]
+fn runtime_print_receipt(state: State<Runtime>, token: String, job_id: String, order_id: String, customer_lines: Vec<String>, business_lines: Vec<String>) -> store::Result<Value> {
+    let policy = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        require_printer_permission(&db, &token, "pos.sell")?;
+        printer_policy(&db)
+    };
+    let profile = printer::PrinterProfile::from_policy(&policy)?;
+    match profile.mode.as_str() {
+        "OS_PRINT" => return Ok(json!({"state":"OS_DIALOG","mode":profile.mode})),
+        "MANUAL" => return Ok(json!({"state":"MANUAL","mode":profile.mode})),
+        _ => {}
+    }
+    queue_printer_job(&state, job_id, order_id, policy, customer_lines, business_lines)
+}
+
+#[tauri::command]
+fn runtime_printer_test(state: State<Runtime>, token: String) -> store::Result<Value> {
+    let policy = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        require_printer_permission(&db, &token, "business.configure")?;
+        printer_policy(&db)
+    };
+    let profile = printer::PrinterProfile::from_policy(&policy)?;
+    if !["XP80T_LAN_ESC_POS", "XP80T_USB_ESC_POS"].contains(&profile.mode.as_str()) {
+        return Err("Select XP-80T LAN or Windows USB queue mode before sending a test slip".into());
+    }
+    let stamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
+    queue_printer_job(&state, uuid::Uuid::new_v4().to_string(), "PRINTER_TEST".into(), policy, vec!["SERVOS XP-80T PRINTER TEST".into(),format!("Sent at {stamp}"),"Paper output must be checked at the printer.".into()], vec![])
+}
+
+#[tauri::command]
+fn runtime_printer_retry(state: State<Runtime>, token: String, job_id: String, confirm_duplicate: bool) -> store::Result<Value> {
+    {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        require_printer_permission(&db, &token, "pos.sell")?;
+        let state: String = db.query_row("SELECT state FROM receipt_print_jobs WHERE id=?", [&job_id], |r| r.get(0)).map_err(|e| e.to_string())?;
+        if state == "DELIVERY_UNCERTAIN" && !confirm_duplicate {
+            return Err("The first send may already have printed. Confirm possible duplicate before retrying".into());
+        }
+        if state != "QUEUED" && state != "DELIVERY_UNCERTAIN" {
+            return Err("This print job is already being sent or has been sent".into());
+        }
+        let claimed = db.execute("UPDATE receipt_print_jobs SET state='SENDING',updated_at=? WHERE id=? AND state=?", rusqlite::params![chrono::Utc::now().to_rfc3339(), job_id, state]).map_err(|e| e.to_string())?;
+        if claimed != 1 { return Err("Another print attempt already claimed this job".into()); }
+    }
+    execute_printer_job(&state, &job_id)
+}
+
+#[tauri::command]
+fn runtime_printer_jobs(state: State<Runtime>, token: String) -> store::Result<Value> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    require_printer_permission(&db, &token, "pos.sell")?;
+    let mut stmt = db.prepare("SELECT id,order_id,state,message,created_at FROM receipt_print_jobs WHERE state!='SENT' ORDER BY created_at DESC LIMIT 50").map_err(|e| e.to_string())?;
+    let rows = stmt.query_map([], |r| Ok(json!({"jobId":r.get::<_,String>(0)?,"orderId":r.get::<_,String>(1)?,"state":r.get::<_,String>(2)?,"message":r.get::<_,String>(3)?,"createdAt":r.get::<_,String>(4)?}))).map_err(|e| e.to_string())?;
+    let mut jobs=Vec::new();
+    for row in rows { jobs.push(row.map_err(|e| e.to_string())?); }
+    Ok(json!(jobs))
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -372,6 +496,7 @@ pub fn run() {
             let db = store::open(&path).map_err(std::io::Error::other)?;
             // Sessions never survive process restart.
             db.execute("DELETE FROM sessions", [])?;
+            db.execute_batch("CREATE TABLE IF NOT EXISTS receipt_print_jobs (id TEXT PRIMARY KEY,order_id TEXT NOT NULL,profile TEXT NOT NULL,payload TEXT NOT NULL,state TEXT NOT NULL,message TEXT NOT NULL,created_at TEXT NOT NULL,updated_at TEXT NOT NULL); UPDATE receipt_print_jobs SET state='DELIVERY_UNCERTAIN',message='App restarted while the printer send was in progress. Check paper before retrying.' WHERE state='SENDING';")?;
             app.manage(Runtime {
                 db: Mutex::new(db),
                 path,
@@ -391,7 +516,11 @@ pub fn run() {
             runtime_manager_approve,
             runtime_enroll,
             runtime_sync,
-            runtime_backup
+            runtime_backup,
+            runtime_print_receipt,
+            runtime_printer_test,
+            runtime_printer_retry,
+            runtime_printer_jobs
         ])
         .run(tauri::generate_context!())
         .expect("Unable to start ServOS");

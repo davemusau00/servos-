@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import type { BusinessCommand, CommandResult, IntakeProfile, ManagerApproval, Permission, RuntimeSession, RuntimeSnapshot, RuntimeStatus } from '../types/runtime';
+import type { BusinessCommand, CommandResult, IntakeProfile, ManagerApproval, Permission, PrinterJobResult, RuntimeSession, RuntimeSnapshot, RuntimeStatus } from '../types/runtime';
 
 export const isNative = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
 
@@ -22,6 +22,10 @@ interface RuntimeContextValue {
   approve: (approverId: string, pin: string, permission: Permission, target?: string) => Promise<ManagerApproval>;
   sync: () => Promise<void>;
   backup: () => Promise<string>;
+  printReceipt: (input: { orderId: string; customerLines: string[]; businessLines: string[] }) => Promise<PrinterJobResult>;
+  testPrinter: () => Promise<PrinterJobResult>;
+  retryPrinterJob: (jobId: string, confirmDuplicate?: boolean) => Promise<PrinterJobResult>;
+  printerJobs: () => Promise<PrinterJobResult[]>;
   clearError: () => void;
 }
 
@@ -120,6 +124,22 @@ export const RuntimeProvider = ({ children }: { children: React.ReactNode }) => 
     try { const path = await invoke<string>('runtime_backup', { token: session.token }); await refresh(); return path; }
     catch (e) { report(e); throw e; }
   };
+  const printReceipt = async (input: { orderId: string; customerLines: string[]; businessLines: string[] }) => {
+    if (!session) throw new Error('Unlock the terminal first');
+    return invoke<PrinterJobResult>('runtime_print_receipt', { token: session.token, jobId: crypto.randomUUID(), ...input });
+  };
+  const testPrinter = async () => {
+    if (!session) throw new Error('Unlock the terminal first');
+    return invoke<PrinterJobResult>('runtime_printer_test', { token: session.token });
+  };
+  const retryPrinterJob = async (jobId: string, confirmDuplicate = false) => {
+    if (!session) throw new Error('Unlock the terminal first');
+    return invoke<PrinterJobResult>('runtime_printer_retry', { token: session.token, jobId, confirmDuplicate });
+  };
+  const printerJobs = async () => {
+    if (!session) return [];
+    return invoke<PrinterJobResult[]>('runtime_printer_jobs', { token: session.token });
+  };
 
   useEffect(() => {
     if (!session) return;
@@ -134,5 +154,5 @@ export const RuntimeProvider = ({ children }: { children: React.ReactNode }) => 
     return () => { clearInterval(timer); window.removeEventListener('pointerdown', active); window.removeEventListener('keydown', active); window.removeEventListener('online', resume); document.removeEventListener('visibilitychange', resume); };
   }, [session, sync, lock]);
 
-  return <RuntimeContext.Provider value={{ status, session, snapshot, error, syncing, busy, reloadStatus, saveIntake, completeIntake, enroll, login, lock, refresh, command, approve, sync, backup, clearError: () => setError('') }}>{children}</RuntimeContext.Provider>;
+  return <RuntimeContext.Provider value={{ status, session, snapshot, error, syncing, busy, reloadStatus, saveIntake, completeIntake, enroll, login, lock, refresh, command, approve, sync, backup, printReceipt, testPrinter, retryPrinterJob, printerJobs, clearError: () => setError('') }}>{children}</RuntimeContext.Provider>;
 };

@@ -12,7 +12,13 @@ Use Node.js and npm. Run `npm ci`, `npm run lint`, `npm run build`, and `npm tes
 
 Native development additionally requires Rust and the platform's Tauri prerequisites. Use `npm run native:dev`, `npm run test:native`, and `npm run native:build`. Android additionally requires its SDK/NDK and `npm run tauri -- android init` before platform testing.
 
-Copy `.env.example` to `.env.local` and configure the dedicated business Supabase project. Never place privileged server keys in frontend environment variables. Initial terminal enrollment requires an owner account; enrolled staff subsequently use local PINs offline.
+Copy .env.example to .env.local and configure the dedicated business Supabase project. Never place privileged server keys in frontend environment variables. Initial terminal enrollment requires an owner account; enrolled staff subsequently use local PINs offline.
+
+## Windows POS terminal
+
+Follow the [Windows deployment and recovery runbook](docs/DEPLOYMENT_RUNBOOK.md#build-a-windows-installer). Build the NSIS installer on a Windows build computer with `bash scripts/deploy-windows-pos.sh --package`. The cashier terminal does not need Bash, Node, Rust or C++ Build Tools; copy the setup executable, its SHA-256 sidecar and PowerShell install helper to it.
+
+Install the XP-80T driver and configure the USB queue separately. The setup helpers do not create business records, enroll the terminal, configure a payment gateway, or claim successful printer output. Complete the real Intake → enrollment → Setup → Go Live flow and XP-80T paper acceptance before live sales. Standard Windows 10 support ended in October 2025; confirm the terminal's ESU/LTSC status before using it for business.
 
 ## Documentation
 

@@ -8,23 +8,23 @@ Keywords: XP-80T, Xprinter, USB printer, receipt printing, customer copy, busine
 
 ## Overview
 
-ServOS prints through the operating system printer queue. The XP-80T can use the installed Windows driver over USB, so operators can print receipts without attaching directly to a raw USB device interface.
+ServOS supports four receipt routes: direct XP-80T LAN ESC/POS, direct ESC/POS through a Windows USB printer queue, the operating system print dialog, and manual copy. Direct profiles send a two-copy receipt without opening a print dialog. The LAN profile uses TCP port 9100 by default.
 
 ## Procedure
 
 ## Before connecting
 
-The XP-80T is an 80 mm thermal receipt printer with USB and USB plus Ethernet variants. Use the 24 V, 1.25 A adapter supplied for the printer. Load an 80 mm thermal paper roll with the paper feeding from the correct side. The printer's USB connection carries print data; the separate cash drawer socket is not a USB port.
+The XP-80T is an 80 mm thermal receipt printer. Use the supplied 24 V, 1.25 A adapter and load an 80 mm thermal paper roll with the paper feeding from the correct side. Set receipt width to 48 columns unless a printed test shows that the installed font needs another width.
 
 ## Install and test the Windows queue
 
-1. Download the XP-80T Windows driver from the [Xprinter driver page](https://www.xprinter.net/Download_Details/3.html).
-2. Install the driver, connect the printer to power, and connect the USB data cable to the Windows 10 POS computer.
-3. In Windows Settings, open Bluetooth & devices, then Printers & scanners. Confirm the Xprinter queue appears.
-4. Print a Windows test page before using ServOS. If Windows does not list the printer, check power, USB cable, another USB port, and the manufacturer's driver installer.
-5. In ServOS Business Setup, set Receipt printing to **Windows / OS printer queue (USB or LAN)**. Complete setup and unlock an operator session.
+1. Install the XP-80T-compatible 80-series Windows driver from the [official Xprinter driver page](https://www.xprinter.net/companyfile/11/).
+2. Connect printer power and USB data, then add a local Windows printer queue. Print a Windows test page. The driver must be registered and a queue must exist; detecting a USB device alone is not sufficient.
+3. For direct USB printing, open ServOS Business Setup → Till policy, choose **XP-80T direct USB (Windows queue)**, and enter the exact local queue name.
+4. For direct LAN printing, reserve or set the printer's local network address using its setup utility, connect its Ethernet cable, select **XP-80T direct LAN (ESC/POS)**, and enter the printer's private-network IP. Keep port **9100** unless the printer was configured differently.
+5. Set receipt width (default 48 columns) and whether to cut after each copy. Save the profile and choose **Save & send test slip**.
 
-ServOS uses the Windows print dialog and installed queue. At print time, choose the Xprinter XP-80T queue. The same route can use the XP-80T network queue when the installed Windows driver has been configured for its Ethernet address. The printer model supports ESC/POS commands, but ServOS currently sends formatted pages through the OS driver; it does not open the USB device as a raw port.
+For **Windows / OS print dialog**, ServOS opens the operating system print window and the operator selects the installed queue. Direct USB uses the local Windows queue to pass ESC/POS data in RAW mode. Direct LAN connects to the configured address and sends ESC/POS bytes. The LAN address must be local to the POS network.
 
 ## Print the sale receipts
 
@@ -33,15 +33,15 @@ After a native POS payment is recorded, ServOS opens the receipt dialog. Choose 
 - **Customer copy:** business and outlet, receipt number and time, ordered items, total, tender and reference, and any cash change.
 - **Business record copy:** the same sale details plus the transaction ID and operator name for filing and reconciliation.
 
-Both copies are pages in one Windows print job. Use 80 mm paper in the driver settings. A test print on the installed XP-80T is required to confirm that Windows applies the correct roll width and cut behavior. Receipt print success is not eTIMS confirmation; fiscal submission is not connected.
+Direct profiles print the customer copy and business record copy as separate receipts, with an optional cut after each copy. The OS print dialog may paginate according to driver settings. A `SENT` status means the printer socket or Windows spooler accepted the bytes; it cannot confirm that paper physically came out. Inspect the test slip and first sale before relying on the printer. Receipt printing is not eTIMS confirmation; fiscal submission is not connected.
 
 ## If nothing prints
 
-1. Use the printer's self-test: turn the printer off, hold **FEED**, turn it on, and release FEED after the self-test begins.
-2. If the self-test prints, the printer mechanism and paper are working. Return to Windows and print its test page.
-3. Reopen the ServOS print dialog and select the Xprinter queue rather than a PDF queue. Check the Windows print queue for paused or failed jobs.
-4. If Windows test printing works but a ServOS receipt is clipped, set paper width to 80 mm and disable any letter-size scaling in printer preferences.
-5. Keep the customer and business copies together if a paper jam or printer warning interrupts the job. Reprint both copies from the receipt dialog; do not treat a browser preview or an unconfirmed print dialog as proof that paper came out.
+1. Use the printer's self-test: turn it off, hold **FEED**, turn it on, and release FEED when the test starts.
+2. If self-test works but the ServOS test slip does not, verify the Windows queue name or LAN IP, then check that the selected connection matches the cable in use.
+3. For USB, check Windows Printers & scanners and the queue's paused/error state. For LAN, check that the POS and printer share the local network and that TCP port 9100 is reachable.
+4. If a send is **QUEUED**, fix the connection and select **Retry**. If it is **DELIVERY_UNCERTAIN**, check the paper first; choose **Reprint anyway (may duplicate)** only when the receipt did not print.
+5. If text is clipped, adjust receipt width and cut setting in Till policy, save, and send another test slip. A sent job is not proof of paper output.
 
 ## Related workflows
 

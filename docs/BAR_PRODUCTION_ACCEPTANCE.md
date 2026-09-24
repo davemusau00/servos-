@@ -29,7 +29,7 @@ Record commit, OS/device, operator, date and evidence for every run.
 14. Perform a physical stock count.
 15. Record paid-in/paid-out cash movement.
 16. Confirm till close refuses open tabs.
-17. Enter blind drawer count; variance requires manager approval and reason.
+17. Enter a blind count of cash on hand; variance requires manager approval and reason. No physical cash drawer is part of this installation.
 18. Generate close-day report and verify sales/tax/tenders/adjustments/COGS/waste/margin/staff/system totals.
 19. Create local backup.
 
