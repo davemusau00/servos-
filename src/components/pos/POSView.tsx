@@ -201,7 +201,7 @@ export const POSView: React.FC = () => {
     const res = await processPayment(activeOrder.id, tenderType, activeOrder.grandTotal - activeOrder.amountPaid, {
       phoneNumber: mpesaPhone,
       mpesa: mpesaReceipt,
-      cashTendered: cashTendered || activeOrder.grandTotal,
+      cashTendered,
       guestStayId: selectedGuestStayId,
       cardAuthCode
     });
@@ -821,7 +821,8 @@ export const POSView: React.FC = () => {
                 onClick={() => {
                   setIsCheckoutOpen(true);
                   setPaymentResult(null);
-                  setCashTendered(activeOrder.grandTotal);
+                  setCashTendered(activeOrder.grandTotal - activeOrder.amountPaid);
+                  setMpesaReceipt({ code: '', account: '', receivedAmount: activeOrder.grandTotal - activeOrder.amountPaid, receivedAt: new Date().toISOString(), confirmed: false });
                 }}
                 disabled={activeOrder.items.length === 0}
                 className="py-2 px-1 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-slate-950 text-xs font-bold rounded flex flex-col items-center justify-center gap-0.5 shadow-sm"

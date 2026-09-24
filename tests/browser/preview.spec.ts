@@ -10,6 +10,7 @@ test('browser preview is explicit and all retained module routes render', async 
   for (const route of ['pos', 'catalog', 'kds', 'inventory', 'accounting', 'hotel', 'crm', 'events', 'host', 'procurement', 'batch', 'staff', 'reports', 'tender', 'control', 'settings']) {
     await page.evaluate(route => { window.location.hash = `/${route}`; }, route);
     await page.waitForTimeout(100);
+    await expect(page).toHaveURL(new RegExp(`#/${route}$`));
     await expect(page.locator('main')).not.toBeEmpty();
   }
   expect(errors).toEqual([]);
