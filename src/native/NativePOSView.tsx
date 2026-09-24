@@ -5,6 +5,7 @@ import type { Permission } from '../types/runtime';
 import { recordsOf, money, fieldClass, buttonClass, primaryButtonClass } from './records';
 import { ManagerApprovalDialog } from './ManagerApprovalDialog';
 import { ActionDialog } from './ActionDialog';
+import { NativeReceiptDialog } from './NativeReceiptDialog';
 
 export function NativePOSView(){
   const runtime=useRuntime(); const snapshot=runtime.snapshot!; const perms=snapshot.actor.permissions;
@@ -21,6 +22,23 @@ export function NativePOSView(){
   const addProduct=(product:any)=>{if((product.portions?.length||0)>0||(product.modifiers?.length||0)>0)setModal({kind:'CONFIG',data:{product,quantity:1,portionId:product.portions?.[0]?.id||'',modifierIds:[]}});else if(active)void run('order.addItem',{orderId:active.id,productId:product.id,quantity:1});};
   const updateItem=(item:any,quantity:number)=>quantity<=0?void run('order.removeItem',{orderId:active.id,itemId:item.id}):void run('order.updateItem',{orderId:active.id,itemId:item.id,quantity});
   const balance=active?Math.max(0,Number(active.grandTotal||0)-Number(active.amountPaid||0)):0;
+  const finishPayment=async(p:any)=>{
+    if(!active)return;
+    const order={...active,amountPaid:Number(active.amountPaid||0)+Number(p.amount||0),completedAt:new Date().toISOString()};
+    try{
+      await runtime.command('payment.record',{orderId:active.id,...p});
+      setModal({kind:'RECEIPT',data:{order,payment:{tenderType:p.method,amount:p.amount,receiptRef:p.mpesa?.code||p.cardAuthCode,cashTendered:p.cashTendered,changeDue:p.method==='CASH'?Math.max(0,Number(p.cashTendered||0)-Number(p.amount||0)):0}}});
+    }catch(e){setNotice(String(e))}
+  };
+  const finishSplit=async(payments:any[])=>{
+    if(!active)return;
+    const amount=payments.reduce((sum,p)=>sum+Number(p.amount||0),0);
+    const order={...active,amountPaid:Number(active.amountPaid||0)+amount,completedAt:new Date().toISOString()};
+    try{
+      await runtime.command('payment.split',{orderId:active.id,payments});
+      setModal({kind:'RECEIPT',data:{order,payment:{tenderType:payments.map(p=>p.method).join(' + '),amount,receiptRef:payments.map(p=>p.mpesa?.code||p.cardAuthCode).filter(Boolean).join(', ')||undefined,cashTendered:payments.filter(p=>p.method==='CASH').reduce((sum,p)=>sum+Number(p.cashTendered||0),0)||undefined}}});
+    }catch(e){setNotice(String(e))}
+  };
 
   return <div className="grid h-full min-h-0 grid-cols-1 xl:grid-cols-[1fr_430px] bg-slate-950 text-white">
     <section className="min-h-0 overflow-auto p-4">
@@ -38,8 +56,9 @@ export function NativePOSView(){
       {notice&&<p className="mt-4 whitespace-pre-wrap rounded-lg bg-slate-950 p-2 text-xs text-slate-300">{notice}</p>}
     </aside>
     {modal?.kind==='CONFIG'&&active&&<ConfigDialog value={modal.data} onClose={()=>setModal(null)} onSave={async v=>{await run('order.addItem',{orderId:active.id,productId:v.product.id,quantity:v.quantity,portionId:v.portionId||undefined,modifierIds:v.modifierIds});setModal(null);}}/>}
-    {modal?.kind==='PAY'&&active&&<PaymentDialog balance={balance} snapshot={snapshot} onClose={()=>setModal(null)} onPay={async p=>{await run('payment.record',{orderId:active.id,...p});setModal(null);}}/>}
-    {modal?.kind==='SPLIT'&&active&&<SplitDialog balance={balance} snapshot={snapshot} onClose={()=>setModal(null)} onPay={async payments=>{await run('payment.split',{orderId:active.id,payments});setModal(null);}}/>}
+    {modal?.kind==='PAY'&&active&&<PaymentDialog balance={balance} snapshot={snapshot} onClose={()=>setModal(null)} onPay={finishPayment}/>}
+    {modal?.kind==='SPLIT'&&active&&<SplitDialog balance={balance} snapshot={snapshot} onClose={()=>setModal(null)} onPay={finishSplit}/>}
+    {modal?.kind==='RECEIPT'&&<NativeReceiptDialog order={modal.data.order} payment={modal.data.payment} businessName={recordsOf(snapshot,'organization')[0]?.name||'Business'} outletName={outlets.find(o=>o.id===modal.data.order.outletId)?.name||'Outlet'} cashierName={snapshot.actor.name} onClose={()=>setModal(null)}/>}
     {modal?.kind==='DISCOUNT'&&active&&<ReasonDialog title="Discount order" extra="percent" onClose={()=>setModal(null)} onSubmit={async v=>protectedRun('order.discount',active.id,async token=>{await run('order.discount',{orderId:active.id,percent:v.percent,reason:v.reason,approvalToken:token});setModal(null);})}/>} 
     {modal?.kind==='COMP'&&active&&<ReasonDialog title={`Comp ${modal.data.productName}`} onClose={()=>setModal(null)} onSubmit={async v=>protectedRun('order.comp',modal.data.id,async token=>{await run('order.compItem',{orderId:active.id,itemId:modal.data.id,reason:v.reason,approvalToken:token});setModal(null);})}/>} 
     {modal?.kind==='VOID'&&active&&<VoidDialog onClose={()=>setModal(null)} onSubmit={async v=>protectedRun('order.void',active.id,async token=>{await run('order.void',{orderId:active.id,...v,approvalToken:token});setModal(null);})}/>} 

@@ -1,6 +1,6 @@
 import { ManualMpesaFields } from './ManualMpesaFields';
 import type { ManualMpesaInput } from '../../types/runtime';
-import { useRuntime } from '../../runtime/RuntimeProvider';
+import { isNative, useRuntime } from '../../runtime/RuntimeProvider';
 import React, { useState } from 'react';
 import { useServOS } from '../../context/ServOSContext';
 import { ProductSellable, RestaurantTable, OrderItem, Order } from '../../types/servos';
@@ -316,7 +316,7 @@ export const POSView: React.FC = () => {
                     if (tbl.currentOrderId) {
                       selectOrder(tbl.currentOrderId);
                     } else if (tbl.state === 'CLEANING') {
-                      if (!runtime) { setTableError('Marking a table clean requires the installed application.'); return; }
+                      if (!isNative) { setTableError('Marking a table clean requires the installed application.'); return; }
                       const record = runtime.snapshot?.records.find(r => r.collection === 'tables' && r.id === tbl.id);
                       setPendingTable(tbl.id);
                       try { await runtime.command('table.ready', { tableId: tbl.id }, record?.version); }

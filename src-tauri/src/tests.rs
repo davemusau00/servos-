@@ -128,6 +128,26 @@ fn receipt_allocation_prevents_double_spending() {
     assert_eq!(list(&db, "payments").unwrap().len(), 1);
     assert_eq!(list(&db, "mpesaReceipts").unwrap().len(), 1);
 }
+
+#[test]
+fn mpesa_statement_variance_requires_audited_resolution() {
+    let (_, mut db, s) = setup();
+    run(&mut db, &s, "till.open", json!({"floatAmount":0}));
+    let order_id = order(&mut db, &s);
+    let receipt = json!({"code":"VAR123XYZ","account":"123456","receivedAmount":100,"receivedAt":"2026-09-24T08:00:00+03:00","confirmed":true});
+    run(&mut db, &s, "payment.record", json!({"orderId":order_id,"method":"MPESA","amount":100,"mpesa":receipt}));
+    let receipt_id = list(&db, "mpesaReceipts").unwrap()[0]["id"].as_str().unwrap().to_string();
+    let mismatch = execute(&mut db, &s.token, cmd("mpesa.reconcile", json!({"receiptId":receipt_id,"statementAmount":90,"statementReference":"STMT-1","notes":"Difference"}))).unwrap_err();
+    assert!(mismatch.to_string().contains("record and resolve the discrepancy"));
+    run(&mut db, &s, "mpesa.discrepancy", json!({"receiptId":receipt_id,"statementAmount":90,"statementReference":"STMT-1","reason":"Account statement shows a partial amount"}));
+    let discrepancy_id = list(&db, "mpesaDiscrepancies").unwrap()[0]["id"].as_str().unwrap().to_string();
+    run(&mut db, &s, "mpesa.discrepancy.resolve", json!({"discrepancyId":discrepancy_id,"outcome":"ACCEPTED_VARIANCE","resolution":"Verified this statement line is a partial settlement"}));
+    let wrong_amount = execute(&mut db, &s.token, cmd("mpesa.reconcile", json!({"receiptId":receipt_id,"statementAmount":80,"statementReference":"STMT-1","notes":"Wrong line"}))).unwrap_err();
+    assert!(wrong_amount.to_string().contains("record and resolve the discrepancy"));
+    run(&mut db, &s, "mpesa.reconcile", json!({"receiptId":receipt_id,"statementAmount":90,"statementReference":"STMT-1","notes":"Resolved accepted variance"}));
+    assert_eq!(get(&db, "mpesaReceipts", &receipt_id).unwrap().1["reconciliationStatus"], "RECONCILED_WITH_DISCREPANCY");
+    assert_eq!(get(&db, "mpesaDiscrepancies", &discrepancy_id).unwrap().1["status"], "RESOLVED");
+}
 #[test]
 fn version_conflicts_cannot_overwrite_records() {
     let (_, mut db, s) = setup();

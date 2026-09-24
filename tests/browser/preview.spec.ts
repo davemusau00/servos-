@@ -7,11 +7,11 @@ test('browser preview is explicit and all retained module routes render', async 
   await expect(page.getByRole('button', { name: 'Open UI preview' })).toBeVisible();
   await page.getByRole('button', { name: 'Open UI preview' }).click();
   await expect(page.getByText(/UI preview.*sample data only/)).toBeVisible();
-  for (const route of ['pos', 'catalog', 'kds', 'inventory', 'accounting', 'hotel', 'crm', 'events', 'host', 'procurement', 'batch', 'staff', 'reports', 'tender', 'control', 'settings']) {
+  for (const route of ['pos', 'catalog', 'kds', 'inventory', 'accounting', 'hotel', 'crm', 'events', 'host', 'procurement', 'batch', 'staff', 'reports', 'tender', 'control', 'settings', 'help']) {
     await page.evaluate(route => { window.location.hash = `/${route}`; }, route);
     await page.waitForTimeout(100);
     await expect(page).toHaveURL(new RegExp(`#/${route}$`));
-    await expect(page.locator('main')).not.toBeEmpty();
+    await expect(page.locator('main').first()).not.toBeEmpty();
   }
   expect(errors).toEqual([]);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
@@ -32,6 +32,39 @@ test('native shell mounts its fresh-install intake without runtime provider erro
   await expect(page.getByRole('heading', { name: 'What kind of business are we configuring?' })).toBeVisible();
   expect(errors).toEqual([]);
 });
+
+test('native checkout provides customer and business receipt copies', async ({ page }) => {
+  await page.addInitScript(() => {
+    const order = { id: 'order-1', outletId: 'outlet-1', state: 'OPEN', orderNumber: 'SO-1001', subtotal: 100, taxTotal: 0, cateringLevyTotal: 0, grandTotal: 100, amountPaid: 0, items: [{ id: 'item-1', productName: 'Test Lager', quantity: 1, lineTotal: 100, courseStatus: 'HELD' }] };
+    const record = (collection: string, id: string, data: Record<string, unknown>) => ({ collection, id, version: 1, archived: false, data });
+    const snapshot = {
+      terminalId: 'terminal-test', installationStage: 'LIVE', pendingCount: 0, lastSync: null, lastBackup: null,
+      actor: { id: 'staff-1', name: 'Test Owner', role: 'Admin', permissions: ['pos.sell','kds.view','inventory.view','catalog.view','mpesa.reconcile','payment.record','floorplan.view','till.close','reports.view','backup.create','help.view','sync.manual'] },
+      records: [record('organization','business',{name:'Test Bar'}),record('outlets','outlet-1',{name:'Main Bar',propertyId:'property-1',active:true}),record('orders','order-1',order),record('paymentConfig','main',{methods:['CASH']})],
+    };
+    (window as Window & { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__ = {
+      invoke: async (command: string) => {
+        if (command === 'runtime_status') return { enrolled: true, installationStage: 'LIVE', staff: [{id:'staff-1',name:'Test Owner',role:'Admin'}] };
+        if (command === 'runtime_login') return {token:'test-session',staffId:'staff-1',name:'Test Owner',role:'Admin'};
+        if (command === 'runtime_snapshot') return snapshot;
+        if (command === 'runtime_command') return {commandId:'cmd-test',recordIds:[],auditReference:'audit-test',sequence:1};
+        throw new Error(`Unexpected native command: ${command}`);
+      },
+    };
+  });
+  await page.goto('/');
+  await page.getByLabel('PIN').fill('123456');
+  await page.getByRole('button', {name:'Unlock'}).click();
+  await page.getByRole('button', {name:'Pay'}).click();
+  await page.getByLabel('Cash tendered').fill('100');
+  await page.getByRole('button', {name:'Record payment'}).click();
+  const receipt = page.getByRole('dialog', {name:'Print receipts'});
+  await expect(receipt).toBeVisible();
+  await expect(receipt.locator('.native-receipt-copy')).toHaveCount(2);
+  await expect(receipt.locator('.native-receipt-copy').nth(0).getByText('CUSTOMER COPY', {exact:true})).toBeVisible();
+  await expect(receipt.locator('.native-receipt-copy').nth(1).getByText('BUSINESS RECORD COPY - RETAIN FOR RECONCILIATION', {exact:true})).toBeVisible();
+});
+
 test('floorplan drafts are editable and preview cannot claim a saved layout', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Open UI preview' }).click();

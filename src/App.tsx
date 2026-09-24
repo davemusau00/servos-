@@ -10,6 +10,7 @@ import { HostStandView } from './components/host/HostStandView';
 import { RuntimeProvider, isNative } from './runtime/RuntimeProvider';
 import { NativeRoot } from './native/NativeRoot';
 import { RemoteManagerApp } from './runtime/RemoteManagerApp';
+import { HelpCenterView } from './native/HelpCenterView';
 import { CatalogStudioView } from './components/catalog/CatalogStudioView';
 import { CRM360View } from './components/crm/CRM360View';
 import { EventsNightlifeView } from './components/events/EventsNightlifeView';
@@ -147,6 +148,8 @@ const MainApp: React.FC = () => {
         return <StaffCashView />;
       case 'settings':
         return <SettingsCenterView />;
+      case 'help':
+        return <HelpCenterView />;
       default:
         return <POSView />;
     }

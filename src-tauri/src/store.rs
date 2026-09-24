@@ -129,7 +129,7 @@ fn live_required(tx: &Transaction, operation: &str) -> Result<()> {
     const TRADING: &[&str] = &[
         "till.open","till.cashMovement","till.close","order.create","order.addItem","order.updateItem",
         "order.removeItem","order.fire","order.kds","order.transfer","order.merge","order.void","order.discount",
-        "order.compItem","payment.record","payment.split","payment.refund","payment.reverse","mpesa.reconcile",
+        "order.compItem","payment.record","payment.split","payment.refund","payment.reverse","mpesa.reconcile","mpesa.discrepancy","mpesa.discrepancy.resolve",
         "inventory.receive","inventory.adjust","inventory.waste","inventory.transfer","table.ready","closeDay.generate"
     ];
     if TRADING.contains(&operation) && installation_stage(tx)? != "LIVE" {
@@ -1117,11 +1117,48 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
             let journal_id=id(); put(&tx,"journalEntries",&journal_id,json!({"id":journal_id,"entryNumber":format!("JE-{}",&journal_id[..8]),"propertyId":"property","occurredAt":stamp,"postedAt":stamp,"sourceType":"REFUND","sourceId":refund_id,"memo":format!("Refund for payment {}",payment_id),"lines":debit_parts,"totalDebit":amount as f64/100.0,"totalCredit":amount as f64/100.0,"balanced":true}),&mut changes)?;
             let order_id=text(&payment_record,"orderId")?.to_string(); let (_,mut order)=get(&tx,"orders",&order_id)?; order["refundedAmount"]=json!((money(&order,"refundedAmount").unwrap_or(0)+amount) as f64/100.0); put(&tx,"orders",&order_id,order,&mut changes)?;
         }
+        "mpesa.discrepancy" => {
+            if !permissions(&user.role).contains(&"mpesa.reconcile"){return Err("M-Pesa reconciliation permission required".into());}
+            let receipt_id=text(p,"receiptId")?;
+            let (_,mut receipt)=get(&tx,"mpesaReceipts",receipt_id)?;
+            if receipt["reconciliationStatus"]=="RECONCILED"||receipt["reconciliationStatus"]=="RECONCILED_WITH_DISCREPANCY"{return Err("Receipt already reconciled".into());}
+            let statement=money(p,"statementAmount")?;
+            let received=money(&receipt,"receivedAmount")?;
+            if statement==received{return Err("Statement amount matches; reconcile the receipt directly".into());}
+            let open=list(&tx,"mpesaDiscrepancies")?.into_iter().any(|r|r["data"]["receiptId"]==receipt_id&&r["data"]["status"]=="OPEN");
+            if open{return Err("Resolve the existing M-Pesa discrepancy before recording another".into());}
+            let discrepancy_id=id();
+            let stamp=now();
+            let statement_reference=text(p,"statementReference")?;
+            let reason=text(p,"reason")?;
+            if statement_reference.trim().is_empty()||reason.trim().is_empty(){return Err("Statement reference and discrepancy reason are required".into());}
+            put(&tx,"mpesaDiscrepancies",&discrepancy_id,json!({"id":discrepancy_id,"receiptId":receipt_id,"receiptCode":receipt["code"],"account":receipt["account"],"receivedAmount":received as f64/100.0,"statementAmount":statement as f64/100.0,"variance":(statement-received) as f64/100.0,"statementReference":statement_reference,"reason":reason,"status":"OPEN","openedBy":user.staff_id,"openedAt":stamp}),&mut changes)?;
+            receipt["reconciliationStatus"]=json!("DISCREPANCY"); receipt["discrepancyId"]=json!(discrepancy_id);
+            put(&tx,"mpesaReceipts",receipt_id,receipt,&mut changes)?;
+        }
+        "mpesa.discrepancy.resolve" => {
+            if !permissions(&user.role).contains(&"mpesa.reconcile"){return Err("M-Pesa reconciliation permission required".into());}
+            let discrepancy_id=text(p,"discrepancyId")?;
+            let (_,mut discrepancy)=get(&tx,"mpesaDiscrepancies",discrepancy_id)?;
+            if discrepancy["status"]!="OPEN"{return Err("Only open M-Pesa discrepancies can be resolved".into());}
+            let outcome=text(p,"outcome")?;
+            if !["STATEMENT_ERROR","ACCEPTED_VARIANCE"].contains(&outcome){return Err("Choose STATEMENT_ERROR or ACCEPTED_VARIANCE".into());}
+            let resolution=text(p,"resolution")?;
+            if resolution.trim().is_empty(){return Err("A resolution note is required".into());}
+            discrepancy["status"]=json!("RESOLVED"); discrepancy["outcome"]=json!(outcome); discrepancy["resolution"]=json!(resolution); discrepancy["resolvedBy"]=json!(user.staff_id); discrepancy["resolvedAt"]=json!(now());
+            put(&tx,"mpesaDiscrepancies",discrepancy_id,discrepancy,&mut changes)?;
+        }
         "mpesa.reconcile" => {
             if !permissions(&user.role).contains(&"mpesa.reconcile"){return Err("M-Pesa reconciliation permission required".into());}
-            let receipt_id=text(p,"receiptId")?; let (_,mut receipt)=get(&tx,"mpesaReceipts",receipt_id)?; if receipt["reconciliationStatus"]=="RECONCILED"{return Err("Receipt already reconciled".into());}
-            let statement=money(p,"statementAmount")?; if statement!=money(&receipt,"receivedAmount")?{return Err("Statement amount differs from the receipt; resolve before reconciliation".into());}
-            receipt["statementReference"]=json!(text(p,"statementReference")?); receipt["reviewNotes"]=json!(p.get("notes").and_then(Value::as_str).unwrap_or("")); receipt["reviewedBy"]=json!(user.staff_id); receipt["reviewedAt"]=json!(now()); receipt["reconciliationStatus"]=json!("RECONCILED"); put(&tx,"mpesaReceipts",receipt_id,receipt,&mut changes)?;
+            let receipt_id=text(p,"receiptId")?; let (_,mut receipt)=get(&tx,"mpesaReceipts",receipt_id)?; if receipt["reconciliationStatus"]=="RECONCILED"||receipt["reconciliationStatus"]=="RECONCILED_WITH_DISCREPANCY"{return Err("Receipt already reconciled".into());}
+            let statement=money(p,"statementAmount")?; let received=money(&receipt,"receivedAmount")?;
+            let statement_reference=text(p,"statementReference")?;
+            if statement_reference.trim().is_empty(){return Err("Statement reference is required".into());}
+            let resolved=list(&tx,"mpesaDiscrepancies")?.into_iter().rev().find(|r|r["data"]["receiptId"]==receipt_id&&r["data"]["status"]=="RESOLVED");
+            let accepted=resolved.as_ref().is_some_and(|r|r["data"]["outcome"]=="ACCEPTED_VARIANCE"&&money(&r["data"],"statementAmount").ok()==Some(statement)&&r["data"]["statementReference"]==statement_reference);
+            if statement!=received&&!accepted{return Err("Statement amount differs from the receipt; record and resolve the discrepancy first".into());}
+            if receipt["reconciliationStatus"]=="DISCREPANCY"&&!accepted&&resolved.as_ref().map_or(true,|r|r["data"]["outcome"]!="STATEMENT_ERROR"){return Err("Resolve the open M-Pesa discrepancy before reconciliation".into());}
+            receipt["statementReference"]=json!(statement_reference); receipt["reviewNotes"]=json!(p.get("notes").and_then(Value::as_str).unwrap_or("")); receipt["reviewedBy"]=json!(user.staff_id); receipt["reviewedAt"]=json!(now()); receipt["reconciliationStatus"]=json!(if accepted{"RECONCILED_WITH_DISCREPANCY"}else{"RECONCILED"}); put(&tx,"mpesaReceipts",receipt_id,receipt,&mut changes)?;
         }
         "till.cashMovement" => {
             let till_id=text(p,"tillId")?; authorize(&tx,user,"till.cash_movement",p,Some(till_id))?; let (_,mut till)=get(&tx,"tillSessions",till_id)?; if till["status"]!="OPEN"{return Err("Till is not open".into());}

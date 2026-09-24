@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useServOS } from '../../context/ServOSContext';
 import { RestaurantTable } from '../../types/servos';
-import { useRuntime } from '../../runtime/RuntimeProvider';
+import { isNative, useRuntime } from '../../runtime/RuntimeProvider';
 import { 
   LayoutGrid, 
   Plus, 
@@ -94,7 +94,7 @@ export const FloorPlanDesignerView: React.FC<{ onClose: () => void }> = ({ onClo
 
   const handleSaveLayout = async () => {
     if (saving) return;
-    if (!runtime) { setSaveError('This is a sample layout. Saving requires the installed application.'); return; }
+    if (!isNative) { setSaveError('This is a sample layout. Saving requires the installed application.'); return; }
     setSaving(true); setSaveError('');
     try {
       await runtime.command('floorplan.save', { outletId: currentOutlet.id, baseline, tables: layoutTables.map(t => ({ ...t, minimumSpend: t.minimumSpendKes || 0 })) });

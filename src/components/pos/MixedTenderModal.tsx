@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Order } from '../../types/servos';
 import type { ManualMpesaInput } from '../../types/runtime';
-import { useRuntime } from '../../runtime/RuntimeProvider';
+import { isNative, useRuntime } from '../../runtime/RuntimeProvider';
 import { ManualMpesaFields } from './ManualMpesaFields';
 
 interface Props { isOpen: boolean; order?: Order | null; totalAmount?: number; onClose: () => void; onCompleteSettlement?: (payments: { method: string; amount: number }[]) => void }
@@ -15,7 +15,7 @@ export const MixedTenderModal = ({ isOpen, order, totalAmount, onClose, onComple
   if (!isOpen) return null;
   const submit = async (e: React.FormEvent) => {
     e.preventDefault(); setError('');
-    if (!runtime || !order) { setError('Payments require the installed business application.'); return; }
+    if (!isNative || !order) { setError('Payments require the installed business application.'); return; }
     if ([cash, card, mpesa].some(n => !Number.isFinite(n) || n < 0) || Math.round((cash + card + mpesa) * 100) !== Math.round(due * 100)) { setError('Allocate exactly the outstanding balance.'); return; }
     const payments = [cash > 0 ? { method: 'CASH', amount: cash, cashTendered: cash } : null, card > 0 ? { method: 'CARD', amount: card, cardAuthCode: cardCode } : null, mpesa > 0 ? { method: 'MPESA', amount: mpesa, mpesa: receipt } : null].filter(Boolean);
     setBusy(true);

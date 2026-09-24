@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useRuntime } from '../../runtime/RuntimeProvider';
+import { isNative, useRuntime } from '../../runtime/RuntimeProvider';
 import { useServOS } from '../../context/ServOSContext';
 import { 
   GitMerge, 
@@ -41,7 +41,7 @@ export const TableMergeModal: React.FC<TableMergeModalProps> = ({
     const src = srcTable ? srcTable.label : 'Source Table';
     const tgt = tgtTable ? tgtTable.label : 'Target Table';
 
-    if (!runtime || !srcTable?.currentOrderId || !tgtTable?.currentOrderId) {
+    if (!isNative || !srcTable?.currentOrderId || !tgtTable?.currentOrderId) {
       showToast('Merging requires two persisted open orders in the installed application.', 'error'); return;
     }
     setBusy(true);

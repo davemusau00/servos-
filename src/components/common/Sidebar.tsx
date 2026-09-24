@@ -23,7 +23,8 @@ import {
   BarChart3,
   FlaskConical,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  BookOpen
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -74,6 +75,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'control', label: 'Control & Audit', icon: ShieldAlert, desc: 'Anomalies & approvals' },
     { id: 'staff', label: 'Staff & HR Hub', icon: UserCheck, desc: 'Payroll, leave, shifts & till' },
     { id: 'settings', label: 'Business Admin', icon: Settings, desc: 'Staff, terminal, backups & synchronization' },
+    { id: 'help', label: 'Help Center', icon: BookOpen, desc: 'Offline operating guides and troubleshooting' },
   ];
 
   const visibleNavLinks = allNavLinks.filter(link => isTabAllowed(link.id));

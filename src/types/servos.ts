@@ -485,7 +485,7 @@ export const ROLE_DEFINITIONS: Record<UserRole, RolePermissions> = {
     role: 'Admin',
     label: 'Executive Admin (Full Access)',
     description: 'Complete system authority across ERP, Command Centre, Catalog, CRM, Events, Accounting, Control Engine & System Configuration',
-    allowedTabs: ['command', 'pos', 'host', 'kds', 'hotel', 'catalog', 'crm', 'events', 'inventory', 'procurement', 'accounting', 'control', 'staff', 'settings', 'reports', 'tender', 'batch'],
+    allowedTabs: ['command', 'pos', 'host', 'kds', 'hotel', 'catalog', 'crm', 'events', 'inventory', 'procurement', 'accounting', 'control', 'staff', 'settings', 'reports', 'tender', 'batch', 'help'],
     canApproveDiscounts: true,
     canVoidOrders: true,
     canAdjustStock: true,
@@ -499,7 +499,7 @@ export const ROLE_DEFINITIONS: Record<UserRole, RolePermissions> = {
     role: 'Manager',
     label: 'F&B & Hotel Operations Manager',
     description: 'Operational manager with supervisor authority, anomaly audits, discount approvals, reservations & stock transfers',
-    allowedTabs: ['command', 'pos', 'host', 'kds', 'hotel', 'catalog', 'crm', 'events', 'inventory', 'procurement', 'accounting', 'control', 'staff', 'settings', 'reports', 'tender', 'batch'],
+    allowedTabs: ['command', 'pos', 'host', 'kds', 'hotel', 'catalog', 'crm', 'events', 'inventory', 'procurement', 'accounting', 'control', 'staff', 'settings', 'reports', 'tender', 'batch', 'help'],
     canApproveDiscounts: true,
     canVoidOrders: true,
     canAdjustStock: true,
@@ -513,7 +513,7 @@ export const ROLE_DEFINITIONS: Record<UserRole, RolePermissions> = {
     role: 'Server',
     label: 'Floor Server & Bartender',
     description: 'POS floorplan, tables, room charge posting, fast customer loyalty lookup, and kitchen/bar KDS pass workflow',
-    allowedTabs: ['pos', 'host', 'kds', 'hotel', 'crm', 'events', 'staff'],
+    allowedTabs: ['pos', 'host', 'kds', 'hotel', 'crm', 'events', 'staff', 'help'],
     canApproveDiscounts: false,
     canVoidOrders: false,
     canAdjustStock: false,
@@ -1037,4 +1037,3 @@ export interface OfflineOperation {
   errorMessage?: string;
   syncedAt?: string;
 }
-
