@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useServOS } from '../../context/ServOSContext';
 import { RestaurantTable } from '../../types/servos';
+import { useRuntime } from '../../runtime/RuntimeProvider';
 import { 
   LayoutGrid, 
   Plus, 
@@ -25,11 +26,17 @@ interface CustomTableLayout extends RestaurantTable {
   posY?: number; // 0-100 percentage grid
   minimumSpendKes?: number;
   assignedServerName?: string;
+  assignedServerId?: string;
   isJoinable?: boolean;
 }
 
 export const FloorPlanDesignerView: React.FC<{ onClose: () => void }> = ({ onClose }) => {
-  const { tables, showToast } = useServOS();
+  const { tables: allTables, showToast, currentOutlet, currentProperty, employees } = useServOS();
+  const runtime = useRuntime();
+  const tables = allTables.filter(t => t.outletId === currentOutlet.id);
+  const [baseline] = useState(() => runtime?.snapshot?.records.filter(r => r.collection === 'tables' && !r.archived && r.data.outletId === currentOutlet.id).map(r => ({ id: r.id, version: r.version })) || []);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
   const [selectedSection, setSelectedSection] = useState<string>('MAIN_DECK');
   const [editingTableId, setEditingTableId] = useState<string | null>(tables[0]?.id || null);
 
@@ -37,39 +44,39 @@ export const FloorPlanDesignerView: React.FC<{ onClose: () => void }> = ({ onClo
   const [layoutTables, setLayoutTables] = useState<CustomTableLayout[]>(() =>
     tables.map((t, index) => ({
       ...t,
-      shape: t.capacity <= 2 ? 'ROUND' : t.capacity >= 8 ? 'RECTANGLE' : 'SQUARE',
-      posX: (index % 4) * 22 + 5,
-      posY: Math.floor(index / 4) * 25 + 10,
-      minimumSpendKes: t.section === 'VIP_LOUNGE' ? 15000 : 0,
-      assignedServerName: index % 2 === 0 ? 'Daniel K.' : 'Grace N.',
-      isJoinable: t.capacity <= 4
+      shape: (t as CustomTableLayout).shape || (t.capacity <= 2 ? 'ROUND' : t.capacity >= 8 ? 'RECTANGLE' : 'SQUARE'),
+      posX: (t as CustomTableLayout).posX ?? (index % 4) * 22 + 5,
+      posY: (t as CustomTableLayout).posY ?? Math.min(90, Math.floor(index / 4) * 25 + 10),
+      minimumSpendKes: t.minimumSpend || 0,
+      assignedServerName: (t as CustomTableLayout).assignedServerName || 'Unassigned',
+      isJoinable: (t as CustomTableLayout).isJoinable ?? t.capacity <= 4
     }))
   );
 
   const selectedTable = layoutTables.find(t => t.id === editingTableId);
 
   const handleAddTable = (shape: 'SQUARE' | 'RECTANGLE' | 'ROUND' | 'BAR_TOP', capacity: number) => {
-    const newId = `tbl-${Date.now()}`;
+    const newId = crypto.randomUUID();
     const newLabel = `${layoutTables.length + 1}`;
     const newTable: CustomTableLayout = {
       id: newId,
-      propertyId: 'p-01',
-      outletId: 'out-01',
+      propertyId: currentProperty.id,
+      outletId: currentOutlet.id,
       label: newLabel,
       capacity,
       section: selectedSection as any,
       state: 'AVAILABLE',
       shape,
       posX: 10 + (layoutTables.length % 3) * 25,
-      posY: 10 + Math.floor(layoutTables.length / 3) * 20,
-      minimumSpendKes: selectedSection === 'VIP_LOUNGE' ? 10000 : 0,
+      posY: Math.min(90, 10 + Math.floor(layoutTables.length / 3) * 20),
+      minimumSpendKes: 0,
       assignedServerName: 'Unassigned',
       isJoinable: capacity <= 4
     };
 
     setLayoutTables(prev => [...prev, newTable]);
     setEditingTableId(newId);
-    showToast(`Added new Table ${newLabel} (${capacity} seats) to ${selectedSection}!`, 'success');
+    setSaveError('');
   };
 
   const handleUpdateTableProps = (updatedFields: Partial<CustomTableLayout>) => {
@@ -80,14 +87,20 @@ export const FloorPlanDesignerView: React.FC<{ onClose: () => void }> = ({ onClo
   };
 
   const handleDeleteTable = (id: string) => {
+    if (layoutTables.find(t => t.id === id)?.currentOrderId) { setSaveError('Close or transfer the active order before removing this table.'); return; }
     setLayoutTables(prev => prev.filter(t => t.id !== id));
     if (editingTableId === id) setEditingTableId(null);
-    showToast('Table removed from floor layout', 'info');
   };
 
-  const handleSaveLayout = () => {
-    showToast('Floorplan layout successfully published to live POS floor!', 'success');
-    onClose();
+  const handleSaveLayout = async () => {
+    if (saving) return;
+    if (!runtime) { setSaveError('This is a sample layout. Saving requires the installed application.'); return; }
+    setSaving(true); setSaveError('');
+    try {
+      await runtime.command('floorplan.save', { outletId: currentOutlet.id, baseline, tables: layoutTables.map(t => ({ ...t, minimumSpend: t.minimumSpendKes || 0 })) });
+      showToast('Layout saved locally; synchronization pending.', 'success'); onClose();
+    } catch (error) { setSaveError(String(error)); }
+    finally { setSaving(false); }
   };
 
   return (
@@ -106,7 +119,7 @@ export const FloorPlanDesignerView: React.FC<{ onClose: () => void }> = ({ onClo
               </span>
             </h2>
             <p className="text-xs text-slate-400 font-mono">
-              Drag, resize, set capacity & server zones for dining areas
+              Edit table placement and capacity for {currentOutlet.name}
             </p>
           </div>
         </div>
@@ -115,20 +128,23 @@ export const FloorPlanDesignerView: React.FC<{ onClose: () => void }> = ({ onClo
         <div className="flex items-center gap-3">
           <button
             onClick={onClose}
+            disabled={saving}
             className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono text-xs rounded-xl font-bold transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleSaveLayout}
+            disabled={saving}
             className="px-5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl flex items-center gap-2 shadow-lg shadow-amber-500/10 transition-all"
           >
             <Save className="w-4 h-4" />
-            <span>Publish Live Layout</span>
+            <span>{saving ? 'Saving…' : 'Save layout'}</span>
           </button>
         </div>
       </div>
 
+      {saveError && <p role="alert" className="p-3 text-sm text-red-300 bg-red-950/40">{saveError}</p>}
       {/* Main Workspace Layout */}
       <div className="flex-1 grid grid-cols-12 overflow-hidden">
         {/* Left Toolbar: Add Objects & Section Selector (Cols 3) */}
@@ -338,14 +354,12 @@ export const FloorPlanDesignerView: React.FC<{ onClose: () => void }> = ({ onClo
                 <div>
                   <label className="block text-slate-400 text-[10px] uppercase mb-1">ASSIGNED SERVER ZONE</label>
                   <select
-                    value={selectedTable.assignedServerName || 'Unassigned'}
-                    onChange={e => handleUpdateTableProps({ assignedServerName: e.target.value })}
+                    value={selectedTable.assignedServerId || ''}
+                    onChange={e => handleUpdateTableProps({ assignedServerId: e.target.value, assignedServerName: employees.find(employee => employee.id === e.target.value)?.name || 'Unassigned' })}
                     className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-amber-500"
                   >
-                    <option value="Unassigned">Unassigned</option>
-                    <option value="Daniel K.">Daniel K. (Main Deck)</option>
-                    <option value="Grace N.">Grace N. (VIP Cabanas)</option>
-                    <option value="Peter M.">Peter M. (Terrace Bar)</option>
+                    <option value="">Unassigned</option>
+                    {employees.map(employee => <option key={employee.id} value={employee.id}>{employee.name}</option>)}
                   </select>
                 </div>
 

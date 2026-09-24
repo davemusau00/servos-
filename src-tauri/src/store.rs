@@ -587,37 +587,108 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
             )?;
         }
         "floorplan.save" => {
-            if user.role == "Server" { return Err("Manager permission required".into()); }
+            if user.role == "Server" {
+                return Err("Manager permission required".into());
+            }
             let outlet_id = text(p, "outletId")?;
             get(&tx, "outlets", outlet_id)?;
-            let baseline = p["baseline"].as_array().ok_or("Layout baseline is required")?;
-            let tables = p["tables"].as_array().filter(|v| v.len() <= 500).ok_or("Use at most 500 tables per outlet")?;
-            let current: Vec<Value> = list(&tx, "tables")?.into_iter().filter(|v| v["data"]["outletId"] == outlet_id).collect();
-            if baseline.len() != current.len() || current.iter().any(|r| !baseline.iter().any(|b| b["id"] == r["id"] && b["version"] == r["version"])) {
+            let baseline = p["baseline"]
+                .as_array()
+                .ok_or("Layout baseline is required")?;
+            let tables = p["tables"]
+                .as_array()
+                .filter(|v| v.len() <= 500)
+                .ok_or("Use at most 500 tables per outlet")?;
+            let current: Vec<Value> = list(&tx, "tables")?
+                .into_iter()
+                .filter(|v| v["data"]["outletId"] == outlet_id)
+                .collect();
+            if baseline.len() != current.len()
+                || current.iter().any(|r| {
+                    !baseline
+                        .iter()
+                        .any(|b| b["id"] == r["id"] && b["version"] == r["version"])
+                })
+            {
                 return Err("Layout changed; reopen the designer before saving".into());
             }
             let mut ids = std::collections::HashSet::new();
             let mut labels = std::collections::HashSet::new();
             for table in tables {
                 let key = text(table, "id")?;
-                if !current.iter().any(|r| r["id"] == key) && Uuid::parse_str(key).is_err() { return Err("New table IDs must be UUIDs".into()); }
-                if !ids.insert(key.to_string()) || !labels.insert(text(table, "label")?.trim().to_lowercase()) { return Err("Table IDs and labels must be unique within the outlet".into()); }
-                if table["capacity"].as_u64().filter(|n| *n > 0 && *n <= 1000).is_none() { return Err("Table capacity must be between 1 and 1000".into()); }
-                for axis in ["posX", "posY"] { if quantity(table, axis)? > 100.0 { return Err("Layout coordinates must be between 0 and 100".into()); } }
-                if !["SQUARE", "RECTANGLE", "ROUND", "BAR_TOP"].contains(&text(table, "shape")?) { return Err("Invalid table shape".into()); }
+                if !current.iter().any(|r| r["id"] == key) && Uuid::parse_str(key).is_err() {
+                    return Err("New table IDs must be UUIDs".into());
+                }
+                if !ids.insert(key.to_string())
+                    || !labels.insert(text(table, "label")?.trim().to_lowercase())
+                {
+                    return Err("Table IDs and labels must be unique within the outlet".into());
+                }
+                if table["capacity"]
+                    .as_u64()
+                    .filter(|n| *n > 0 && *n <= 1000)
+                    .is_none()
+                {
+                    return Err("Table capacity must be between 1 and 1000".into());
+                }
+                for axis in ["posX", "posY"] {
+                    if quantity(table, axis)? > 100.0 {
+                        return Err("Layout coordinates must be between 0 and 100".into());
+                    }
+                }
+                if !["SQUARE", "RECTANGLE", "ROUND", "BAR_TOP"].contains(&text(table, "shape")?) {
+                    return Err("Invalid table shape".into());
+                }
                 text(table, "section")?;
                 money(table, "minimumSpend")?;
+                let archived: bool = tx.query_row("SELECT EXISTS(SELECT 1 FROM records WHERE collection='tables' AND id=? AND archived=1)", [key], |r| r.get(0)).map_err(error)?;
+                if archived { return Err("Archived table IDs cannot be reused".into()); }
                 let prior = get(&tx, "tables", key).ok();
-                if prior.is_some() && !current.iter().any(|r| r["id"] == key) { return Err("Table belongs to another outlet".into()); }
-                let mut data = prior.as_ref().map(|(_, v)| v.clone()).unwrap_or(json!({"state":"AVAILABLE","currentOrderId":null}));
-                for field in ["label", "capacity", "section", "shape", "posX", "posY", "minimumSpend", "isJoinable"] { data[field] = table[field].clone(); }
-                data["id"] = json!(key); data["propertyId"] = json!("property"); data["outletId"] = json!(outlet_id);
+                if prior.is_some() && !current.iter().any(|r| r["id"] == key) {
+                    return Err("Table belongs to another outlet".into());
+                }
+                let mut data = prior
+                    .as_ref()
+                    .map(|(_, v)| v.clone())
+                    .unwrap_or(json!({"state":"AVAILABLE","currentOrderId":null}));
+                let assigned = table["assignedServerId"].as_str().unwrap_or("");
+                if !assigned.is_empty() {
+                    let name: String = tx
+                        .query_row(
+                            "SELECT name FROM staff WHERE id=? AND active=1",
+                            [assigned],
+                            |r| r.get(0),
+                        )
+                        .map_err(|_| "Assigned staff member is unavailable")?;
+                    data["assignedServerId"] = json!(assigned);
+                    data["assignedServerName"] = json!(name);
+                } else {
+                    data["assignedServerId"] = Value::Null;
+                    data["assignedServerName"] = json!("Unassigned");
+                }
+                for field in [
+                    "label",
+                    "capacity",
+                    "section",
+                    "shape",
+                    "posX",
+                    "posY",
+                    "minimumSpend",
+                    "isJoinable",
+                ] {
+                    data[field] = table[field].clone();
+                }
+                data["id"] = json!(key);
+                data["propertyId"] = json!("property");
+                data["outletId"] = json!(outlet_id);
                 put(&tx, "tables", key, data, &mut changes)?;
             }
             for record in current {
                 let key = text(&record, "id")?;
                 if !ids.contains(key) {
-                    if record["data"]["currentOrderId"].as_str().is_some() { return Err("Cannot remove a table with an active order".into()); }
+                    if record["data"]["currentOrderId"].as_str().is_some() {
+                        return Err("Cannot remove a table with an active order".into());
+                    }
                     tx.execute("UPDATE records SET archived=1,version=version+1 WHERE collection='tables' AND id=?", [key]).map_err(error)?;
                     changes.push(json!({"collection":"tables","id":key,"version":record["version"].as_i64().unwrap()+1,"data":record["data"],"archived":true}));
                 }
@@ -626,9 +697,17 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
         "table.ready" => {
             let key = text(p, "tableId")?;
             let (version, mut table) = get(&tx, "tables", key)?;
-            if cmd.target_version != Some(version) { return Err("Table changed; refresh and try again".into()); }
-            if table["state"] != "CLEANING" || table["currentOrderId"].as_str().is_some() { return Err("Only an unoccupied table awaiting cleaning can be marked ready".into()); }
-            table["state"] = json!("AVAILABLE"); table["cleanedAt"] = json!(now()); table["cleanedBy"] = json!(user.staff_id);
+            if cmd.target_version != Some(version) {
+                return Err("Table changed; refresh and try again".into());
+            }
+            if table["state"] != "CLEANING" || table["currentOrderId"].as_str().is_some() {
+                return Err(
+                    "Only an unoccupied table awaiting cleaning can be marked ready".into(),
+                );
+            }
+            table["state"] = json!("AVAILABLE");
+            table["cleanedAt"] = json!(now());
+            table["cleanedBy"] = json!(user.staff_id);
             put(&tx, "tables", key, table, &mut changes)?;
         }
         "order.create" => {
@@ -646,8 +725,12 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
                 {
                     return Err("Table already has an order".into());
                 }
-                if value["state"] != "AVAILABLE" { return Err("Table is not ready for seating".into()); }
-                if value["outletId"] != outlet_id { return Err("Select a table in the current outlet".into()); }
+                if value["state"] != "AVAILABLE" {
+                    return Err("Table is not ready for seating".into());
+                }
+                if value["outletId"] != outlet_id {
+                    return Err("Select a table in the current outlet".into());
+                }
                 value["currentOrderId"] = json!(order_id);
                 value["state"] = json!("ORDERING");
                 table = Some((t.to_string(), value));
@@ -839,12 +922,16 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
                     return Err("Choose a different table".into());
                 }
                 let (_, mut target) = get(&tx, "tables", target_id)?;
-                if target["outletId"] != order["outletId"] { return Err("Transfers and merges must stay within the order outlet".into()); }
+                if target["outletId"] != order["outletId"] {
+                    return Err("Transfers and merges must stay within the order outlet".into());
+                }
                 if cmd.operation == "order.transfer" {
                     if target["currentOrderId"].as_str().is_some() {
                         return Err("Destination already has an order; use merge".into());
                     }
-                    if target["state"] != "AVAILABLE" { return Err("Destination table is not ready for seating".into()); }
+                    if target["state"] != "AVAILABLE" {
+                        return Err("Destination table is not ready for seating".into());
+                    }
                     order["tableId"] = json!(target_id);
                     order["tableName"] = target["label"].clone();
                     target["currentOrderId"] = json!(order_id);

@@ -1,5 +1,6 @@
 import { ManualMpesaFields } from './ManualMpesaFields';
 import type { ManualMpesaInput } from '../../types/runtime';
+import { useRuntime } from '../../runtime/RuntimeProvider';
 import React, { useState } from 'react';
 import { useServOS } from '../../context/ServOSContext';
 import { ProductSellable, RestaurantTable, OrderItem, Order } from '../../types/servos';
@@ -44,6 +45,9 @@ import {
 } from 'lucide-react';
 
 export const POSView: React.FC = () => {
+  const runtime = useRuntime();
+  const [pendingTable, setPendingTable] = useState<string | null>(null);
+  const [tableError, setTableError] = useState('');
   const {
     products,
     tables,
@@ -300,17 +304,29 @@ export const POSView: React.FC = () => {
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-mono mr-1">
               Tables:
             </span>
-            {tables.map(tbl => {
+            {tables.filter(tbl => tbl.outletId === currentOutlet.id).map(tbl => {
               const isCurrent = activeOrder?.tableId === tbl.id;
               const hasOrder = !!tbl.currentOrderId;
               return (
                 <button
                   key={tbl.id}
-                  onClick={() => {
+                  disabled={pendingTable !== null}
+                  onClick={async () => {
+                    setTableError('');
                     if (tbl.currentOrderId) {
                       selectOrder(tbl.currentOrderId);
+                    } else if (tbl.state === 'CLEANING') {
+                      if (!runtime) { setTableError('Marking a table clean requires the installed application.'); return; }
+                      const record = runtime.snapshot?.records.find(r => r.collection === 'tables' && r.id === tbl.id);
+                      setPendingTable(tbl.id);
+                      try { await runtime.command('table.ready', { tableId: tbl.id }, record?.version); }
+                      catch (error) { setTableError(String(error)); }
+                      finally { setPendingTable(null); }
                     } else {
-                      createOrderForTable(tbl.id);
+                      setPendingTable(tbl.id);
+                      try { await createOrderForTable(tbl.id); }
+                      catch (error) { setTableError(String(error)); }
+                      finally { setPendingTable(null); }
                     }
                   }}
                   className={`px-3 py-1.5 rounded text-xs font-semibold whitespace-nowrap transition-all border ${
@@ -323,9 +339,10 @@ export const POSView: React.FC = () => {
                 >
                   <div className="flex items-center gap-1.5">
                     <span>{tbl.label}</span>
+                    {!hasOrder && <span className="text-[10px]">{tbl.state === 'CLEANING' ? 'Mark clean' : tbl.state}</span>}
                     {tbl.minimumSpend && (
                       <span className="text-[9px] font-mono font-normal text-amber-400/80">
-                        (Min KES 50k)
+                        (Min KES {tbl.minimumSpend.toLocaleString()})
                       </span>
                     )}
                     {hasOrder && (
@@ -363,6 +380,7 @@ export const POSView: React.FC = () => {
           </div>
         </div>
 
+        {tableError && <p role="alert" className="px-3 py-2 text-sm text-red-300">{tableError}</p>}
         {/* Search & Category Filter Header */}
         <div className="p-3 bg-slate-900/40 border-b border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 shrink-0">
           {/* Quick Search */}
