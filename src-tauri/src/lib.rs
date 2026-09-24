@@ -1,4 +1,5 @@
 mod store;
+#[cfg(test)] mod tests;
 use rusqlite::Connection;
 use serde_json::{json,Value};
 use std::{path::PathBuf,sync::Mutex};
