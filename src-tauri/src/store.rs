@@ -18,6 +18,10 @@ fn money(v: &Value, key: &str) -> Result<i64> {
     if !n.is_finite() || n < 0.0 || n > 1_000_000_000.0 || ((n * 100.0).round() - n * 100.0).abs() > 0.0001 { return Err(format!("{key} must be a non-negative amount with at most two decimals")); }
     Ok((n * 100.0).round() as i64)
 }
+fn quantity(v:&Value,key:&str)->Result<f64>{
+    let n=v[key].as_f64().ok_or_else(||format!("{key} must be numeric"))?;
+    if !n.is_finite()||n<0.0||n>1_000_000_000.0||(n*1_000_000.0-(n*1_000_000.0).round()).abs()>0.00001{return Err(format!("{key} must be non-negative with at most six decimals"));}Ok(n)
+}
 pub fn open(path: &std::path::Path) -> Result<Connection> {
     let db = Connection::open(path).map_err(error)?;
     db.busy_timeout(std::time::Duration::from_secs(5)).map_err(error)?;
@@ -100,13 +104,19 @@ fn finish(tx:&Transaction,cmd:&BusinessCommand,actor_id:&str,changes:Vec<Value>)
     tx.execute("INSERT INTO commands VALUES(?,?,?)",params![cmd.id,serde_json::to_string(cmd).map_err(error)?,result.to_string()]).map_err(error)?;
     Ok(result)
 }
-const MASTER:&[&str]=&["products","stockItems","tables","outlets","property","customers","suppliers","rooms","priceRules","recipes","events","promoters","reservations","waitlist","housekeeping","maintenance"];
+const MASTER:&[&str]=&["products","stockItems","stockLocations","tables","outlets","property","customers","suppliers","rooms","priceRules","recipes","events","promoters","reservations","waitlist","housekeeping","maintenance"];
 pub fn execute(db:&mut Connection,token:&str,cmd:BusinessCommand)->Result<Value> {
-    if cmd.schema_version!=1 || Uuid::parse_str(&cmd.id).is_err() {return Err("Unsupported command version or invalid ID".into());}
     let user=actor(db,token,true)?;
+    execute_as(db,&user,cmd)
+}
+pub fn execute_as(db:&mut Connection,user:&Session,cmd:BusinessCommand)->Result<Value> {
+    if cmd.schema_version!=1 || Uuid::parse_str(&cmd.id).is_err() {return Err("Unsupported command version or invalid ID".into());}
     let tx=db.transaction().map_err(error)?;
     let prior:Option<(String,String)>=tx.query_row("SELECT fingerprint,result FROM commands WHERE id=?",[&cmd.id],|r|Ok((r.get(0)?,r.get(1)?))).optional().map_err(error)?;
-    if let Some((fingerprint,result))=prior { if fingerprint!=serde_json::to_string(&cmd).map_err(error)? {return Err("Command ID was already used for different input".into());} return serde_json::from_str(&result).map_err(error); }
+    if let Some((fingerprint,result))=prior {
+        let original:String=tx.query_row("SELECT actor_id FROM audit WHERE command_id=?",[&cmd.id],|r|r.get(0)).map_err(error)?;
+        if original!=user.staff_id || fingerprint!=serde_json::to_string(&cmd).map_err(error)? {return Err("Command ID was already used by another actor or for different input".into());} return serde_json::from_str(&result).map_err(error);
+    }
     let mut changes=vec![]; let p=&cmd.payload;
     match cmd.operation.as_str() {
         "record.save"|"record.archive" => {
@@ -119,14 +129,53 @@ pub fn execute(db:&mut Connection,token:&str,cmd:BusinessCommand)->Result<Value>
             if cmd.operation=="record.archive" {
                 if existing.is_none(){return Err("Record not found".into());}
                 if collection=="property"||collection=="outlets" {return Err("Primary business configuration cannot be archived".into());}
+                let data=&existing.as_ref().unwrap().1;
+                if collection=="tables" && data["currentOrderId"].as_str().is_some(){return Err("Close or transfer the active order before archiving this table".into());}
+                if collection=="stockItems" && data["currentStock"].as_object().is_some_and(|locations|locations.values().any(|q|q.as_f64().unwrap_or(0.0)!=0.0)){return Err("Resolve remaining stock before archiving".into());}
                 tx.execute("UPDATE records SET archived=1,version=version+1 WHERE collection=? AND id=?",params![collection,record_id]).map_err(error)?;
                 let (version,data)=existing.unwrap(); changes.push(json!({"collection":collection,"id":record_id,"version":version+1,"data":data,"archived":true}));
             } else {
-                let data=p.get("data").filter(|v|v.is_object()).ok_or("Record data is required")?.clone();
+                let mut data=p.get("data").filter(|v|v.is_object()).ok_or("Record data is required")?.clone();
                 if collection=="tables" {text(&data,"label")?;} else {text(&data,"name")?;}
-                if collection=="products" {money(&data,"price")?; text(&data,"code")?;}
-                if collection=="stockItems" {money(&data,"averageUnitCost")?;}
+                if collection=="products" {
+                    money(&data,"price")?; text(&data,"code")?;
+                    if !["BAR","KITCHEN","SERVICE"].contains(&text(&data,"routeTo")?){return Err("Invalid preparation station".into());}
+                    let outlets=data["outletIds"].as_array().ok_or("Assign at least one outlet")?;if outlets.is_empty(){return Err("Assign at least one outlet".into());}
+                    for outlet in outlets {get(&tx,"outlets",outlet.as_str().ok_or("Invalid outlet")?)?;}
+                }
+                if collection=="stockItems" {
+                    quantity(&data,"averageUnitCost")?;text(&data,"code")?;text(&data,"baseUnit")?;
+                    data["currentStock"]=existing.as_ref().map(|(_,v)|v["currentStock"].clone()).unwrap_or(json!({}));
+                }
+                if collection=="tables" {
+                    if data["capacity"].as_u64().filter(|n|*n>0&&*n<=1000).is_none(){return Err("Table capacity must be between 1 and 1000".into());}
+                    get(&tx,"outlets",text(&data,"outletId")?)?;
+                    data["state"]=existing.as_ref().map(|(_,v)|v["state"].clone()).unwrap_or(json!("AVAILABLE"));
+                    data["currentOrderId"]=existing.as_ref().map(|(_,v)|v["currentOrderId"].clone()).unwrap_or(Value::Null);
+                }
+                if ["products","stockItems","suppliers"].contains(&collection) {
+                    let code=text(&data,"code")?;
+                    let duplicate:bool=tx.query_row("SELECT EXISTS(SELECT 1 FROM records WHERE collection=? AND id<>? AND archived=0 AND lower(json_extract(data,'$.code'))=lower(?))",params![collection,record_id,code],|r|r.get(0)).map_err(error)?;
+                    if duplicate{return Err("This code already belongs to another record".into());}
+                }
                 put(&tx,collection,record_id,data,&mut changes)?;
+            }
+        },
+        "inventory.adjust"|"inventory.waste"|"inventory.transfer" => {
+            if user.role=="Server"{return Err("Manager permission required".into());}
+            let stock_id=text(p,"stockItemId")?;let location=text(p,"locationId")?;let reason=text(p,"reason")?;
+            let (_,stock)=get(&tx,"stockItems",stock_id)?;get(&tx,"stockLocations",location)?;
+            let current=stock["currentStock"][location].as_f64().unwrap_or(0.0);
+            if cmd.operation=="inventory.adjust" {
+                let counted=quantity(p,"countedQty")?;
+                stock_delta(&tx,&user,stock_id,location,counted-current,"COUNT_ADJUSTMENT",&cmd.id,reason,&mut changes)?;
+            } else {
+                let qty=quantity(p,"quantity")?;if qty==0.0{return Err("Quantity must be positive".into());}
+                if cmd.operation=="inventory.transfer" {
+                    let target=text(p,"toLocationId")?;if target==location{return Err("Choose a different destination".into());}get(&tx,"stockLocations",target)?;
+                    stock_delta(&tx,&user,stock_id,location,-qty,"TRANSFER_OUT",&cmd.id,reason,&mut changes)?;
+                    stock_delta(&tx,&user,stock_id,target,qty,"TRANSFER_IN",&cmd.id,reason,&mut changes)?;
+                }else{stock_delta(&tx,&user,stock_id,location,-qty,"WASTE",&cmd.id,reason,&mut changes)?;}
             }
         },
         "staff.create" => {
@@ -261,6 +310,16 @@ fn payment(tx:&Transaction,user:&Session,p:&Value,changes:&mut Vec<Value>)->Resu
     order["amountPaid"]=json!((paid+amount) as f64/100.0); order["paymentMethod"]=json!(method);
     if paid+amount==total {order["state"]=json!("COMPLETED"); order["completedAt"]=json!(stamp); if let Some(table_id)=order["tableId"].as_str(){let (_,mut table)=get(tx,"tables",table_id)?; table["currentOrderId"]=Value::Null; table["state"]=json!("CLEANING"); put(tx,"tables",table_id,table,changes)?;}}
     put(tx,"orders",order_id,order,changes)
+}
+fn stock_delta(tx:&Transaction,user:&Session,stock_id:&str,location:&str,delta:f64,kind:&str,source:&str,reason:&str,changes:&mut Vec<Value>)->Result<()> {
+    let (_,mut stock)=get(tx,"stockItems",stock_id)?;let (_,location_record)=get(tx,"stockLocations",location)?;
+    let current=stock["currentStock"][location].as_f64().unwrap_or(0.0);
+    let next=((current+delta)*1_000_000.0).round()/1_000_000.0;
+    if next<0.0{return Err("Insufficient stock; no movement was recorded".into());}
+    stock["currentStock"][location]=json!(next);
+    let movement=id();let cost=stock["averageUnitCost"].as_f64().unwrap_or(0.0);
+    put(tx,"stockMovements",&movement,json!({"id":movement,"organizationId":"business","propertyId":"property","stockItemId":stock_id,"stockItemName":stock["name"],"locationId":location,"locationName":location_record["name"],"quantityDelta":delta,"baseUnit":stock["baseUnit"],"movementType":kind,"sourceId":source,"reasonCode":reason,"occurredAt":now(),"actorUserId":user.staff_id,"actorName":user.name,"unitCostSnapshot":cost,"totalCostValuation":((delta*cost*100.0).round())/100.0}),changes)?;
+    put(tx,"stockItems",stock_id,stock,changes)
 }
 pub fn list(db:&Connection,collection:&str)->Result<Vec<Value>> {
     let mut stmt=db.prepare("SELECT id,version,data,archived FROM records WHERE collection=? AND archived=0 ORDER BY rowid").map_err(error)?;

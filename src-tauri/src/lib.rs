@@ -1,6 +1,6 @@
 mod store;
 #[cfg(test)] mod tests;
-use rusqlite::Connection;
+use rusqlite::{Connection, OptionalExtension};
 use serde_json::{json,Value};
 use std::{path::PathBuf,sync::Mutex};
 use tauri::{Manager,State};
@@ -66,10 +66,35 @@ async fn sync_inner(state:&Runtime,token:&str)->store::Result<Value>{
     let cursor=result["acknowledgedSequence"].as_i64().ok_or("Server acknowledgement missing")?;
     let maximum=operations.last().and_then(|v|v["sequence"].as_i64()).unwrap_or(cursor);
     if cursor>maximum{return Err("Unexpected server acknowledgement; queue retained".into());}
-    let mut db=state.db.lock().map_err(|e|e.to_string())?; let tx=db.transaction().map_err(|e|e.to_string())?;
+    {let mut db=state.db.lock().map_err(|e|e.to_string())?; let tx=db.transaction().map_err(|e|e.to_string())?;
     // Acknowledgements apply only to operations actually included in this request.
     for op in &operations {let seq=op["sequence"].as_i64().ok_or("Invalid local sequence")?;if seq<=cursor{tx.execute("UPDATE outbox SET acknowledged_at=? WHERE sequence=?",rusqlite::params![chrono::Utc::now().to_rfc3339(),seq]).map_err(|e|e.to_string())?;}}
-    store::set_meta(&tx,"last_sync",&chrono::Utc::now().to_rfc3339())?;tx.commit().map_err(|e|e.to_string())?;
+    store::set_meta(&tx,"last_sync",&chrono::Utc::now().to_rfc3339())?;tx.commit().map_err(|e|e.to_string())?;}
+    // Apply requests only after the terminal has uploaded its entire current queue.
+    let pending:i64={let db=state.db.lock().map_err(|e|e.to_string())?;db.query_row("SELECT COUNT(*) FROM outbox WHERE acknowledged_at IS NULL",[],|r|r.get(0)).map_err(|e|e.to_string())?};
+    if pending==0 {
+        let requests=rpc(&url,&key,None,"servos_poll_requests",json!({"terminal_id":terminal,"device_token":credential})).await?;
+        for request in requests.as_array().ok_or("Invalid remote request response")? {
+            let request_id=store::text(request,"id")?.to_string();
+            let outcome={
+                let mut db=state.db.lock().map_err(|e|e.to_string())?;
+                let cached:Option<String>=db.query_row("SELECT result FROM remote_requests WHERE id=?",[&request_id],|r|r.get(0)).optional().map_err(|e|e.to_string())?;
+                if let Some(result)=cached {serde_json::from_str::<Value>(&result).map_err(|e|e.to_string())?} else {
+                    let operation=store::text(request,"operation")?;
+                    let allowed=["record.save","record.archive"].contains(&operation)&&["products","tables","customers","suppliers","priceRules"].contains(&request["payload"]["collection"].as_str().unwrap_or(""));
+                    let result=if !allowed {Err("Remote operation is not permitted".into())} else {
+                        let actor=store::Session{token:String::new(),staff_id:format!("remote:{}",store::text(request,"authorId")?),name:"Remote manager".into(),role:"Manager".into()};
+                        store::execute_as(&mut db,&actor,store::BusinessCommand{id:request_id.clone(),schema_version:1,operation:operation.into(),target_version:request["expectedVersion"].as_i64(),payload:request["payload"].clone()})
+                    };
+                    let outcome=match result {Ok(result)=>json!({"status":"applied","result":result}),Err(message)=>json!({"status":if message.starts_with("CONFLICT:"){"conflict"}else{"rejected"},"result":{"message":message}})};
+                    db.execute("INSERT INTO remote_requests VALUES(?,?,?)",rusqlite::params![request_id,outcome["status"].as_str(),outcome.to_string()]).map_err(|e|e.to_string())?;outcome
+                }
+            };
+            // Successful effects must be replicated before the remote UI can say applied.
+            let can_ack=if outcome["status"]=="applied" {let db=state.db.lock().map_err(|e|e.to_string())?;db.query_row("SELECT EXISTS(SELECT 1 FROM outbox WHERE command_id=? AND acknowledged_at IS NOT NULL)",[&request_id],|r|r.get::<_,bool>(0)).map_err(|e|e.to_string())?}else{true};
+            if can_ack {rpc(&url,&key,None,"servos_ack_request",json!({"terminal_id":terminal,"device_token":credential,"request_id":request_id,"request_status":outcome["status"],"request_result":outcome["result"]})).await?;}
+        }
+    }
     Ok(result)
 }
 #[tauri::command]

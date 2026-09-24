@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import type { BusinessCommand, CommandResult, RuntimeSession, RuntimeSnapshot } from '../types/runtime';
+import { RemoteManagerApp } from './RemoteManagerApp';
 
 export const isNative = '__TAURI_INTERNALS__' in window;
 interface RuntimeContextValue {
@@ -23,6 +24,7 @@ export const RuntimeProvider = ({ children }: { children: React.ReactNode }) => 
   const [syncing, setSyncing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [preview, setPreview] = useState(false);
+  const [remote, setRemote] = useState(false);
   const [staffId, setStaffId] = useState('');
   const [pin, setPin] = useState('');
   const [business, setBusiness] = useState('');
@@ -102,8 +104,9 @@ export const RuntimeProvider = ({ children }: { children: React.ReactNode }) => 
   };
   const inputClass = 'w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white';
   if (!isNative) {
+    if (remote) return <RemoteManagerApp onBack={() => setRemote(false)} />;
     if (preview) return <><div className="fixed top-0 left-0 right-0 z-[100] bg-amber-300 text-slate-950 text-xs text-center p-1">UI preview — sample data; no durable business operations or provider integrations</div><div className="pt-6">{children}</div></>;
-    return <div className="min-h-screen bg-slate-950 text-white grid place-items-center p-6"><div className="max-w-md space-y-5"><h1 className="text-3xl font-bold">ServOS</h1><p>Business operations run in the installed POS application. This browser build can display the existing UI with sample data for review.</p><button className="bg-amber-400 text-slate-950 p-3 rounded-lg" onClick={() => setPreview(true)}>Open UI preview</button></div></div>;
+    return <div className="min-h-screen bg-slate-950 text-white grid place-items-center p-6"><div className="max-w-md space-y-5"><h1 className="text-3xl font-bold">ServOS</h1><p>Business operations run in the installed POS application. Use remote management to view synchronized records, or open the sample-data preview for UI review.</p><div className="flex gap-3 flex-wrap"><button className="bg-amber-400 text-slate-950 p-3 rounded-lg" onClick={() => setRemote(true)}>Remote management</button><button className="border border-slate-600 p-3 rounded-lg" onClick={() => setPreview(true)}>Open UI preview</button></div></div></div>;
   }
   if (!session) return <div className="min-h-screen bg-slate-950 text-white grid place-items-center p-6"><form onSubmit={status?.enrolled ? login : enroll} className="w-full max-w-md space-y-4"><h1 className="text-2xl font-bold">{status?.enrolled ? 'Unlock ServOS' : 'Set up your business terminal'}</h1>{!status ? <p>Opening local database…</p> : status.enrolled ? <label className="block">Staff<select className={inputClass} value={staffId} onChange={e => setStaffId(e.target.value)}>{status.staff.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></label> : <><label className="block">Business name<input required className={inputClass} value={business} onChange={e => setBusiness(e.target.value)} /></label><label className="block">Owner name<input required className={inputClass} value={owner} onChange={e => setOwner(e.target.value)} /></label><label className="block">Owner email<input required type="email" autoComplete="username" className={inputClass} value={email} onChange={e => setEmail(e.target.value)} /></label><label className="block">Online password<input required type="password" autoComplete="current-password" className={inputClass} value={password} onChange={e => setPassword(e.target.value)} /></label><p className="text-sm text-slate-400">Initial setup requires the business owner’s online account. Your local staff PIN works offline afterward.</p></> }<label className="block">Staff PIN<input required type="password" inputMode="numeric" minLength={6} maxLength={12} autoComplete="off" className={inputClass} value={pin} onChange={e => setPin(e.target.value)} /></label>{error && <p role="alert" className="text-rose-300">{error}</p>}<button disabled={busy || !status} className="w-full p-3 rounded-lg bg-amber-400 text-slate-950 disabled:opacity-50">{busy ? 'Please wait…' : status?.enrolled ? 'Unlock' : 'Enroll terminal'}</button></form></div>;
   if (!snapshot) return <div className="p-8 bg-slate-950 text-white">Loading local records…{error && <p role="alert">{error}</p>}<button onClick={() => void refresh().catch(report)}>Retry</button></div>;
