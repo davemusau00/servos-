@@ -73,8 +73,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'accounting', label: 'Accounting & eTIMS', icon: Receipt, desc: 'Double-entry & reconciliation' },
     { id: 'control', label: 'Control & Audit', icon: ShieldAlert, desc: 'Anomalies & approvals' },
     { id: 'staff', label: 'Staff & HR Hub', icon: UserCheck, desc: 'Payroll, leave, shifts & till' },
-    { id: 'settings', label: 'Settings & Admin', icon: Settings, desc: 'Multi-property, RBAC & eTIMS' },
-    { id: 'platform', label: 'SaaS Platform Admin', icon: Building2, desc: 'Superadmin, tenants & fleet' }
+    { id: 'settings', label: 'Business Admin', icon: Settings, desc: 'Staff, terminal, backups & synchronization' },
   ];
 
   const visibleNavLinks = allNavLinks.filter(link => isTabAllowed(link.id));

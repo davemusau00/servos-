@@ -57,7 +57,7 @@ import {
   logSyncEvent
 } from '../utils/offlineDb';
 
-interface ServOSContextType {
+export interface ServOSContextType {
   // Authentication & Role Permissions
   userRole: UserRole;
   setUserRole: (role: UserRole) => void;
@@ -175,6 +175,7 @@ interface ServOSContextType {
     tenderType: 'CASH' | 'MPESA' | 'CARD' | 'ROOM_CHARGE',
     amount: number,
     options?: {
+      mpesa?: { code: string; account: string; receivedAmount: number; receivedAt: string; confirmed: boolean };
       phoneNumber?: string;
       cashTendered?: number;
       guestStayId?: string;
@@ -243,7 +244,7 @@ interface ServOSContextType {
   };
 }
 
-const ServOSContext = createContext<ServOSContextType | null>(null);
+export const ServOSContext = createContext<ServOSContextType | null>(null);
 
 // ================= INITIAL SEED DATA =================
 
@@ -2944,6 +2945,7 @@ export const ServOSProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     tenderType: 'CASH' | 'MPESA' | 'CARD' | 'ROOM_CHARGE',
     amount: number,
     options?: {
+      mpesa?: { code: string; account: string; receivedAmount: number; receivedAt: string; confirmed: boolean };
       phoneNumber?: string;
       cashTendered?: number;
       guestStayId?: string;

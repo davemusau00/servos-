@@ -6,3 +6,9 @@ coverage/
 *.log
 .env*
 !.env.example
+
+src-tauri/target/
+src-tauri/gen/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal

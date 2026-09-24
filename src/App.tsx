@@ -7,7 +7,10 @@ import { POSView } from './components/pos/POSView';
 import { KDSView } from './components/kds/KDSView';
 import { HotelPMSView } from './components/hotel/HotelPMSView';
 import { HostStandView } from './components/host/HostStandView';
-import { PlatformAdminView } from './components/platform/PlatformAdminView';
+import { RuntimeProvider, isNative, useRuntime } from './runtime/RuntimeProvider';
+import { NativeServOSProvider } from './runtime/NativeServOSProvider';
+import { BusinessAdminView } from './runtime/BusinessAdminView';
+import { ManualReconciliationView } from './runtime/ManualReconciliationView';
 import { CatalogStudioView } from './components/catalog/CatalogStudioView';
 import { CRM360View } from './components/crm/CRM360View';
 import { EventsNightlifeView } from './components/events/EventsNightlifeView';
@@ -35,7 +38,11 @@ const MainApp: React.FC = () => {
     userPermissions
   } = useServOS();
 
-  const [activeTab, setActiveTab] = useState<string>('pos');
+  const route = () => window.location.hash.replace(/^#\/?/, '').split('/')[0] || 'pos';
+  const [activeTab, setTab] = useState<string>(route);
+  const setActiveTab = (tab: string) => { window.location.hash = '/' + tab; setTab(tab); };
+  useEffect(() => { const update = () => setTab(route()); window.addEventListener('hashchange', update); return () => window.removeEventListener('hashchange', update); }, []);
+  const runtime = useRuntime();
   const [isHardwareModalOpen, setIsHardwareModalOpen] = useState<boolean>(false);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
@@ -98,7 +105,7 @@ const MainApp: React.FC = () => {
               onClick={() => switchUserRole('Manager')}
               className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-md transition-all"
             >
-              <span>Elevate to Manager Role</span>
+              <span>Unlock with another staff account</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -106,6 +113,7 @@ const MainApp: React.FC = () => {
       );
     }
 
+    if (isNative && !['pos', 'catalog', 'kds', 'inventory', 'accounting', 'tender', 'settings', 'staff'].includes(activeTab)) return <div className="p-6 space-y-3"><h1 className="text-xl font-bold">Backend integration pending</h1><p>This module is not yet connected to the installed backend. No sample business records are displayed in production.</p></div>;
     switch (activeTab) {
       case 'command':
         return <CommandCentreView />;
@@ -113,8 +121,7 @@ const MainApp: React.FC = () => {
         return <POSView />;
       case 'host':
         return <HostStandView />;
-      case 'platform':
-        return <PlatformAdminView />;
+
       case 'kds':
         return <KDSView />;
       case 'hotel':
@@ -122,7 +129,7 @@ const MainApp: React.FC = () => {
       case 'reports':
         return <ReportsCenterView />;
       case 'tender':
-        return <TenderReconciliationView />;
+        return isNative ? <ManualReconciliationView /> : <TenderReconciliationView />;
       case 'batch':
         return <BatchProductionView />;
       case 'catalog':
@@ -140,9 +147,9 @@ const MainApp: React.FC = () => {
       case 'control':
         return <ControlEngineView />;
       case 'staff':
-        return <StaffCashView />;
+        return isNative ? <BusinessAdminView /> : <StaffCashView />;
       case 'settings':
-        return <SettingsCenterView />;
+        return isNative ? <BusinessAdminView /> : <SettingsCenterView />;
       default:
         return <POSView />;
     }
@@ -176,10 +183,10 @@ const MainApp: React.FC = () => {
               <WifiOff className="w-3.5 h-3.5 animate-pulse shrink-0" />
               <span className="font-bold shrink-0">OFFLINE MODE ACTIVE:</span>
               <span className="truncate hidden sm:inline">
-                All POS sales and stock updates are buffered locally in IndexedDB.
+                Local records remain available. Server synchronization will resume when connected.
               </span>
               <span className="truncate sm:hidden">
-                Buffered in IndexedDB.
+                Saved locally.
               </span>
             </div>
 
@@ -209,11 +216,8 @@ const MainApp: React.FC = () => {
 };
 
 export function App() {
-  return (
-    <ServOSProvider>
-      <MainApp />
-    </ServOSProvider>
-  );
+  const Provider = isNative ? NativeServOSProvider : ServOSProvider;
+  return <RuntimeProvider><Provider><MainApp /></Provider></RuntimeProvider>;
 }
 
 export default App;

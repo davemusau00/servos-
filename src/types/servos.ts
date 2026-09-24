@@ -3,7 +3,7 @@
  * Domain Types Specification (Baseline v1.0)
  */
 
-// Tenancy & Organization Hierarchy
+// Business Organization Hierarchy
 export interface Organization {
   id: string;
   name: string;

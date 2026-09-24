@@ -88,10 +88,13 @@ export const POSView: React.FC = () => {
   // Payment checkout modal
   const [isCheckoutOpen, setIsCheckoutOpen] = useState<boolean>(false);
   const [tenderType, setTenderType] = useState<'CASH' | 'MPESA' | 'CARD' | 'ROOM_CHARGE'>('MPESA');
-  const [mpesaPhone, setMpesaPhone] = useState<string>('0722419802');
+  const [mpesaPhone, setMpesaPhone] = useState<string>('');
+  const [mpesaCode, setMpesaCode] = useState('');
+  const [mpesaAccount, setMpesaAccount] = useState('');
+  const [mpesaConfirmed, setMpesaConfirmed] = useState(false);
   const [cashTendered, setCashTendered] = useState<number>(0);
   const [selectedGuestStayId, setSelectedGuestStayId] = useState<string>('');
-  const [cardAuthCode, setCardAuthCode] = useState<string>('748192');
+  const [cardAuthCode, setCardAuthCode] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [darajaStep, setDarajaStep] = useState<string>('');
   const [paymentResult, setPaymentResult] = useState<{ success: boolean; message: string; receipt?: string } | null>(null);
@@ -193,19 +196,11 @@ export const POSView: React.FC = () => {
     setIsProcessing(true);
     setPaymentResult(null);
 
-    if (tenderType === 'MPESA') {
-      setDarajaStep('1/3 Contacting Safaricom Daraja API...');
-      await new Promise(r => setTimeout(r, 600));
-      setDarajaStep('2/3 STK Push prompt sent to handset ' + mpesaPhone + '...');
-      await new Promise(r => setTimeout(r, 800));
-      setDarajaStep('3/3 Customer verified PIN. Capturing C2B callback...');
-      await new Promise(r => setTimeout(r, 600));
-    }
-
     const currentOrderSnapshot = { ...activeOrder };
 
-    const res = await processPayment(activeOrder.id, tenderType, activeOrder.grandTotal, {
+    const res = await processPayment(activeOrder.id, tenderType, activeOrder.grandTotal - activeOrder.amountPaid, {
       phoneNumber: mpesaPhone,
+      mpesa: { code: mpesaCode, account: mpesaAccount, receivedAmount: activeOrder.grandTotal - activeOrder.amountPaid, receivedAt: new Date().toISOString(), confirmed: mpesaConfirmed },
       cashTendered: cashTendered || activeOrder.grandTotal,
       guestStayId: selectedGuestStayId,
       cardAuthCode
@@ -1313,7 +1308,7 @@ export const POSView: React.FC = () => {
         </div>
       )}
 
-      {/* MODAL: Payment / Checkout with M-PESA Daraja & Room Charge */}
+      {/* MODAL: Payment / Checkout with Manual payments & room charge */}
       {isCheckoutOpen && activeOrder && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 max-w-xl w-full shadow-2xl max-h-[90vh] overflow-y-auto">
@@ -1476,13 +1471,16 @@ export const POSView: React.FC = () => {
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-emerald-400 font-mono flex items-center gap-1.5">
                         <Smartphone className="w-4 h-4" />
-                        Safaricom Daraja API v2 (STK Push)
+                        Manual M-Pesa receipt
                       </span>
                       <span className="text-[10px] text-slate-400 font-mono">
-                        Till: 894102 | Shortcode: 174379
+                        Confirm against the business receipt
                       </span>
                     </div>
 
+                    <label className="block text-xs">Transaction code<input required value={mpesaCode} onChange={e => setMpesaCode(e.target.value.toUpperCase())} className="block w-full bg-slate-900 border border-slate-700 rounded p-2" /></label>
+                    <label className="block text-xs">Receiving till / paybill account<input required value={mpesaAccount} onChange={e => setMpesaAccount(e.target.value)} className="block w-full bg-slate-900 border border-slate-700 rounded p-2" /></label>
+                    <label className="flex gap-2 text-xs"><input type="checkbox" checked={mpesaConfirmed} onChange={e => setMpesaConfirmed(e.target.checked)} />I checked the receipt on the business account and confirmed the amount.</label>
                     <div>
                       <label className="text-xs text-slate-300 block mb-1">Customer Phone Number</label>
                       <input

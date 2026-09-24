@@ -123,9 +123,9 @@ pub fn execute(db:&mut Connection,token:&str,cmd:BusinessCommand)->Result<Value>
                 let (version,data)=existing.unwrap(); changes.push(json!({"collection":collection,"id":record_id,"version":version+1,"data":data,"archived":true}));
             } else {
                 let data=p.get("data").filter(|v|v.is_object()).ok_or("Record data is required")?.clone();
-                text(&data,"name")?;
-                if collection=="products" {money(&data,"sellingPrice")?; text(&data,"code")?;}
-                if collection=="stockItems" {money(&data,"costPerBaseUnit")?;}
+                if collection=="tables" {text(&data,"label")?;} else {text(&data,"name")?;}
+                if collection=="products" {money(&data,"price")?; text(&data,"code")?;}
+                if collection=="stockItems" {money(&data,"averageUnitCost")?;}
                 put(&tx,collection,record_id,data,&mut changes)?;
             }
         },
@@ -145,18 +145,19 @@ pub fn execute(db:&mut Connection,token:&str,cmd:BusinessCommand)->Result<Value>
             let order_id=id(); let table_id=p.get("tableId").and_then(Value::as_str);
             let mut table=None;
             if let Some(t)=table_id {let (_,mut value)=get(&tx,"tables",t)?; if value.get("currentOrderId").and_then(Value::as_str).is_some(){return Err("Table already has an order".into());} value["currentOrderId"]=json!(order_id); value["state"]=json!("ORDERING"); table=Some((t.to_string(),value));}
-            put(&tx,"orders",&order_id,json!({"id":order_id,"orderNumber":format!("ORD-{}",&order_id[..8]),"propertyId":"property","outletId":p.get("outletId").and_then(Value::as_str).unwrap_or("main"),"tableId":table_id,"tableName":table.as_ref().and_then(|(_,v)|v.get("name")),"items":[],"state":"OPEN","subtotal":0,"discountTotal":0,"vatTotal":0,"levyTotal":0,"grandTotal":0,"amountPaid":0,"createdAt":now(),"employeeId":user.staff_id,"employeeName":user.name,"guestName":p.get("name")}),&mut changes)?;
+            put(&tx,"orders",&order_id,json!({"id":order_id,"orderNumber":format!("ORD-{}",&order_id[..8]),"propertyId":"property","outletId":p.get("outletId").and_then(Value::as_str).unwrap_or("main"),"tableId":table_id,"tableName":table.as_ref().and_then(|(_,v)|v.get("label")),"items":[],"state":"OPEN","subtotal":0,"discountTotal":0,"taxTotal":0,"cateringLevyTotal":0,"shortfallAdjustment":0,"grandTotal":0,"amountPaid":0,"createdAt":now(),"serverEmployeeId":user.staff_id,"serverName":user.name,"terminalId":meta(&tx,"terminal_id")?,"tabName":p.get("name")}),&mut changes)?;
             if let Some((key,value))=table {put(&tx,"tables",&key,value,&mut changes)?;}
         },
         "order.addItem"|"order.removeItem"|"order.fire"|"order.kds" => {
             let order_id=text(p,"orderId")?; let (_,mut order)=get(&tx,"orders",order_id)?;
             if ["COMPLETED","VOIDED"].contains(&order["state"].as_str().unwrap_or("")){return Err("Order is closed".into());}
             if order["amountPaid"].as_f64().unwrap_or(0.0)>0.0 && ["order.addItem","order.removeItem"].contains(&cmd.operation.as_str()){return Err("Partially paid orders cannot be edited".into());}
+            let order_outlet=order["outletId"].as_str().unwrap_or("main").to_string();
             let items=order["items"].as_array_mut().ok_or("Invalid order items")?;
             if cmd.operation=="order.addItem" {
-                let product_id=text(p,"productId")?; let (version,product)=get(&tx,"products",product_id)?; let price=money(&product,"sellingPrice")?;
+                let product_id=text(p,"productId")?; let (version,product)=get(&tx,"products",product_id)?; let price=money(&product,"price")?;
                 let item_id=id();
-                items.push(json!({"id":item_id,"productId":product_id,"productName":product["name"],"quantity":1,"unitPrice":price as f64/100.0,"lineTotal":price as f64/100.0,"totalPrice":price as f64/100.0,"state":"OPEN","courseStatus":"HELD","courseName":p.get("courseName").cloned().unwrap_or(json!("Mains")),"seatLabel":p.get("seatLabel"),"productSnapshot":product,"productVersion":version,"stockFired":false,"modifiers":[]}));
+                items.push(json!({"id":item_id,"productId":product_id,"productName":product["name"],"quantity":1,"unitPrice":price as f64/100.0,"lineTotal":price as f64/100.0,"totalPrice":price as f64/100.0,"state":"OPEN","courseStatus":"HELD","courseName":p.get("courseName").cloned().unwrap_or(json!("Mains")),"seatLabel":p.get("seatLabel"),"productSnapshot":product,"productVersion":version,"taxAmount":0,"cateringLevy":0,"stockFired":false,"modifiers":[]}));
             } else if cmd.operation=="order.removeItem" {
                 let item_id=text(p,"itemId")?;
                 let item=items.iter().find(|i|i["id"]==item_id).ok_or("Item not found")?;
@@ -167,15 +168,18 @@ pub fn execute(db:&mut Connection,token:&str,cmd:BusinessCommand)->Result<Value>
                     if item["stockFired"]==true {continue;}
                     if let Some(course)=p.get("courseName").and_then(Value::as_str){if item["courseName"]!=course {continue;}}
                     let product=&item["productSnapshot"]; let quantity=item["quantity"].as_f64().unwrap_or(1.0);
-                    let mut ingredients=product["recipe"].as_array().cloned().unwrap_or_default();
+                    let mut ingredients=product["recipeIngredients"].as_array().cloned().unwrap_or_default();
                     if ingredients.is_empty(){if let Some(stock)=product["stockItemId"].as_str(){ingredients.push(json!({"stockItemId":stock,"quantity":product["portionVolume"].as_f64().unwrap_or(1.0)}));}}
                     for ingredient in ingredients {
                         let stock_id=text(&ingredient,"stockItemId")?; let (_,mut stock)=get(&tx,"stockItems",stock_id)?;
                         let consumed=ingredient["quantity"].as_f64().ok_or("Invalid recipe quantity")?*quantity;
                         if !consumed.is_finite()||consumed<=0.0{return Err("Invalid recipe quantity".into());}
-                        let on_hand=stock["currentStock"].as_f64().unwrap_or(0.0);
+                        let location=order_outlet.clone();
+                        let (_, outlet)=get(&tx,"outlets",&location)?;
+                        let location=outlet["defaultStockLocationId"].as_str().unwrap_or("main");
+                        let on_hand=stock["currentStock"][location].as_f64().unwrap_or(0.0);
                         if on_hand<consumed {return Err(format!("Insufficient stock for {}",stock["name"]));}
-                        stock["currentStock"]=json!(on_hand-consumed); put(&tx,"stockItems",stock_id,stock,&mut changes)?;
+                        stock["currentStock"][location]=json!(on_hand-consumed); put(&tx,"stockItems",stock_id,stock,&mut changes)?;
                         let movement=id(); put(&tx,"stockMovements",&movement,json!({"id":movement,"stockItemId":stock_id,"type":"SALE","quantity":-consumed,"occurredAt":now(),"referenceId":order_id,"orderItemId":item["id"],"employeeId":user.staff_id}),&mut changes)?;
                     }
                     item["stockFired"]=json!(true); item["state"]=json!("ROUTED"); item["courseStatus"]=json!("FIRED"); item["firedAt"]=json!(now());
@@ -190,6 +194,14 @@ pub fn execute(db:&mut Connection,token:&str,cmd:BusinessCommand)->Result<Value>
             put(&tx,"orders",order_id,order,&mut changes)?;
         },
         "payment.record" => payment(&tx,&user,p,&mut changes)?,
+        "payment.split" => {
+            let splits=p["payments"].as_array().ok_or("Payment lines are required")?;
+            if splits.is_empty() || splits.len()>10 {return Err("Use between one and ten payment lines".into());}
+            let order_id=text(p,"orderId")?; let (_,order)=get(&tx,"orders",order_id)?;
+            let sum=splits.iter().map(|s|money(s,"amount")).collect::<Result<Vec<_>>>()?.iter().sum::<i64>();
+            if sum!=money(&order,"grandTotal")?-money(&order,"amountPaid")?{return Err("Split amounts must equal the outstanding balance".into());}
+            for split in splits {let mut line=split.clone();line["orderId"]=json!(order_id);payment(&tx,&user,&line,&mut changes)?;}
+        },
         "mpesa.reconcile" => {
             if user.role=="Server"{return Err("Manager permission required".into());}
             let receipt_id=text(p,"receiptId")?; let (_,mut receipt)=get(&tx,"mpesaReceipts",receipt_id)?;
