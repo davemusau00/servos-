@@ -903,7 +903,7 @@ export interface EmployeePayslip {
   advancesDeducted: number;
   totalDeductions: number;
   netPay: number;
-  disbursementMethod: 'MPESA_B2C' | 'BANK_TRANSFER' | 'CASH';
+  disbursementMethod: 'MPESA_MANUAL' | 'BANK_TRANSFER' | 'CASH';
   disbursementStatus: 'PENDING' | 'DISBURSED';
   paymentReference?: string;
 }

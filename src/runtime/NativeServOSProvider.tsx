@@ -20,33 +20,35 @@ export const NativeServOSProvider = ({ children }: { children: React.ReactNode }
     const existing = records.find(r => r.collection === collection && r.id === id);
     try {
       await runtime.command('record.save', { collection, id: id || crypto.randomUUID(), data: { ...existing?.data, ...data } }, existing?.version);
-      showToast('Saved locally; synchronization pending.', 'success');
-    } catch (e) { showToast(String(e), 'error'); }
+      showToast('Saved locally; synchronization pending.', 'success'); return true;
+    } catch (e) { showToast(String(e), 'error'); return false; }
   };
   const archive = async (collection: string, id: string) => {
     const existing = records.find(r => r.collection === collection && r.id === id);
-    try { await runtime.command('record.archive', { collection, id }, existing?.version); showToast('Archived locally.', 'success'); }
-    catch (e) { showToast(String(e), 'error'); }
+    try { await runtime.command('record.archive', { collection, id }, existing?.version); showToast('Archived locally.', 'success'); return true; }
+    catch (e) { showToast(String(e), 'error'); return false; }
   };
   const unavailable = () => showToast('This workflow is not yet implemented in the installed backend. No changes were made.', 'error');
   const orders = list('orders');
   const currentUser = list('employees').find(e => e.id === runtime.session!.staffId) || { id: runtime.session!.staffId, name: runtime.session!.name, role: runtime.session!.role.toUpperCase() };
   const role = runtime.session!.role as UserRole;
-  const createOrder = (payload: Record<string, unknown>) => {
-    void run('order.create', { ...payload, outletId }).then(result => { if (result) setActiveId(result.recordIds[0]); });
-    // Existing view callers do not consume the synchronous return. Native creation is asynchronous.
-    return undefined as unknown as Order;
+  const createOrder = async (payload: Record<string, unknown>) => {
+    const result = await run('order.create', { ...payload, outletId });
+    if (!result) return null;
+    setActiveId(result.recordIds[0]);
+    return result.recordIds[0];
   };
+  const mutate = (operation: string, payload: Record<string, unknown>) => run(operation, payload).then(Boolean);
   const value = {
     userRole: role, userPermissions: ROLE_DEFINITIONS[role], availableRoles: [],
     setUserRole: unavailable, switchUserRole: () => void runtime.lock(),
     isTabAllowed: (tab: string) => ROLE_DEFINITIONS[role].allowedTabs.includes(tab),
     organization: one('organization'), currentProperty: one('property'),
-    updateProperty: (data: Record<string, unknown>) => void save('property', data, 'property'),
+    updateProperty: (data: Record<string, unknown>) => save('property', data, 'property'),
     outlets: list('outlets'), currentOutlet: list('outlets').find(o => o.id === outletId) || one('outlets'),
     setCurrentOutlet: (o: { id: string }) => setOutletId(o.id),
-    addOutlet: (data: Record<string, unknown>) => void save('outlets', data),
-    updateOutlet: (id: string, data: Record<string, unknown>) => void save('outlets', data, id),
+    addOutlet: (data: Record<string, unknown>) => save('outlets', data),
+    updateOutlet: (id: string, data: Record<string, unknown>) => save('outlets', data, id),
     terminals: [{ id: runtime.snapshot!.terminalId, name: 'POS terminal', isEdgeConnected: false }],
     currentTerminal: { id: runtime.snapshot!.terminalId, name: 'POS terminal', isEdgeConnected: false },
     currentUser, setCurrentUser: unavailable, employees: list('employees'),
@@ -56,17 +58,17 @@ export const NativeServOSProvider = ({ children }: { children: React.ReactNode }
     clockInShift: unavailable, clockOutShift: unavailable, createShiftSchedule: unavailable,
     requestSalaryAdvance: unavailable, approveSalaryAdvance: unavailable, generatePayrollRun: unavailable, approvePayrollRun: unavailable, disbursePayrollRun: unavailable,
     stockItems: list('stockItems'), stockLocations: list('stockLocations'), stockMovements: list('stockMovements'), products: list('products'),
-    addProduct: (data: Record<string, unknown>) => void save('products', data),
-    updateProduct: (id: string, data: Record<string, unknown>) => void save('products', data, id),
-    deleteProduct: (id: string) => void archive('products', id),
-    addStockItem: (data: Record<string, unknown>) => void save('stockItems', data),
-    updateStockItem: (id: string, data: Record<string, unknown>) => void save('stockItems', data, id),
-    deleteStockItem: (id: string) => void archive('stockItems', id),
-    transferStock: (stockItemId: string, locationId: string, toLocationId: string, quantity: number, reason: string) => void run('inventory.transfer', { stockItemId, locationId, toLocationId, quantity, reason }),
-    declareWaste: (stockItemId: string, locationId: string, quantity: number, reason: string) => void run('inventory.waste', { stockItemId, locationId, quantity, reason }),
-    recordStockCountAdjustment: (stockItemId: string, locationId: string, countedQty: number, reason: string) => void run('inventory.adjust', { stockItemId, locationId, countedQty, reason }),
-    tables: list('tables'), addTable: (data: Record<string, unknown>) => void save('tables', data),
-    updateTable: (id: string, data: Record<string, unknown>) => void save('tables', data, id), deleteTable: (id: string) => void archive('tables', id),
+    addProduct: (data: Record<string, unknown>) => save('products', data),
+    updateProduct: (id: string, data: Record<string, unknown>) => save('products', data, id),
+    deleteProduct: (id: string) => archive('products', id),
+    addStockItem: (data: Record<string, unknown>) => save('stockItems', data),
+    updateStockItem: (id: string, data: Record<string, unknown>) => save('stockItems', data, id),
+    deleteStockItem: (id: string) => archive('stockItems', id),
+    transferStock: (stockItemId: string, locationId: string, toLocationId: string, quantity: number, reason: string) => mutate('inventory.transfer', { stockItemId, locationId, toLocationId, quantity, reason }),
+    declareWaste: (stockItemId: string, locationId: string, quantity: number, reason: string) => mutate('inventory.waste', { stockItemId, locationId, quantity, reason }),
+    recordStockCountAdjustment: (stockItemId: string, locationId: string, countedQty: number, reason: string) => mutate('inventory.adjust', { stockItemId, locationId, countedQty, reason }),
+    tables: list('tables'), addTable: (data: Record<string, unknown>) => save('tables', data),
+    updateTable: (id: string, data: Record<string, unknown>) => save('tables', data, id), deleteTable: (id: string) => archive('tables', id),
     orders, activeOrder: orders.find(o => o.id === activeId) || null,
     createOrderForTable: (tableId: string) => createOrder({ tableId }), createQuickBarTab: (name: string) => createOrder({ name }), selectOrder: setActiveId,
     addItemToOrder: (productId: string, portionVolume?: number, modifiers?: unknown[], selectedMixers?: string[], seatLabel?: string, courseName?: string) => {

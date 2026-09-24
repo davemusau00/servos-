@@ -61,7 +61,7 @@ Subtotal:                               1,100.00
 2% Catering Levy:                          22.00
 TOTAL:                               KES 1,100.00
 ------------------------------------------------
-M-PESA Daraja Ref: QHK482910 [COMPLETED]
+M-PESA: manual receipt confirmation required
 QR CODE EMBEDDED: https://itax.kra.go.ke/...
 ------------------------------------------------
       THANK YOU FOR VISITING SERVOS!`

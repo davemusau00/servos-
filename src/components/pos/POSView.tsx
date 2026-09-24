@@ -96,7 +96,7 @@ export const POSView: React.FC = () => {
   const [selectedGuestStayId, setSelectedGuestStayId] = useState<string>('');
   const [cardAuthCode, setCardAuthCode] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
-  const [darajaStep, setDarajaStep] = useState<string>('');
+  const [paymentStep, setPaymentStep] = useState<string>('');
   const [paymentResult, setPaymentResult] = useState<{ success: boolean; message: string; receipt?: string } | null>(null);
 
   // Discount / Comp modal
@@ -207,7 +207,7 @@ export const POSView: React.FC = () => {
     });
 
     setIsProcessing(false);
-    setDarajaStep('');
+    setPaymentStep('');
     setPaymentResult(res);
 
     if (res.success) {
@@ -1490,10 +1490,10 @@ export const POSView: React.FC = () => {
                       />
                     </div>
 
-                    {darajaStep && (
+                    {paymentStep && (
                       <div className="p-2.5 rounded bg-emerald-950/30 border border-emerald-800/40 text-xs font-mono text-emerald-300 flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                        <span>{darajaStep}</span>
+                        <span>{paymentStep}</span>
                       </div>
                     )}
                   </div>

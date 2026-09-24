@@ -140,7 +140,7 @@ export const SettingsCenterView: React.FC = () => {
               activeTab === 'PAYMENT_GATEWAYS' ? 'bg-slate-750 text-amber-300 shadow-xs' : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            M-PESA Daraja
+            Manual M-Pesa
           </button>
         </div>
       </div>
@@ -407,7 +407,7 @@ export const SettingsCenterView: React.FC = () => {
                 {[
                   { key: 'createOrder', label: 'Create & Send POS Order Tickets' },
                   { key: 'modifyOrder', label: 'Modify Open Check Items' },
-                  { key: 'acceptMpesa', label: 'Trigger M-PESA STK Push' },
+                  { key: 'acceptMpesa', label: 'Accept manually confirmed M-Pesa' },
                   { key: 'acceptCash', label: 'Accept Cash & Open Drawer' },
                   { key: 'processRefund', label: 'Issue Itemized Refund / Credit Note' },
                   { key: 'applyDiscountMax5', label: 'Apply Discount <= 5%' },
@@ -486,7 +486,7 @@ export const SettingsCenterView: React.FC = () => {
           <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl space-y-4">
             <h2 className="text-base font-bold text-white flex items-center gap-2">
               <Smartphone className="w-5 h-5 text-emerald-400" />
-              <span>Safaricom M-PESA Daraja 3.0 API Integration</span>
+              <span>Manual M-Pesa configuration</span>
             </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-mono">
@@ -495,11 +495,11 @@ export const SettingsCenterView: React.FC = () => {
                 <span className="text-white font-bold text-sm">684920</span>
               </div>
               <div className="p-3.5 bg-slate-850 border border-slate-750 rounded-xl space-y-1">
-                <span className="text-slate-400 block">STK Push Timeout:</span>
+                <span className="text-slate-400 block">Manual review window:</span>
                 <span className="text-amber-300 font-bold text-sm">45 Seconds</span>
               </div>
               <div className="p-3.5 bg-slate-850 border border-slate-750 rounded-xl space-y-1">
-                <span className="text-slate-400 block">B2C Commission Float:</span>
+                <span className="text-slate-400 block">Manual payout budget:</span>
                 <span className="text-emerald-400 font-bold text-sm">KES 450,000</span>
               </div>
             </div>

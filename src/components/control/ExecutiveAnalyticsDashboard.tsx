@@ -125,7 +125,7 @@ export const ExecutiveAnalyticsDashboard: React.FC = () => {
 
   // --- 4. TENDER TYPE BREAKDOWN PIE DATA ---
   const paymentChannelData = [
-    { name: 'M-PESA Daraja (Direct STK)', value: 58, amount: 1531200, color: '#10B981' },
+    { name: 'Manual M-Pesa', value: 58, amount: 1531200, color: '#10B981' },
     { name: 'EMV Card Terminal (Ingenico)', value: 26, amount: 686400, color: '#3B82F6' },
     { name: 'Hotel Room Folio Postings', value: 11, amount: 290400, color: '#F59E0B' },
     { name: 'Cash Drawer Float', value: 5, amount: 132000, color: '#8B5CF6' }
@@ -438,7 +438,7 @@ export const ExecutiveAnalyticsDashboard: React.FC = () => {
                 <span>Settlement Tender Split</span>
               </h4>
               <p className="text-xs text-slate-400 font-mono mt-0.5">
-                M-PESA Daraja STK vs EMV & Room Folios
+                Manual M-Pesa vs EMV & Room Folios
               </p>
             </div>
 

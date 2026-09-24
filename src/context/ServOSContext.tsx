@@ -57,6 +57,8 @@ import {
   logSyncEvent
 } from '../utils/offlineDb';
 
+type MutationResult = void | Promise<boolean>;
+
 export interface ServOSContextType {
   // Authentication & Role Permissions
   userRole: UserRole;
@@ -101,34 +103,34 @@ export interface ServOSContextType {
 
   // Catalog & Inventory
   stockItems: StockItem[];
-  addStockItem: (item: Omit<StockItem, 'id'>) => void;
-  updateStockItem: (id: string, updates: Partial<StockItem>) => void;
-  deleteStockItem: (id: string) => void;
+  addStockItem: (item: Omit<StockItem, 'id'>) => MutationResult;
+  updateStockItem: (id: string, updates: Partial<StockItem>) => MutationResult;
+  deleteStockItem: (id: string) => MutationResult;
   stockLocations: StockLocation[];
   stockMovements: StockMovement[];
   products: ProductSellable[];
-  addProduct: (product: Omit<ProductSellable, 'id'>) => void;
-  updateProduct: (id: string, updates: Partial<ProductSellable>) => void;
-  deleteProduct: (id: string) => void;
+  addProduct: (product: Omit<ProductSellable, 'id'>) => MutationResult;
+  updateProduct: (id: string, updates: Partial<ProductSellable>) => MutationResult;
+  deleteProduct: (id: string) => MutationResult;
   transferStock: (
     stockItemId: string,
     fromLocId: string,
     toLocId: string,
     quantity: number,
     reason: string
-  ) => void;
+  ) => MutationResult;
   declareWaste: (
     stockItemId: string,
     locationId: string,
     quantity: number,
     reason: string
-  ) => void;
+  ) => MutationResult;
   recordStockCountAdjustment: (
     stockItemId: string,
     locationId: string,
     countedQty: number,
     notes: string
-  ) => void;
+  ) => MutationResult;
 
   // Tables & POS
   tables: RestaurantTable[];
@@ -137,8 +139,8 @@ export interface ServOSContextType {
   deleteTable: (id: string) => void;
   activeOrder: Order | null;
   orders: Order[];
-  createOrderForTable: (tableId: string) => Order;
-  createQuickBarTab: (tabName?: string) => Order;
+  createOrderForTable: (tableId: string) => Order | Promise<string | null>;
+  createQuickBarTab: (tabName?: string) => Order | Promise<string | null>;
   selectOrder: (orderId: string) => void;
   addItemToOrder: (
     productId: string,
@@ -1475,7 +1477,7 @@ const initialPayrollRuns: PayrollRun[] = [
         advancesDeducted: 0,
         totalDeductions: 16979,
         netPay: 60971,
-        disbursementMethod: 'MPESA_B2C',
+        disbursementMethod: 'MPESA_MANUAL',
         disbursementStatus: 'DISBURSED',
         paymentReference: 'B2C-MP-849102'
       },
@@ -1572,7 +1574,7 @@ const initialPayrollRuns: PayrollRun[] = [
         advancesDeducted: 5000,
         totalDeductions: 22711,
         netPay: 57339,
-        disbursementMethod: 'MPESA_B2C',
+        disbursementMethod: 'MPESA_MANUAL',
         disbursementStatus: 'PENDING'
       },
       {
@@ -1653,7 +1655,7 @@ const initialPayrollRuns: PayrollRun[] = [
         advancesDeducted: 0,
         totalDeductions: 15650,
         netPay: 58350,
-        disbursementMethod: 'MPESA_B2C',
+        disbursementMethod: 'MPESA_MANUAL',
         disbursementStatus: 'PENDING'
       },
       {
@@ -1707,7 +1709,7 @@ const initialPayrollRuns: PayrollRun[] = [
         advancesDeducted: 8000,
         totalDeductions: 20549,
         netPay: 44051,
-        disbursementMethod: 'MPESA_B2C',
+        disbursementMethod: 'MPESA_MANUAL',
         disbursementStatus: 'PENDING'
       },
       {
@@ -1734,7 +1736,7 @@ const initialPayrollRuns: PayrollRun[] = [
         advancesDeducted: 0,
         totalDeductions: 21622,
         netPay: 70538,
-        disbursementMethod: 'MPESA_B2C',
+        disbursementMethod: 'MPESA_MANUAL',
         disbursementStatus: 'PENDING'
       },
       {
@@ -1761,7 +1763,7 @@ const initialPayrollRuns: PayrollRun[] = [
         advancesDeducted: 0,
         totalDeductions: 11623,
         netPay: 49917,
-        disbursementMethod: 'MPESA_B2C',
+        disbursementMethod: 'MPESA_MANUAL',
         disbursementStatus: 'PENDING'
       }
     ]
@@ -3209,7 +3211,7 @@ export const ServOSProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         advancesDeducted,
         totalDeductions,
         netPay,
-        disbursementMethod: emp.mpesaDisbursementNumber ? 'MPESA_B2C' : 'BANK_TRANSFER',
+        disbursementMethod: emp.mpesaDisbursementNumber ? 'MPESA_MANUAL' : 'BANK_TRANSFER',
         disbursementStatus: 'PENDING' as const
       };
     });

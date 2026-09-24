@@ -328,7 +328,7 @@ export const TenderReconciliationView: React.FC = () => {
                   KES {calculatedAmount.toLocaleString()}
                 </span>
                 <button
-                  onClick={() => showToast(`Initiating M-Pesa B2C tip transfer of KES ${calculatedAmount.toLocaleString()} for ${pool.name}...`, 'info')}
+                  onClick={() => showToast(`Initiating manual M-Pesa tip transfer of KES ${calculatedAmount.toLocaleString()} for ${pool.name}...`, 'info')}
                   className="w-full py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors"
                 >
                   <Send className="w-3 h-3" /> Payout via M-Pesa

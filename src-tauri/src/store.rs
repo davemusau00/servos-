@@ -137,6 +137,10 @@ pub fn execute_as(db:&mut Connection,user:&Session,cmd:BusinessCommand)->Result<
             } else {
                 let mut data=p.get("data").filter(|v|v.is_object()).ok_or("Record data is required")?.clone();
                 if collection=="tables" {text(&data,"label")?;} else {text(&data,"name")?;}
+                if collection=="property" && data["taxConfigured"]==true {
+                    if quantity(&data,"vatRatePct")?>100.0 || quantity(&data,"levyRatePct")?>100.0 {return Err("Tax rates must be between 0 and 100".into());}
+                    if data["pricesIncludeTax"]!=true {return Err("This release requires tax-inclusive selling prices".into());}
+                }
                 if collection=="products" {
                     money(&data,"price")?; text(&data,"code")?;
                     if !["BAR","KITCHEN","SERVICE"].contains(&text(&data,"routeTo")?){return Err("Invalid preparation station".into());}
@@ -205,8 +209,14 @@ pub fn execute_as(db:&mut Connection,user:&Session,cmd:BusinessCommand)->Result<
             let items=order["items"].as_array_mut().ok_or("Invalid order items")?;
             if cmd.operation=="order.addItem" {
                 let product_id=text(p,"productId")?; let (version,product)=get(&tx,"products",product_id)?; let price=money(&product,"price")?;
+                let (_,policy)=get(&tx,"property","property")?;
+                if policy["taxConfigured"]!=true{return Err("An owner must configure the business tax rates before trading".into());}
+                let vat=if ["B_0","C_EXEMPT"].contains(&product["taxClassId"].as_str().unwrap_or("")){0.0}else{quantity(&policy,"vatRatePct")?/100.0};
+                let levy=quantity(&policy,"levyRatePct")?/100.0;
+                let net=(price as f64/(1.0+vat+levy)).round() as i64;
+                let vat_amount=(net as f64*vat).round() as i64;let levy_amount=price-net-vat_amount;
                 let item_id=id();
-                items.push(json!({"id":item_id,"productId":product_id,"productName":product["name"],"quantity":1,"unitPrice":price as f64/100.0,"lineTotal":price as f64/100.0,"totalPrice":price as f64/100.0,"state":"OPEN","courseStatus":"HELD","courseName":p.get("courseName").cloned().unwrap_or(json!("Mains")),"seatLabel":p.get("seatLabel"),"productSnapshot":product,"productVersion":version,"taxAmount":0,"cateringLevy":0,"stockFired":false,"modifiers":[]}));
+                items.push(json!({"id":item_id,"productId":product_id,"productName":product["name"],"quantity":1,"unitPrice":price as f64/100.0,"lineTotal":price as f64/100.0,"totalPrice":price as f64/100.0,"netMinor":net,"vatMinor":vat_amount,"levyMinor":levy_amount,"taxPolicySnapshot":policy,"state":"OPEN","courseStatus":"HELD","courseName":p.get("courseName").cloned().unwrap_or(json!("Mains")),"seatLabel":p.get("seatLabel"),"productSnapshot":product,"productVersion":version,"taxAmount":vat_amount as f64/100.0,"cateringLevy":levy_amount as f64/100.0,"stockFired":false,"modifiers":[]}));
             } else if cmd.operation=="order.removeItem" {
                 let item_id=text(p,"itemId")?;
                 let item=items.iter().find(|i|i["id"]==item_id).ok_or("Item not found")?;
@@ -220,16 +230,14 @@ pub fn execute_as(db:&mut Connection,user:&Session,cmd:BusinessCommand)->Result<
                     let mut ingredients=product["recipeIngredients"].as_array().cloned().unwrap_or_default();
                     if ingredients.is_empty(){if let Some(stock)=product["stockItemId"].as_str(){ingredients.push(json!({"stockItemId":stock,"quantity":product["portionVolume"].as_f64().unwrap_or(1.0)}));}}
                     for ingredient in ingredients {
-                        let stock_id=text(&ingredient,"stockItemId")?; let (_,mut stock)=get(&tx,"stockItems",stock_id)?;
+                        if ingredient["tracked"]==false{continue;}
+                        let stock_id=text(&ingredient,"stockItemId")?;
                         let consumed=ingredient["quantity"].as_f64().ok_or("Invalid recipe quantity")?*quantity;
                         if !consumed.is_finite()||consumed<=0.0{return Err("Invalid recipe quantity".into());}
                         let location=order_outlet.clone();
                         let (_, outlet)=get(&tx,"outlets",&location)?;
                         let location=outlet["defaultStockLocationId"].as_str().unwrap_or("main");
-                        let on_hand=stock["currentStock"][location].as_f64().unwrap_or(0.0);
-                        if on_hand<consumed {return Err(format!("Insufficient stock for {}",stock["name"]));}
-                        stock["currentStock"][location]=json!(on_hand-consumed); put(&tx,"stockItems",stock_id,stock,&mut changes)?;
-                        let movement=id(); put(&tx,"stockMovements",&movement,json!({"id":movement,"stockItemId":stock_id,"type":"SALE","quantity":-consumed,"occurredAt":now(),"referenceId":order_id,"orderItemId":item["id"],"employeeId":user.staff_id}),&mut changes)?;
+                        stock_delta(&tx,user,stock_id,location,-consumed,"SALE_CONSUMPTION",order_id,"Order fired",&mut changes)?;
                     }
                     item["stockFired"]=json!(true); item["state"]=json!("ROUTED"); item["courseStatus"]=json!("FIRED"); item["firedAt"]=json!(now());
                 }
@@ -239,7 +247,10 @@ pub fn execute_as(db:&mut Connection,user:&Session,cmd:BusinessCommand)->Result<
                 for item in items.iter_mut().filter(|i|i["stockFired"]==true){item["state"]=json!(status);}
             }
             let total:i64=order["items"].as_array().unwrap().iter().map(|i|money(i,"lineTotal")).collect::<Result<Vec<_>>>()?.iter().sum();
-            order["subtotal"]=json!(total as f64/100.0); order["grandTotal"]=json!(total as f64/100.0);
+            let net:i64=order["items"].as_array().unwrap().iter().map(|i|i["netMinor"].as_i64().unwrap_or(0)).sum();
+            let vat:i64=order["items"].as_array().unwrap().iter().map(|i|i["vatMinor"].as_i64().unwrap_or(0)).sum();
+            let levy:i64=order["items"].as_array().unwrap().iter().map(|i|i["levyMinor"].as_i64().unwrap_or(0)).sum();
+            order["subtotal"]=json!(net as f64/100.0);order["taxTotal"]=json!(vat as f64/100.0);order["cateringLevyTotal"]=json!(levy as f64/100.0); order["grandTotal"]=json!(total as f64/100.0);
             put(&tx,"orders",order_id,order,&mut changes)?;
         },
         "payment.record" => payment(&tx,&user,p,&mut changes)?,

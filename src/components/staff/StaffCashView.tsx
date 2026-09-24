@@ -752,7 +752,7 @@ export const StaffCashView: React.FC = () => {
               <div>
                 <h3 className="text-base font-bold text-white flex items-center gap-2">
                   <Wallet className="w-5 h-5 text-amber-400" />
-                  <span>Hospitality Payroll, Statutory Withholding & M-PESA B2C</span>
+                  <span>Hospitality Payroll, Statutory Withholding & manual M-Pesa</span>
                 </h3>
                 <p className="text-xs text-slate-400 font-mono mt-1">
                   KRA PAYE with personal relief, NSSF Tier 1 & 2, NHIF/SHIF, 1.5% Affordable Housing, Overtime & Tip Pool Additions
@@ -854,7 +854,7 @@ export const StaffCashView: React.FC = () => {
                           className="w-full py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded transition-colors flex items-center justify-center gap-1.5 shadow-md shadow-emerald-950"
                         >
                           <Send className="w-3.5 h-3.5" />
-                          <span>Disburse via M-PESA B2C</span>
+                          <span>Disburse via manual M-Pesa</span>
                         </button>
                       )}
 

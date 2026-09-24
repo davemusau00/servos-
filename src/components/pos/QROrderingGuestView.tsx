@@ -213,7 +213,7 @@ export const QROrderingGuestView: React.FC<{ onClose: () => void; tableLabel?: s
                     className="px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-200 outline-none focus:border-amber-500"
                   >
                     <option value="ADD_TO_TABLE">Add to Table Bill</option>
-                    <option value="PAY_MPESA_NOW">Pay via M-Pesa STK</option>
+                    <option value="PAY_MPESA_NOW">Pay at the cashier</option>
                   </select>
                 </div>
 

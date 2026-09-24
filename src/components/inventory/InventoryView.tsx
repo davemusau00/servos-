@@ -64,20 +64,20 @@ export const InventoryView: React.FC = () => {
   const [isRequisitionOpen, setIsRequisitionOpen] = useState<boolean>(false);
   const [isTransferOpen, setIsTransferOpen] = useState<boolean>(false);
   const [transferItemId, setTransferItemId] = useState<string>('');
-  const [transferFromLoc, setTransferFromLoc] = useState<string>('loc-warehouse');
-  const [transferToLoc, setTransferToLoc] = useState<string>('loc-bar-store');
+  const [transferFromLoc, setTransferFromLoc] = useState<string>(stockLocations[0]?.id || '');
+  const [transferToLoc, setTransferToLoc] = useState<string>(stockLocations[0]?.id || '');
   const [transferQty, setTransferQty] = useState<number>(0);
   const [transferReason, setTransferReason] = useState<string>('Weekend Bar Replenishment');
 
   const [isWasteOpen, setIsWasteOpen] = useState<boolean>(false);
   const [wasteItemId, setWasteItemId] = useState<string>('');
-  const [wasteLocationId, setWasteLocationId] = useState<string>('loc-bar-store');
+  const [wasteLocationId, setWasteLocationId] = useState<string>(stockLocations[0]?.id || '');
   const [wasteQty, setWasteQty] = useState<number>(0);
   const [wasteReason, setWasteReason] = useState<string>('Broken bottle during service');
 
   const [isStocktakeOpen, setIsStocktakeOpen] = useState<boolean>(false);
   const [stocktakeItemId, setStocktakeItemId] = useState<string>('');
-  const [stocktakeLocId, setStocktakeLocId] = useState<string>('loc-bar-store');
+  const [stocktakeLocId, setStocktakeLocId] = useState<string>(stockLocations[0]?.id || '');
   const [stocktakeCounted, setStocktakeCounted] = useState<number>(0);
   const [stocktakeNotes, setStocktakeNotes] = useState<string>('Weekly shift handover count');
 
@@ -140,12 +140,12 @@ export const InventoryView: React.FC = () => {
     setIsStockModalOpen(true);
   };
 
-  const handleSaveStockItem = (e: React.FormEvent) => {
+  const handleSaveStockItem = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!stockFormName.trim()) return;
 
     if (editingStockId) {
-      updateStockItem(editingStockId, {
+      const saved = await updateStockItem(editingStockId, {
         name: stockFormName,
         code: stockFormCode,
         category: stockFormCategory,
@@ -154,6 +154,7 @@ export const InventoryView: React.FC = () => {
         reorderPoint: stockFormRop,
         minimumStockLevel: stockFormMin
       });
+      if (saved === false) return;
     } else {
       const created: Omit<StockItem, 'id'> = {
         name: stockFormName,
@@ -162,16 +163,13 @@ export const InventoryView: React.FC = () => {
         dimension: 'VOLUME',
         parLevel: stockFormRop * 2,
         baseUnit: stockFormBaseUnit,
-        currentStock: {
-          'loc-warehouse': 1000,
-          'loc-bar-store': 500
-        },
+        currentStock: {},
         reorderPoint: stockFormRop,
         minimumStockLevel: stockFormMin,
         averageUnitCost: stockFormCost,
         lastStocktakeDate: new Date().toISOString().split('T')[0]
       };
-      addStockItem(created);
+      if (await addStockItem(created) === false) return;
     }
     setIsStockModalOpen(false);
   };
@@ -924,12 +922,12 @@ export const InventoryView: React.FC = () => {
                 Cancel
               </button>
               <button
-                onClick={() => {
+                onClick={async () => {
                   if (transferQty <= 0) {
                     showToast('Please enter a positive transfer quantity', 'error');
                     return;
                   }
-                  transferStock(transferItemId, transferFromLoc, transferToLoc, transferQty, transferReason);
+                  if (await transferStock(transferItemId, transferFromLoc, transferToLoc, transferQty, transferReason) === false) return;
                   setIsTransferOpen(false);
                 }}
                 className="px-4 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold rounded"
@@ -1003,12 +1001,12 @@ export const InventoryView: React.FC = () => {
                 Cancel
               </button>
               <button
-                onClick={() => {
+                onClick={async () => {
                   if (wasteQty <= 0) {
                     showToast('Please enter a positive wastage quantity', 'error');
                     return;
                   }
-                  declareWaste(wasteItemId, wasteLocationId, wasteQty, wasteReason);
+                  if (await declareWaste(wasteItemId, wasteLocationId, wasteQty, wasteReason) === false) return;
                   setIsWasteOpen(false);
                 }}
                 className="px-4 py-1.5 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded"
@@ -1082,8 +1080,8 @@ export const InventoryView: React.FC = () => {
                 Cancel
               </button>
               <button
-                onClick={() => {
-                  recordStockCountAdjustment(stocktakeItemId, stocktakeLocId, stocktakeCounted, stocktakeNotes);
+                onClick={async () => {
+                  if (await recordStockCountAdjustment(stocktakeItemId, stocktakeLocId, stocktakeCounted, stocktakeNotes) === false) return;
                   setIsStocktakeOpen(false);
                 }}
                 className="px-4 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold rounded"

@@ -141,12 +141,12 @@ export const CatalogStudioView: React.FC = () => {
     setIsProductModalOpen(true);
   };
 
-  const handleSaveProduct = (e: React.FormEvent) => {
+  const handleSaveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!productFormName.trim()) return;
 
     if (editingProductId) {
-      updateProduct(editingProductId, {
+      const saved = await updateProduct(editingProductId, {
         name: productFormName,
         code: productFormCode,
         category: productFormCategory,
@@ -158,6 +158,7 @@ export const CatalogStudioView: React.FC = () => {
         description: productFormDescription
       });
       // update selected product
+      if (saved === false) return;
       if (selectedProduct && selectedProduct.id === editingProductId) {
         setSelectedProduct(prev => prev ? {
           ...prev,
@@ -187,7 +188,7 @@ export const CatalogStudioView: React.FC = () => {
         etimsTaxCode: productFormEtimsCode,
         description: productFormDescription
       };
-      addProduct(created);
+      if (await addProduct(created) === false) return;
     }
     setIsProductModalOpen(false);
   };
