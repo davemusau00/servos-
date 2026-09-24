@@ -1,7 +1,7 @@
 /**
  * ServOS - Central State & Domain Engine
  * Implements: Double-entry posting, immutable inventory ledger,
- * M-PESA Daraja adapter, eTIMS fiscalizer, offline synchronization,
+ * Legacy browser preview, offline synchronization,
  * Hotel Folios, Control Engine rules & North Star evidence trail.
  */
 
@@ -681,7 +681,7 @@ const initialJournalEntries: JournalEntry[] = [
     postedAt: '2026-09-23T02:15:01Z',
     sourceType: 'SALE',
     sourceId: 'ORD-9018',
-    memo: 'Order #ORD-9018 settled via M-PESA Daraja (1x Tanqueray G&T)',
+    memo: 'Order #ORD-9018 settled via manual M-Pesa (1x Tanqueray G&T)',
     totalDebit: 1042.00,
     totalCredit: 1042.00,
     balanced: true,
@@ -2931,279 +2931,19 @@ export const ServOSProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       totalAmount: order.grandTotal,
       qrCodeUrl: qrUrl,
       fiscalDate: new Date().toISOString(),
-      status: 'FISCALIZED',
-      verificationHash: `KRA-HASH-${Math.random().toString(36).substring(2, 10).toUpperCase()}`
+      status: 'PENDING',
+      verificationHash: ''
     };
 
     setEtimsInvoices(prev => [fiscalInv, ...prev]);
     return fiscalInv;
   };
 
-  // Payment processing with M-PESA STK emulator, Cash drawer, Room Charge
-  const processPayment = async (
-    orderId: string,
-    tenderType: 'CASH' | 'MPESA' | 'CARD' | 'ROOM_CHARGE',
-    amount: number,
-    options?: {
-      mpesa?: { code: string; account: string; receivedAmount: number; receivedAt: string; confirmed: boolean };
-      phoneNumber?: string;
-      cashTendered?: number;
-      guestStayId?: string;
-      cardAuthCode?: string;
-    }
-  ): Promise<{ success: boolean; message: string; receipt?: string }> => {
-    const order = orders.find(o => o.id === orderId) || activeOrder;
-    if (!order) return { success: false, message: 'Order not found' };
-
-    // Check if offline (Cached locally into IndexedDB)
-    if (isOffline) {
-      if (tenderType === 'MPESA') {
-        return {
-          success: false,
-          message: 'Offline Mode: Live Safaricom Daraja STK Push requires cloud connectivity. Please use Cash or Card Voucher.'
-        };
-      }
-
-      const offlineOrder: Order = {
-        ...order,
-        state: 'COMPLETED',
-        amountPaid: amount,
-        paymentMethod: tenderType,
-        isOfflineCreated: true
-      };
-
-      // 1. Enqueue into IndexedDB
-      const offlineOp: OfflineOperation = {
-        id: `off-op-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-        operationType: 'PAYMENT_PROCESS',
-        occurredAt: new Date().toISOString(),
-        terminalId: currentTerminal.id,
-        terminalName: currentTerminal.name,
-        employeeId: currentUser.id,
-        employeeName: currentUser.name,
-        status: 'PENDING',
-        retryCount: 0,
-        amount: amount,
-        summary: `Offline Sale: Order #${order.orderNumber} (${tenderType})`,
-        payload: offlineOrder
-      };
-
-      enqueueOfflineOperation(offlineOp).catch(err =>
-        console.error('Failed to persist to IndexedDB:', err)
-      );
-
-      // 2. Local stock depletion for accurate live bar counts
-      depleteInventoryForOrder(offlineOrder);
-
-      // 3. Local receipt print & cash drawer solenoid pulse
-      triggerEdgePrint('RECEIPT', {
-        orderNumber: order.orderNumber,
-        amount: amount,
-        tenderType,
-        offline: true,
-        persistedTo: 'IndexedDB (ServOS_Offline_Store)'
-      });
-
-      if (tenderType === 'CASH') {
-        triggerCashDrawerKick();
-        if (tillSession) {
-          setTillSession(prev =>
-            prev
-              ? {
-                  ...prev,
-                  cashSalesTotal: prev.cashSalesTotal + amount,
-                  expectedCashInDrawer: prev.expectedCashInDrawer + amount
-                }
-              : prev
-          );
-        }
-      }
-
-      // Free table if applicable
-      if (order.tableId) {
-        setTables(prev =>
-          prev.map(t =>
-            t.id === order.tableId ? { ...t, status: 'DIRTY', activeOrderId: undefined } : t
-          )
-        );
-      }
-
-      setOfflineQueue(prev => [...prev, offlineOrder]);
-      setActiveOrder(null);
-
-      showToast(
-        `Order #${order.orderNumber} settled offline & cached to IndexedDB (${tenderType} KES ${amount.toLocaleString()})`,
-        'success'
-      );
-
-      return {
-        success: true,
-        message: 'Order cached in IndexedDB offline queue (will auto-sync upon reconnection).'
-      };
-    }
-
-    // 1. M-PESA Daraja Flow Simulation
-    let providerRef = `CASH-${Math.floor(10000 + Math.random() * 90000)}`;
-    let mpesaReceipt = '';
-
-    if (tenderType === 'MPESA') {
-      // Simulate Safaricom Daraja STK Push latency & response
-      const phone = options?.phoneNumber || '+254712345678';
-      mpesaReceipt = `QHK${Math.floor(1000000 + Math.random() * 9000000)}`;
-      providerRef = mpesaReceipt;
-    } else if (tenderType === 'CARD') {
-      providerRef = `AUTH-${options?.cardAuthCode || Math.floor(100000 + Math.random() * 900000)}`;
-    } else if (tenderType === 'ROOM_CHARGE') {
-      if (!options?.guestStayId) {
-        return { success: false, message: 'Please select a hotel room stay for room charge' };
-      }
-      const stay = guestStays.find(s => s.id === options.guestStayId);
-      if (!stay) {
-        return { success: false, message: 'Guest stay record not found' };
-      }
-      if (!stay.allowRoomCharge) {
-        return { success: false, message: 'Guest has no room-charge privileges enabled' };
-      }
-
-      const folio = guestFolios.find(f => f.stayId === stay.id);
-      if (folio && folio.balanceDue + amount > stay.creditLimit) {
-        // Trigger alert for credit breach
-        const alert: AnomalyAlert = {
-          id: `alt-${Date.now()}`,
-          ruleCode: 'CREDIT_LIMIT_BREACH',
-          title: `Room Charge Credit Limit Exceeded (${stay.roomNumber})`,
-          description: `Attempted to charge KES ${amount} to Room ${stay.roomNumber} (${stay.guestName}), exceeding limit of KES ${stay.creditLimit}.`,
-          severity: 'HIGH',
-          evidence: {
-            differenceAmount: folio.balanceDue + amount - stay.creditLimit,
-            employeeName: currentUser.name,
-            expectedValue: `Limit: KES ${stay.creditLimit}`,
-            actualValue: `Requested: KES ${folio.balanceDue + amount}`
-          },
-          recommendedAction: 'Require guest to settle partial folio balance at front desk before additional charges.',
-          status: 'OPEN',
-          detectedAt: new Date().toISOString()
-        };
-        setAnomalyAlerts(prev => [alert, ...prev]);
-        return {
-          success: false,
-          message: `Room charge declined: Room ${stay.roomNumber} credit limit of KES ${stay.creditLimit.toLocaleString()} would be exceeded.`
-        };
-      }
-
-      // Add Folio Charge Entry
-      const entry: FolioEntry = {
-        id: `fe-${Date.now()}`,
-        folioId: stay.folioId,
-        occurredAt: new Date().toISOString(),
-        type: 'CHARGE',
-        category: 'F&B_BAR',
-        description: `Bar Order #${order.orderNumber} - ${currentOutlet.name}`,
-        amount,
-        referenceId: order.orderNumber,
-        postedBy: `${currentUser.name} (${currentTerminal.name})`
-      };
-
-      setGuestFolios(prev =>
-        prev.map(f => {
-          if (f.id === stay.folioId) {
-            return {
-              ...f,
-              entries: [entry, ...f.entries],
-              totalCharges: f.totalCharges + amount,
-              balanceDue: f.balanceDue + amount
-            };
-          }
-          return f;
-        })
-      );
-      providerRef = `FOLIO-${stay.roomNumber}`;
-    }
-
-    // 2. Deplete Stock
-    const movements = depleteInventoryForOrder(order);
-
-    // 3. Post to General Ledger (Double-Entry Engine)
-    const journalEntry = postOrderToGeneralLedger(order, tenderType, movements);
-
-    // 4. Kenya eTIMS Fiscal Invoice
-    const fiscalInvoice = generateEtimsFiscalInvoice(order);
-
-    // 5. Payment Record
-    const paymentRecord: PaymentRecord = {
-      id: `pay-${Date.now()}`,
-      orderId: order.id,
-      propertyId: currentProperty.id,
-      tenderType,
-      amount,
-      currency: 'KES',
-      status: 'PAID',
-      referenceNumber: providerRef,
-      providerMetadata: {
-        mpesaReceipt: mpesaReceipt || undefined,
-        phoneNumber: options?.phoneNumber,
-        cardAuthCode: options?.cardAuthCode
-      },
-      cashTendered: options?.cashTendered,
-      changeGiven: options?.cashTendered ? Math.max(0, options.cashTendered - amount) : undefined,
-      occurredAt: new Date().toISOString(),
-      cashierId: currentUser.id,
-      cashierName: currentUser.name
-    };
-    setPayments(prev => [paymentRecord, ...prev]);
-
-    // 6. Update Till Session if cash
-    if (tenderType === 'CASH' && tillSession && tillSession.status === 'OPEN') {
-      setTillSession({
-        ...tillSession,
-        cashSalesTotal: tillSession.cashSalesTotal + amount,
-        expectedCashInDrawer: tillSession.expectedCashInDrawer + amount
-      });
-      // Physical cash drawer kick via Edge Agent
-      triggerCashDrawerKick();
-    }
-
-    // 7. Complete the Order
-    const completedOrder: Order = {
-      ...order,
-      state: 'COMPLETED',
-      amountPaid: amount,
-      completedAt: new Date().toISOString(),
-      paymentMethod: tenderType,
-      etimsInvoiceNumber: fiscalInvoice.invoiceNumber,
-      etimsQrCode: fiscalInvoice.qrCodeUrl,
-      journalEntryId: journalEntry.id
-    };
-
-    setOrders(prev => prev.map(o => (o.id === order.id ? completedOrder : o)));
-    setActiveOrder(null);
-
-    // Free table if associated
-    if (order.tableId) {
-      setTables(prev =>
-        prev.map(t =>
-          t.id === order.tableId ? { ...t, state: 'CLEANING', currentOrderId: undefined } : t
-        )
-      );
-    }
-
-    // Hardware Edge Receipt Print
-    triggerEdgePrint('RECEIPT', {
-      orderNumber: completedOrder.orderNumber,
-      fiscalInvoiceNumber: fiscalInvoice.invoiceNumber,
-      cuNumber: fiscalInvoice.cuSerialNumber,
-      total: completedOrder.grandTotal,
-      tender: tenderType,
-      reference: providerRef,
-      qrUrl: fiscalInvoice.qrCodeUrl
-    });
-
-    return {
-      success: true,
-      message: `Payment successful via ${tenderType}. Order #${completedOrder.orderNumber} completed. eTIMS Invoice ${fiscalInvoice.invoiceNumber} generated.`,
-      receipt: providerRef
-    };
-  };
+  // Browser preview cannot record real financial transactions.
+  const processPayment: ServOSContextType['processPayment'] = async () => ({
+    success: false,
+    message: 'Payments require the installed business application. No payment was recorded.'
+  });
 
   // Till Session Management
   const openTillSession = (floatAmount: number) => {
@@ -3507,84 +3247,10 @@ export const ServOSProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     showToast(`Payroll #${payrollId} approved by ${currentUser.name}. Ready for disbursement!`, 'success');
   };
 
-  const disbursePayrollRun = (payrollId: string) => {
-    const run = payrollRuns.find(r => r.id === payrollId);
-    if (!run) return;
-
-    const updatedPayslips: EmployeePayslip[] = run.payslips.map(ps => ({
-      ...ps,
-      disbursementStatus: 'DISBURSED' as const,
-      paymentReference: `B2C-PYR-${Math.floor(100000 + Math.random() * 900000)}`
-    }));
-
-    const journalId = `je-pyr-${Date.now()}`;
-    const newJournalEntry: JournalEntry = {
-      id: journalId,
-      entryNumber: `JE-PYR-${run.period.replace(/\s+/g, '').toUpperCase()}`,
-      propertyId: currentProperty.id,
-      occurredAt: new Date().toISOString(),
-      postedAt: new Date().toISOString(),
-      sourceType: 'PAYMENT',
-      sourceId: run.id,
-      memo: `Payroll disbursement for ${run.period} (${run.employeeCount} staff) via M-PESA B2C & Bank EFT`,
-      totalDebit: run.totalGross,
-      totalCredit: run.totalGross,
-      balanced: true,
-      lines: [
-        {
-          id: `jl-pyr-1`,
-          accountId: 'acc-5080',
-          accountCode: '5080',
-          accountName: 'Salaries, Wages & Staff Welfare Expense',
-          debit: run.totalGross,
-          credit: 0,
-          description: `Gross Wages Expense - ${run.period}`
-        },
-        {
-          id: `jl-pyr-2`,
-          accountId: 'acc-2120',
-          accountCode: '2120',
-          accountName: 'Payroll Statutory Withholdings (PAYE, NSSF, NHIF, Housing)',
-          debit: 0,
-          credit: run.totalDeductions,
-          description: `Statutory deductions withholding - ${run.period}`
-        },
-        {
-          id: `jl-pyr-3`,
-          accountId: 'acc-1020',
-          accountCode: '1020',
-          accountName: 'M-PESA Clearing Settlement',
-          debit: 0,
-          credit: run.totalNetPay,
-          description: `Net Pay B2C disbursement - ${run.period}`
-        }
-      ]
-    };
-
-    setJournalEntries(prev => [newJournalEntry, ...prev]);
-
-    setSalaryAdvances(prev =>
-      prev.map(a => (a.status === 'APPROVED' ? { ...a, status: 'RECOVERED' as const } : a))
-    );
-
-    setPayrollRuns(prev =>
-      prev.map(r =>
-        r.id === payrollId
-          ? {
-              ...r,
-              status: 'DISBURSED' as const,
-              disbursedAt: new Date().toISOString(),
-              journalEntryId: journalId,
-              payslips: updatedPayslips
-            }
-          : r
-      )
-    );
-
-    showToast(`KES ${run.totalNetPay.toLocaleString()} disbursed to ${run.employeeCount} staff members via M-PESA B2C & GL updated!`, 'success');
+  const disbursePayrollRun = (_payrollId: string) => {
+    showToast('Manual payroll payment recording is pending backend integration. No funds were disbursed.', 'error');
   };
 
-  // Stock Actions (Transfers, Waste, Adjustments)
   const transferStock = (
     stockItemId: string,
     fromLocId: string,
@@ -4151,57 +3817,7 @@ export const ServOSProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const syncOfflineQueue = async () => {
-    try {
-      const pendingOps = await getOfflineOperations('PENDING');
-      if (pendingOps.length === 0 && offlineQueue.length === 0) return;
-
-      let syncedCount = 0;
-
-      // 1. Process and replay each pending operation from IndexedDB
-      for (const op of pendingOps) {
-        await updateOfflineOperationStatus(op.id, 'SYNCING');
-
-        if (op.operationType === 'PAYMENT_PROCESS' || op.operationType === 'ORDER_CREATE') {
-          const ord = op.payload as Order;
-          postOrderToGeneralLedger(ord, (ord.paymentMethod as any) || 'CASH', []);
-          generateEtimsFiscalInvoice(ord);
-          setOrders(prev => {
-            if (prev.some(o => o.id === ord.id || o.orderNumber === ord.orderNumber)) {
-              return prev;
-            }
-            return [ord, ...prev];
-          });
-        }
-
-        await updateOfflineOperationStatus(op.id, 'SYNCED');
-        syncedCount++;
-      }
-
-      // 2. Process memory queue if any items remained unpersisted
-      offlineQueue.forEach(order => {
-        if (!orders.some(o => o.id === order.id)) {
-          postOrderToGeneralLedger(order, (order.paymentMethod as any) || 'CASH', []);
-          generateEtimsFiscalInvoice(order);
-          setOrders(prev => [order, ...prev]);
-        }
-      });
-
-      const totalSynced = syncedCount || offlineQueue.length;
-      setOfflineQueue([]);
-      await logSyncEvent(
-        `Synchronized ${totalSynced} offline transactions with Central General Ledger & eTIMS`,
-        'success',
-        totalSynced
-      );
-
-      showToast(
-        `Successfully synced ${totalSynced} offline transaction(s) with Central Ledger and eTIMS fiscalizer!`,
-        'success'
-      );
-    } catch (err) {
-      console.error('Error synchronizing offline queue:', err);
-      showToast('Error syncing offline queue. Will auto-retry upon reconnection.', 'error');
-    }
+    showToast('Browser preview has no server connection. No transactions were synchronized.', 'info');
   };
 
   const triggerEdgePrint = (documentType: 'RECEIPT' | 'KITCHEN_TICKET', payload: any) => {

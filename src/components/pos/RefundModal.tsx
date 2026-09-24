@@ -44,18 +44,7 @@ export const RefundModal: React.FC<RefundModalProps> = ({ isOpen, order, onClose
     .reduce((acc, curr) => acc + curr.price, 0);
 
   const handleProcessRefund = () => {
-    if (selectedRefundAmount === 0) {
-      showToast('Please select at least one item to refund', 'error');
-      return;
-    }
-
-    if (!managerPin || (managerPin !== '9999' && managerPin !== '1234')) {
-      showToast('Enter valid Manager PIN (1234 or 9999) to authorize refund', 'error');
-      return;
-    }
-
-    showToast(`KES ${selectedRefundAmount.toLocaleString()} refunded via ${refundMethod}! eTIMS Credit Note Generated.`, 'success');
-    onClose();
+    showToast('Refund recording is pending backend integration. No refund or fiscal credit note was issued.', 'error');
   };
 
   return (

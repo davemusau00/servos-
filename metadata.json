@@ -1,6 +1,0 @@
-{
-  "name": "ServOS - Hospitality ERP & POS Platform",
-  "description": "Enterprise modular hospitality operating system unifying POS, beverage yield, double-entry accounting, hotel PMS, M-PESA, eTIMS fiscalization, and operational control engine.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}

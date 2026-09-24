@@ -163,18 +163,8 @@ export const EventsNightlifeView: React.FC = () => {
     }
   };
 
-  const handlePayCommission = (prom: Promoter) => {
-    const remaining = prom.earnedCommissionKes - prom.paidCommissionKes;
-    if (remaining <= 0) return;
-
-    setPromoters(prev => prev.map(p => {
-      if (p.id === prom.id) {
-        return { ...p, paidCommissionKes: p.earnedCommissionKes };
-      }
-      return p;
-    }));
-
-    showToast(`KES ${remaining.toLocaleString()} commission paid to ${prom.name} via Daraja!`, 'success');
+  const handlePayCommission = (_prom: Promoter) => {
+    showToast('Manual commission payment recording is pending backend integration. No payout was made.', 'error');
   };
 
   return (
@@ -269,7 +259,7 @@ export const EventsNightlifeView: React.FC = () => {
               <span className="text-xl font-black text-cyan-400 font-mono mt-1 block">
                 KES {(selectedEvent.presaleRevenueKes / 1000).toFixed(0)}k
               </span>
-              <span className="text-[11px] font-mono text-cyan-300">Daraja e-Tickets</span>
+              <span className="text-[11px] font-mono text-cyan-300">Event tickets</span>
             </div>
           </div>
 

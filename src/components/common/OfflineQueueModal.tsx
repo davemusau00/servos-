@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { isNative } from '../../runtime/RuntimeProvider';
+import { NativeQueuePanel } from '../../runtime/NativeQueuePanel';
 import { useServOS } from '../../context/ServOSContext';
 import { 
   Database, 
@@ -70,6 +72,7 @@ export const OfflineQueueModal: React.FC<OfflineQueueModalProps> = ({ isOpen, on
   }, [isOpen, offlineQueueCount, isOffline]);
 
   if (!isOpen) return null;
+  if (isNative) return <NativeQueuePanel onClose={onClose} />;
 
   const handleManualSync = async () => {
     setIsSyncing(true);

@@ -1,3 +1,5 @@
+import { ManualMpesaFields } from './ManualMpesaFields';
+import type { ManualMpesaInput } from '../../types/runtime';
 import React, { useState } from 'react';
 import { useServOS } from '../../context/ServOSContext';
 import { ProductSellable, RestaurantTable, OrderItem, Order } from '../../types/servos';
@@ -89,9 +91,7 @@ export const POSView: React.FC = () => {
   const [isCheckoutOpen, setIsCheckoutOpen] = useState<boolean>(false);
   const [tenderType, setTenderType] = useState<'CASH' | 'MPESA' | 'CARD' | 'ROOM_CHARGE'>('MPESA');
   const [mpesaPhone, setMpesaPhone] = useState<string>('');
-  const [mpesaCode, setMpesaCode] = useState('');
-  const [mpesaAccount, setMpesaAccount] = useState('');
-  const [mpesaConfirmed, setMpesaConfirmed] = useState(false);
+  const [mpesaReceipt, setMpesaReceipt] = useState<ManualMpesaInput>({ code: '', account: '', receivedAmount: 0, receivedAt: new Date().toISOString(), confirmed: false });
   const [cashTendered, setCashTendered] = useState<number>(0);
   const [selectedGuestStayId, setSelectedGuestStayId] = useState<string>('');
   const [cardAuthCode, setCardAuthCode] = useState<string>('');
@@ -200,7 +200,7 @@ export const POSView: React.FC = () => {
 
     const res = await processPayment(activeOrder.id, tenderType, activeOrder.grandTotal - activeOrder.amountPaid, {
       phoneNumber: mpesaPhone,
-      mpesa: { code: mpesaCode, account: mpesaAccount, receivedAmount: activeOrder.grandTotal - activeOrder.amountPaid, receivedAt: new Date().toISOString(), confirmed: mpesaConfirmed },
+      mpesa: mpesaReceipt,
       cashTendered: cashTendered || activeOrder.grandTotal,
       guestStayId: selectedGuestStayId,
       cardAuthCode
@@ -1478,9 +1478,7 @@ export const POSView: React.FC = () => {
                       </span>
                     </div>
 
-                    <label className="block text-xs">Transaction code<input required value={mpesaCode} onChange={e => setMpesaCode(e.target.value.toUpperCase())} className="block w-full bg-slate-900 border border-slate-700 rounded p-2" /></label>
-                    <label className="block text-xs">Receiving till / paybill account<input required value={mpesaAccount} onChange={e => setMpesaAccount(e.target.value)} className="block w-full bg-slate-900 border border-slate-700 rounded p-2" /></label>
-                    <label className="flex gap-2 text-xs"><input type="checkbox" checked={mpesaConfirmed} onChange={e => setMpesaConfirmed(e.target.checked)} />I checked the receipt on the business account and confirmed the amount.</label>
+                    <ManualMpesaFields value={mpesaReceipt} onChange={setMpesaReceipt} />
                     <div>
                       <label className="text-xs text-slate-300 block mb-1">Customer Phone Number</label>
                       <input
@@ -1605,7 +1603,7 @@ export const POSView: React.FC = () => {
                     {isProcessing ? (
                       <>
                         <span className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
-                        <span>Processing & Fiscalizing...</span>
+                        <span>Saving payment locally…</span>
                       </>
                     ) : (
                       <>
