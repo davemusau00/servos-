@@ -4,15 +4,16 @@ Updated: 2026-09-24. **Partial implementation. Not deployment ready.**
 
 ## Latest progress and next slice
 
-Documentation now separates the accepted deployment target from source implementation and local verification. The obsolete platform specification and administration surface were removed; the retained documentation index covers only business operations, implementation, verification and deployment. Supabase configuration is stored locally outside version control. Schema installation and enrollment have not been established by the connectivity probe.
+Documentation separates the accepted deployment target from source implementation and local verification. The obsolete platform specification and administration surface were removed; the retained index covers business operations, implementation, verification and deployment. Supabase configuration is stored locally outside version control. The live replica table now rejects anonymous access with a database permission error; this does not establish enrollment or synchronization.
 
-The next trading slice closes a table-lifecycle gap: paid or transferred tables enter CLEANING, but currently have no native cleaning-completion command and can be reopened prematurely. Implement an audited readiness command, enforce availability when seating/transferring, and verify failed commands leave no partial records. Native execution remains a priority alongside this work.
+The table-lifecycle slice is implemented: native layout saving is atomic and version-checked; occupied table ownership is preserved; removing occupied tables is rejected; cleaning completion is attributable; seating and transfer require availability. The designer preserves stored positions, uses real staff assignments, supports coordinate editing and keeps errors/drafts visible. SQL migration 003 rejects malformed remote requests without changing business records. Native execution and full trading acceptance remain priorities.
 
 ## Implemented in source
 
 - Tauri scaffold, typed command boundary, versioned SQLite records, audit, command deduplication and transactional outbox.
 - Argon2 PIN verification, persistent retry throttling, role checks and expiring local sessions.
 - Selected master save/archive commands; simple orders, firing, recipe stock depletion, KDS transitions, unpaid transfer/merge and unfired voids.
+- Atomic outlet floorplans and versioned table cleaning confirmation; table lifecycle cannot be reset by layout edits.
 - Stock counts, waste and transfers with movement records and negative-stock rejection.
 - Till opening/closing, manual cash/card/M-Pesa, atomic split payments, receipt uniqueness/allocation and manager reconciliation.
 - Configured inclusive-tax snapshots and balanced payment journals, including partial-payment rounding. Full accrual accounting remains pending.
@@ -21,16 +22,17 @@ The next trading slice closes a table-lifecycle gap: paid or transferred tables 
 - Online manager login, replica browsing, terminal health and selected administrative change requests.
 - Consistent manual SQLite backup. Credentials are included; encryption and restore are not implemented.
 
-These are source implementation claims, not native or server acceptance evidence.
+These are source implementation claims. Verification below applies only to the named checks, not whole-module acceptance.
 
 ## Verification evidence
 
 - `npm run lint`, `npm run build`, and `npm test`: passed; five documentation/SQLite integrity tests. Build warns about the large frontend bundle.
-- Browser preview: two desktop/narrow-layout route smoke tests passed. This does not verify native business workflows.
-- Static interaction inventory: 1,206 controls, handlers and routes; all require workflow classification and acceptance.
-- Native tests: ten domain tests written. The GNU/Zig toolchain attempt compiled the store but did not establish executable test results; linking stalled. Desktop check failed in a Tauri dependency build script with `STATUS_ACCESS_VIOLATION`. Use a supported Windows toolchain for native acceptance.
-- Configured project's Auth settings endpoint: HTTP 200 with the supplied publishable key. Replica table probe: HTTP 404. No remote migrations or data mutations performed; no sync claim established.
-- Supabase policy/replay, authenticated native end-to-end, physical devices, offline shift and restore rehearsals: not verified.
+- Browser preview: four desktop/narrow-layout checks passed, covering module navigation and floorplan draft editing/cancellation/truthful preview saving. These do not verify native UI persistence.
+- Static interaction inventory: 1,209 controls, handlers and routes; all require workflow classification and acceptance.
+- Native domain source and fourteen tests pass `cargo check --tests --manifest-path native-tests/Cargo.toml`. Executable tests remain pending. The Windows GNU build previously stalled at linking; the desktop check failed in a Tauri dependency build script with `STATUS_ACCESS_VIOLATION`. Platform package verification remains open.
+- `npm run test:cloud`: passed in disposable PostgreSQL 18.6 with minimal Supabase Auth fixtures. All three migrations apply. Assertions cover retry-safe enrollment, one active terminal, unchanged/changed replays, sequence-gap rollback, read/write permissions, malformed requests, upload-before-applied acknowledgement, revoked request authors and fenced terminals.
+- Configured project: Auth settings HTTP 200. Latest anonymous replica probe HTTP 401 / PostgreSQL 42501, permission denied for business_records (previously 404). No remote migrations or business-data mutations performed by this agent; no sync claim established.
+- Live Supabase Auth/HTTP integration, authenticated native end-to-end, physical devices, offline shift and restore rehearsals: not verified.
 
 ## Release blockers
 
