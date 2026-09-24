@@ -1,105 +1,25 @@
-# ServOS Technical Architecture & System Overview
+# System architecture
 
-## 1. System Vision & Architecture Principles
+## Data flow
 
-ServOS is designed as a **Unified Hospitality Operating System** that integrates front-of-house (FOH) guest interaction, mid-of-house (MOH) kitchen/room service fulfillment, and back-of-house (BOH) enterprise resource planning (ERP).
+Installed React views -> typed Tauri commands -> native authorization and validation -> SQLite transaction containing business records, audit and outbox -> authenticated Supabase upload -> Postgres replica -> remote reporting.
 
-```
-                      ┌──────────────────────────────────────────────┐
-                      │              ServOS Web App Core             │
-                      │  (Vite + React + TypeScript + Tailwind CSS)  │
-                      └──────────────────────┬───────────────────────┘
-                                             │
-      ┌──────────────────────────────────────┼──────────────────────────────────────┐
-      │                                      │                                      │
-┌─────▼──────────────┐             ┌─────────▼───────────┐                ┌─────────▼───────────┐
-│ Front-of-House UI  │             │ Mid-of-House Engine │                │ Back-of-House ERP   │
-├────────────────────┤             ├─────────────────────┤                ├─────────────────────┤
-│ POS & Multi-Tender │             │ KDS Prep Stations   │                │ Double-Entry Ledger │
-│ Table Floorplan    │             │ Hotel Tape Chart    │                │ KRA eTIMS Fiscal    │
-│ Catalog & Pricing  │             │ Housekeeping Board  │                │ Procurement & AP    │
-│ Nightlife Door Scan│             │ Maintenance Tickets │                │ HR & Payroll Hub    │
-│ CRM 360 & Loyalty  │             │ Universal Task Queue│                │ AvT Yield Control   │
-└─────────┬──────────┘             └──────────┬──────────┘                └──────────┬──────────┘
-          │                                   │                                      │
-          └───────────────────────────────────┼──────────────────────────────────────┘
-                                              │
-                              ┌───────────────▼───────────────┐
-                              │     Edge Node Sync & Offline  │
-                              │     Hardware Gateway Bridge   │
-                              └───────────────┬───────────────┘
-                                              │
-                      ┌───────────────────────┴───────────────────────┐
-                      │                                               │
-             ┌────────▼────────┐                             ┌────────▼────────┐
-             │ Edge Hardware   │                             │ Cloud Sync API  │
-             ├─────────────────┤                             ├─────────────────┤
-             │ Thermal Printers│                             │ Multi-Property  │
-             │ Weight Scales   │                             │ Global Analytics│
-             │ M-Pesa POS Term │                             │ Remote Audit    │
-             └─────────────────┘                             └─────────────────┘
-```
+The installed terminal is the authoritative writer. Server outages do not disable locally enrolled staff access. A successful local command means its SQLite transaction committed; it does not mean a server or external provider accepted it.
 
-### Core Architecture Design Pillars:
-1. **Local-First Edge Resilience**: Cashiers and waiters must be able to ring up orders, print receipts, and issue M-Pesa requests uninterrupted during cloud network outages.
-2. **Unified Data Model**: Single source of truth across inventory, sales, room folios, and financial ledger accounts.
-3. **Role-Based Security & Audit Trail**: Granular action permissions with manager authorization PIN gates and immutable audit logs.
-4. **Real-time Operational Telemetry**: Instant sync across POS, KDS, Hotel Tape Chart, and Command Centre.
+The local migration contains staff credentials, expiring sessions, versioned domain records, command deduplication, append-only application audit, an outbox and a unique M-Pesa code registry. Domain records currently use validated JSON envelopes, not a complete normalized relational model. Expanding relational constraints remains release work.
 
----
+The React runtime gate selects the native provider only inside Tauri. Ordinary browser access opens an explicitly labelled sample-data preview. The legacy context is retained for that preview while native workflows are migrated. Unconnected native modules display a pending-integration message.
 
-## 2. Technology Stack
+## Commands and synchronization
 
-- **Framework**: React 18+ with TypeScript (Strict mode enabled)
-- **Build System**: Vite
-- **Styling**: Tailwind CSS with custom dark mode glassmorphism theme (`bg-slate-900`, `bg-slate-800`, `border-slate-700`, `amber-400` accent highlights)
-- **Icons**: Lucide React (`lucide-react`)
-- **State Management**: React Context API (`ServOSContext.tsx`) with memoized selective state updates
-- **Storage & Synchronization**: LocalStorage & IndexedDB backed offline transaction queue simulation with automatic backoff retry logic.
+Commands carry a UUID, schema version, operation, payload and optional expected record version. The backend derives the actor from a local session. A repeated command ID returns its stored result only if the payload matches. Transactions create the audit and outbox together with business changes.
 
----
+Uploads contain ordered operation envelopes. The server serializes each terminal stream, rejects sequence gaps and changed replays, and commits the batch before returning an acknowledgement. The terminal acknowledges only uploaded operations. Scheduled foreground sync uses backoff; resume and reconnection trigger retries. Native background execution is not guaranteed on Android.
 
-## 3. Data Model & Entity Hierarchy
+The server migration also stores remote change requests. Terminal polling/application and the remote manager web application remain unfinished; requests must not be represented as applied.
 
-### Property & Outlet Structure
-ServOS enforces a strict multi-property and multi-outlet relational structure:
+## Security and limitations
 
-```
-Organization
- └── Property (e.g., Grand Nairobi Hotel, Westlands Rooftop)
-      ├── Outlets (Main Bar, VIP Lounge, Terrace Restaurant, Room Service)
-      ├── Terminals / Edge Nodes (POS-01, KDS-Bar, Door-Scanner-01)
-      ├── Tables / Sections (Section A, VIP Cabanas, Terrace)
-      └── Hotel Rooms / Room Types (Deluxe Ocean, Executive Suite)
-```
+Local PINs use Argon2 with random salts and persistent throttling. Native sessions expire after 15 minutes without commands and are deleted on restart. Remote roles are project-provisioned Supabase memberships. Server upload credentials are hashed on the server; the current local device token is in the OS application database. Secure-keystore integration, encrypted backups and recovery fencing remain release blockers.
 
-### Key Entity Relationships:
-- **Product & Portions**: A `Product` (e.g., Jameson 750ml) links to multiple `Portion` definitions (30ml Shot, 60ml Double, Bottle) and a master `StockItem` for milliliter-precise inventory depletion.
-- **Orders & Payments**: An `Order` contains multiple `OrderItems` (with modifiers and mixers), linked to a `Table` or `RoomFolio`, settled via `SplitPayment` entries (M-Pesa, Cash, Card, Room Charge).
-- **Fiscal Receipts**: Every completed payment generates an eTIMS payload containing a Control Unit Code (CU Serial), QR Code URL, and Tax Breakdown (VAT 16%, Catering Levy 2%).
-- **Guest 360**: A `CustomerProfile` accumulates spend across F&B, Nightlife, and Hotel Stays, generating loyalty points and tracking preferences.
-
----
-
-## 4. Hardware Diagnostics & Edge Integration
-
-ServOS interfaces directly with peripheral hardware through Edge Gateway API protocols:
-
-```
-                  ┌─────────────────────────────────┐
-                  │    ServOS Edge Gateway Bridge   │
-                  └────────────────┬────────────────┘
-                                   │
-      ┌────────────────────────────┼────────────────────────────┐
-      │                            │                            │
-┌─────▼──────────────┐   ┌─────────▼──────────┐       ┌─────────▼──────────┐
-│  Thermal Printer   │   │ Smart Bar Scale    │       │ M-Pesa POS Device  │
-├────────────────────┤   ├────────────────────┤       ├────────────────────┤
-│ ESC/POS USB/LAN    │   │ RS232 / USB Serial │       │ Direct SDK / Push  │
-│ 80mm Autocutter    │   │ Bottle Weight (g)  │       │ Instant STK Push   │
-└────────────────────┘   └────────────────────┘       └────────────────────┘
-```
-
-- **ESC/POS Printing**: Native support for Kitchen Order Tickets (KOT) and Fiscal Receipts via ESC/POS command generation.
-- **Precision Spirit Weighing**: Integration with Bluetooth/USB digital scales to weigh partial bottles for exact liquid loss calculation.
-- **M-Pesa Express (STK Push)**: Real-time M-Pesa payment prompt triggering and instant callback verification.
+No unrestricted SQL command is exposed to the frontend. Backend commands enforce roles. An application audit trigger prevents normal updates/deletes, but this is not protection against an administrator modifying the database file.
