@@ -19,15 +19,15 @@ Updated: 2026-09-24. **Bar-first source implementation substantially expanded. P
 - Till open, paid-in/out, blind close and protected variance override.
 - Persisted close-day report covering sales, tax/levy, tenders, cash, discounts/comps/refunds, COGS/waste, gross profit, top products, staff sales and system state.
 - Offline Help Center generated from 31 Markdown user-guide articles.
-- Windows build bootstrap, Bash-driven preflight/NSIS packaging, target runtime install/check and XP-80T USB queue helper source are now present alongside the existing Linux/Android scripts.
+- Windows build bootstrap, Bash-driven preflight/NSIS packaging, target runtime install/check, XP-80T USB queue setup and RAW test-slip helpers are now present alongside the existing Linux/Android scripts.
 - Existing ordered Supabase replica and remote-request architecture retained.
 
 ## Hardware status checked 2026-09-24
 
-- The Windows host enumerated the connected XP-80T as USB device `Printer POS-80` and exposes port `USB001`.
-- The installed Windows print driver is named `XP-80C`, but no Windows printer queue was present. Creating a queue from this non-elevated session failed, so no paper test was sent.
-- An administrator-only `scripts/configure-xprinter-usb.ps1` helper now registers a queue from the existing XP-80C driver and USB port; it has not been run on the target Windows 10 terminal.
-- Source now includes an XP-80T profile for direct LAN ESC/POS (default TCP port 9100), a Windows RAW USB queue path, 48-column receipt formatting, optional cut between copies, a setup test slip, and a locally persisted retry list. Network/spooler acceptance is not proof of physical paper output; USB and LAN remain unverified on the device.
+- On the connected Windows 11 host, Windows exposes the XP-80T as `Printer POS-80` on `USB001`. Its existing queue is `Xprinter XP-80` with driver `Xprinter XP-80`; vendor driver `XP-80C` is also registered.
+- `scripts/test-xprinter-usb.ps1` sent a short non-sale RAW slip to that USB queue. The printer was initially out of paper; after paper was loaded, the operator confirmed the test slip printed and the pending job cleared. This verifies one physical USB RAW slip on the Windows 11 host.
+- `scripts/configure-xprinter-usb.ps1` now reuses a compatible XP-80 queue on the requested USB port before creating a new queue, so the current driver/queue naming does not create duplicates. Neither helper has yet been rehearsed on the fresh Windows 10 terminal.
+- Source includes an XP-80T profile for direct LAN ESC/POS (default TCP port 9100), a Windows RAW USB queue path, 48-column receipt formatting, optional cut between customer and business copies, an in-app setup test slip, and a locally persisted retry list. The standalone USB slip does not verify ServOS's packaged-app path, both receipts or cutter behavior. LAN remains unverified.
 - This installation will not use a cash drawer.
 
 ## Verification executed in this environment
@@ -46,7 +46,7 @@ Dependency-independent checks are recorded in [TEST_EVIDENCE.md](TEST_EVIDENCE.m
 - successful Rust domain tests and Tauri desktop build;
 - disposable PostgreSQL/Supabase protocol test;
 - actual Windows/Linux/Android package builds as applicable;
-- XP-80T queue creation with the new helper, customer/business two-copy paper output, LAN/USB handoff, cut behavior, retry/restart recovery, and physical printer acceptance;
+- packaged-app XP-80T USB printing and customer/business two-copy paper output, optional cut behavior, LAN handoff, retry/restart recovery, and acceptance on the fresh Windows 10 terminal;
 - complete Phase 16 fresh-install/offline/restart/reconnect/backup acceptance rehearsal;
 - encrypted/rotated remote backups and verified replacement-terminal restore remain beyond the current local backup implementation.
 

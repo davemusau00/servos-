@@ -19,10 +19,11 @@ The XP-80T is an 80 mm thermal receipt printer. Use the supplied 24 V, 1.25 A ad
 ## Install and test the Windows queue
 
 1. Install the XP-80T-compatible 80-series Windows driver from the [official Xprinter driver page](https://www.xprinter.net/companyfile/11/).
-2. Connect printer power and USB data, then add a local Windows printer queue. Print a Windows test page. The driver must be registered and a queue must exist; detecting a USB device alone is not sufficient.
-3. For direct USB printing, open ServOS Business Setup → Till policy, choose **XP-80T direct USB (Windows queue)**, and enter the exact local queue name.
-4. For direct LAN printing, reserve or set the printer's local network address using its setup utility, connect its Ethernet cable, select **XP-80T direct LAN (ESC/POS)**, and enter the printer's private-network IP. Keep port **9100** unless the printer was configured differently.
-5. Set receipt width (default 48 columns) and whether to cut after each copy. Save the profile and choose **Save & send test slip**.
+2. Connect printer power and USB data, then run `scripts/configure-xprinter-usb.ps1` from elevated PowerShell. It reuses an XP-80 queue already assigned to the selected USB port, or creates `XP-80T USB` from the installed driver. Record the exact queue name it reports.
+3. To check the USB queue with a short non-sale receipt, run `scripts/test-xprinter-usb.ps1 -QueueName '<queue name>' -Send` and confirm that paper physically prints. This test sends no cash-drawer signal. Replace `<queue name>` with the exact name reported by the setup helper.
+4. For direct USB printing, open ServOS Business Setup → Till policy, choose **XP-80T direct USB (Windows queue)**, and enter that exact local queue name.
+5. For direct LAN printing, reserve or set the printer's local network address using its setup utility, connect its Ethernet cable, select **XP-80T direct LAN (ESC/POS)**, and enter the printer's private-network IP. Keep port **9100** unless the printer was configured differently.
+6. Set receipt width (default 48 columns) and whether to cut after each copy. Save the profile and choose **Save & send test slip**.
 
 For **Windows / OS print dialog**, ServOS opens the operating system print window and the operator selects the installed queue. Direct USB uses the local Windows queue to pass ESC/POS data in RAW mode. Direct LAN connects to the configured address and sends ESC/POS bytes. The LAN address must be local to the POS network.
 

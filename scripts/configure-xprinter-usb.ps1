@@ -15,15 +15,6 @@ if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administra
 
 Import-Module PrintManagement -ErrorAction Stop
 
-$driver = Get-PrinterDriver -Name $DriverName -ErrorAction SilentlyContinue
-if (-not $driver) {
-    $installed = Get-PrinterDriver -ErrorAction SilentlyContinue |
-        Where-Object { $_.Name -match '(?i)XP.?80|Xprinter' } |
-        Select-Object -ExpandProperty Name
-    $installedText = if ($installed) { $installed -join ', ' } else { 'none found' }
-    throw "Printer driver '$DriverName' is not registered. Xprinter-like drivers found: $installedText. Install the XP-80 series driver first."
-}
-
 $port = Get-PrinterPort -Name $PortName -ErrorAction SilentlyContinue
 if (-not $port) {
     $usbPorts = Get-PrinterPort -ErrorAction SilentlyContinue |
@@ -35,10 +26,10 @@ if (-not $port) {
 
 $existing = Get-Printer -Name $QueueName -ErrorAction SilentlyContinue
 if ($existing) {
-    if ($existing.DriverName -ne $DriverName -or $existing.PortName -ne $PortName) {
-        throw "Queue '$QueueName' already exists with a different driver or port. Inspect it in Windows Printers & scanners before changing it."
+    if ($existing.PortName -ne $PortName -or $existing.DriverName -notmatch '(?i)XP.?80|Xprinter|POS.?80') {
+        throw "Queue '$QueueName' already exists, but it is not an XP-80 series queue on '$PortName'. Inspect it in Windows Printers & scanners before changing it."
     }
-    Write-Host "Existing queue is ready: $QueueName | $DriverName | $PortName" -ForegroundColor Green
+    Write-Host ("Existing XP-80 queue is ready: {0} | {1} | {2}" -f $existing.Name, $existing.DriverName, $existing.PortName) -ForegroundColor Green
     return
 }
 
@@ -49,6 +40,15 @@ if ($existing) {
     Write-Host ("Using existing queue on the requested USB port: {0} | {1} | {2}" -f $existing.Name, $existing.DriverName, $existing.PortName) -ForegroundColor Green
     Write-Host 'Enter this exact queue name in ServOS Till Setup. No duplicate queue was created.'
     return
+}
+
+$driver = Get-PrinterDriver -Name $DriverName -ErrorAction SilentlyContinue
+if (-not $driver) {
+    $installed = Get-PrinterDriver -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -match '(?i)XP.?80|Xprinter|POS.?80' } |
+        Select-Object -ExpandProperty Name
+    $installedText = if ($installed) { $installed -join ', ' } else { 'none found' }
+    throw "Printer driver '$DriverName' is not registered. XP-80 series drivers found: $installedText. Install the XP-80 series driver first, or pass its exact name with -DriverName."
 }
 
 Add-Printer -Name $QueueName -DriverName $DriverName -PortName $PortName
