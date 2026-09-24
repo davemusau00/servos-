@@ -1,0 +1,620 @@
+{
+  "generatedAt": "2026-09-24T13:12:45.951Z",
+  "source": "docs/user-guide",
+  "count": 30,
+  "articles": [
+    {
+      "id": "01-getting-started",
+      "title": "Getting Started",
+      "section": "Getting Started",
+      "roles": [
+        "Admin",
+        "Manager",
+        "Server"
+      ],
+      "permissions": [
+        "help.view"
+      ],
+      "screen": "help",
+      "summary": "ServOS runs one business from one installed terminal. Local SQLite remains authoritative during internet loss.",
+      "body": "Section: Getting Started\nRoles: Admin, Manager, Server\nPermission: help.view\nScreen: help\nKeywords: getting started, getting started, ServOS\n\n## Overview\n\nServOS runs one business from one installed terminal. Local SQLite remains authoritative during internet loss.\n\n## Procedure\n\nUnlock with your own PIN. Use the left navigation for permitted workspaces. Watch the pending-sync indicator, but continue local trading when offline. Use Change Staff / Lock whenever another person takes over the terminal.\n\n## What ServOS records\n\nActions that change the business are committed through the native backend. When applicable, business records, audit evidence and synchronization outbox entries commit together.\n\n## Common mistakes and correction\n\nDo not treat a button, toast or browser preview as proof that a business transaction was committed. Correct mistakes through the documented reversal, void, refund, count or manager-approved workflow rather than deleting historical transactions.",
+      "keywords": [
+        "getting started",
+        "getting started",
+        "ServOS"
+      ]
+    },
+    {
+      "id": "02-intake",
+      "title": "Intake Wizard",
+      "section": "First-Time Setup",
+      "roles": [
+        "Admin"
+      ],
+      "permissions": [
+        "system.configure"
+      ],
+      "screen": "intake",
+      "summary": "The Intake Wizard records how the bar operates before owner enrollment.",
+      "body": "Section: First-Time Setup\nRoles: Admin\nPermission: system.configure\nScreen: intake\nKeywords: intake wizard, first-time setup, ServOS\n\n## Overview\n\nThe Intake Wizard records how the bar operates before owner enrollment.\n\n## Procedure\n\nChoose the venue type, service modes, operating pattern, payments, service areas, stock areas, equipment and import strategy. Save progress safely. Confirm the summary before owner enrollment. Intake creates configuration intent only, not trading records.\n\n## What ServOS records\n\nActions that change the business are committed through the native backend. When applicable, business records, audit evidence and synchronization outbox entries commit together.\n\n## Common mistakes and correction\n\nDo not treat a button, toast or browser preview as proof that a business transaction was committed. Correct mistakes through the documented reversal, void, refund, count or manager-approved workflow rather than deleting historical transactions.",
+      "keywords": [
+        "intake wizard",
+        "first-time setup",
+        "ServOS"
+      ]
+    },
+    {
+      "id": "03-enrollment",
+      "title": "Owner Enrollment",
+      "section": "First-Time Setup",
+      "roles": [
+        "Admin"
+      ],
+      "permissions": [
+        "system.configure"
+      ],
+      "screen": "enrollment",
+      "summary": "Enrollment links the one terminal to the owner account and creates the first local Admin PIN.",
+      "body": "Section: First-Time Setup\nRoles: Admin\nPermission: system.configure\nScreen: enrollment\nKeywords: owner enrollment, first-time setup, ServOS\n\n## Overview\n\nEnrollment links the one terminal to the owner account and creates the first local Admin PIN.\n\n## Procedure\n\nComplete intake first. Sign in with the owner online account. Enter the real business and owner names and create a 6–12 digit local PIN. After successful enrollment, local staff PINs work offline.\n\n## What ServOS records\n\nActions that change the business are committed through the native backend. When applicable, business records, audit evidence and synchronization outbox entries commit together.\n\n## Common mistakes and correction\n\nDo not treat a button, toast or browser preview as proof that a business transaction was committed. Correct mistakes through the documented reversal, void, refund, count or manager-approved workflow rather than deleting historical transactions.",
+      "keywords": [
+        "owner enrollment",
+        "first-time setup",
+        "ServOS"
+      ]
+    },
+    {
+      "id": "04-business-setup",
+      "title": "Business Setup Wizard",
+      "section": "First-Time Setup",
+      "roles": [
+        "Admin"
+      ],
+      "permissions": [
+        "business.configure"
+      ],
+      "screen": "setup",
+      "summary": "The setup wizard creates the real operating configuration and resumes after restart.",
+      "body": "Section: First-Time Setup\nRoles: Admin\nPermission: business.configure\nScreen: setup\nKeywords: business setup wizard, first-time setup, ServOS\n\n## Overview\n\nThe setup wizard creates the real operating configuration and resumes after restart.\n\n## Procedure\n\nComplete business identity, tax, payments, service areas, stock locations, catalog, opening inventory, staff access and till policy. Optional recipes/portions, floorplan and backup/sync can be completed as appropriate. Only the native go-live check can set the system LIVE.\n\n## What ServOS records\n\nActions that change the business are committed through the native backend. When applicable, business records, audit evidence and synchronization outbox entries commit together.\n\n## Common mistakes and correction\n\nDo not treat a button, toast or browser preview as proof that a business transaction was committed. Correct mistakes through the documented reversal, void, refund, count or manager-approved workflow rather than deleting historical transactions.",
+      "keywords": [
+        "business setup wizard",
+        "first-time setup",
+        "ServOS"
+      ]
+    },
+    {
+      "id": "05-rbac",
+      "title": "Roles and Permissions",
+      "section": "User Access",
+      "roles": [
+        "Admin",
+        "Manager",
+        "Server"
+      ],
+      "permissions": [
+        "help.view"
+      ],
+      "screen": "admin",
+      "summary": "Authority comes from the authenticated staff PIN session, never from a role dropdown.",
+      "body": "Section: User Access\nRoles: Admin, Manager, Server\nPermission: help.view\nScreen: admin\nKeywords: roles and permissions, user access, ServOS\n\n## Overview\n\nAuthority comes from the authenticated staff PIN session, never from a role dropdown.\n\n## Procedure\n\nAdmin owns business/security configuration. Manager supervises protected operations. Server is the bar operator. Protected actions can request a single-use manager approval without changing the operator session. Change staff by locking and unlocking with the next person’s PIN.\n\n## What ServOS records\n\nActions that change the business are committed through the native backend. When applicable, business records, audit evidence and synchronization outbox entries commit together.\n\n## Common mistakes and correction\n\nDo not treat a button, toast or browser preview as proof that a business transaction was committed. Correct mistakes through the documented reversal, void, refund, count or manager-approved workflow rather than deleting historical transactions.",
+      "keywords": [
+        "roles and permissions",
+        "user access",
+        "ServOS"
+      ]
+    },
+    {
+      "id": "06-opening-bar",
+      "title": "Opening the Bar",
+      "section": "Opening the Bar",
+      "roles": [
+        "Admin",
+        "Manager",
+        "Server"
+      ],
+      "permissions": [
+        "till.open"
+      ],
+      "screen": "admin",
+      "summary": "Open one till with the physical opening float before cash service.",
+      "body": "Section: Opening the Bar\nRoles: Admin, Manager, Server\nPermission: till.open\nScreen: admin\nKeywords: opening the bar, opening the bar, ServOS\n\n## Overview\n\nOpen one till with the physical opening float before cash service.\n\n## Procedure\n\nUnlock ServOS. Confirm products and stock are visible. Open Business Admin, enter the actual opening float and open the till. Only one till can be open on the one-terminal installation.\n\n## What ServOS records\n\nActions that change the business are committed through the native backend. When applicable, business records, audit evidence and synchronization outbox entries commit together.\n\n## Common mistakes and correction\n\nDo not treat a button, toast or browser preview as proof that a business transaction was committed. Correct mistakes through the documented reversal, void, refund, count or manager-approved workflow rather than deleting historical transactions.",
+      "keywords": [
+        "opening the bar",
+        "opening the bar",
+        "ServOS"
+      ]
+    },
+    {
+      "id": "07-pos-tabs",
+      "title": "Running Bar Tabs",
+      "section": "POS",
+      "roles": [
+        "Admin",
+        "Manager",
+        "Server"
+      ],
+      "permissions": [
+        "pos.sell"
+      ],
+      "screen": "pos",
+      "summary": "Use quick tabs or tables, add products, fire rounds and settle from the same native order.",
+      "body": "Section: POS\nRoles: Admin, Manager, Server\nPermission: pos.sell\nScreen: pos\nKeywords: running bar tabs, pos, ServOS\n\n## Overview\n\nUse quick tabs or tables, add products, fire rounds and settle from the same native order.\n\n## Procedure\n\nOpen a quick tab or available table. Search by name, SKU or barcode. Add products and configure portions/modifiers. Change quantities before firing. Fire the round, repeat as needed, then settle using an enabled tender.\n\n## What ServOS records\n\nActions that change the business are committed through the native backend. When applicable, business records, audit evidence and synchronization outbox entries commit together.\n\n## Common mistakes and correction\n\nDo not treat a button, toast or browser preview as proof that a business transaction was committed. Correct mistakes through the documented reversal, void, refund, count or manager-approved workflow rather than deleting historical transactions.",
+      "keywords": [
+        "running bar tabs",
+        "pos",
+        "ServOS"
+      ]
+    },
+    {
+      "id": "08-portions",
+      "title": "Portions, Modifiers and Recipes",
+      "section": "Portions",
+      "roles": [
+        "Admin",
+        "Manager"
+      ],
+      "permissions": [
+        "catalog.manage"
+      ],
+      "screen": "catalog",
+      "summary": "Portions and recipes turn one stock item into correctly measured sellables.",
+      "body": "Section: Portions\nRoles: Admin, Manager\nPermission: catalog.manage\nScreen: catalog\nKeywords: portions, modifiers and recipes, portions, ServOS\n\n## Overview\n\nPortions and recipes turn one stock item into correctly measured sellables.\n\n## Procedure\n\nCreate a stock item such as a 750ml spirit. Add sellable portions with volumes and prices. Add modifiers/mixers with optional price and ingredient adjustments. Add recipe ingredients for cocktails. The frozen ingredient snapshot is consumed when the order is fired.\n\n## What ServOS records\n\nActions that change the business are committed through the native backend. When applicable, business records, audit evidence and synchronization outbox entries commit together.\n\n## Common mistakes and correction\n\nDo not treat a button, toast or browser preview as proof that a business transaction was committed. Correct mistakes through the documented reversal, void, refund, count or manager-approved workflow rather than deleting historical transactions.",
+      "keywords": [
+        "portions",
+        "modifiers and recipes",
+        "portions",
+        "ServOS"
+      ]
+    },
+    {
+      "id": "09-kds",
+      "title": "Bar Pass / KDS",
+      "section": "KDS / Bar Pass",
+      "roles": [
+        "Admin",
+        "Manager",
+        "Server"
+      ],
+      "permissions": [
+        "kds.update"
+      ],
+      "screen": "kds",
+      "summary": "Preparation state is item-specific and routed by BAR, KITCHEN or SERVICE.",
+      "body": "Section: KDS / Bar Pass\nRoles: Admin, Manager, Server\nPermission: kds.update\nScreen: kds\nKeywords: bar pass / kds, kds / bar pass, ServOS\n\n## Overview\n\nPreparation state is item-specific and routed by BAR, KITCHEN or SERVICE.\n\n## Procedure\n\nFire the order first. In Bar Pass select the station. Move each item FIRED → PREPARING → READY → SERVED. The station filter changes which routed items are displayed.\n\n## What ServOS records\n\nActions that change the business are committed through the native backend. When applicable, business records, audit evidence and synchronization outbox entries commit together.\n\n## Common mistakes and correction\n\nDo not treat a button, toast or browser preview as proof that a business transaction was committed. Correct mistakes through the documented reversal, void, refund, count or manager-approved workflow rather than deleting historical transactions.",
+      "keywords": [
+        "bar pass / kds",
+        "kds / bar pass",
+        "ServOS"
+      ]
+    },
+    {
+      "id": "10-tables",
+      "title": "Tables and Cleaning",
+      "section": "Tables",
+      "roles": [
+        "Admin",
+        "Manager",
+        "Server"
+      ],
+      "permissions": [
+        "pos.manage_table"
+      ],
+      "screen": "floorplan",
+      "summary": "Paid, transferred or voided tables enter CLEANING before reuse.",
+      "body": "Section: Tables\nRoles: Admin, Manager, Server\nPermission: pos.manage_table\nScreen: floorplan\nKeywords: tables and cleaning, tables, ServOS\n\n## Overview\n\nPaid, transferred or voided tables enter CLEANING before reuse.\n\n## Procedure\n\nOpen an AVAILABLE table from POS. After settlement or movement it enters CLEANING. Staff select the cleaning table to mark it ready; the native table.ready command verifies the state and version before returning it to AVAILABLE.\n\n## What ServOS records\n\nActions that change the business are committed through the native backend. When applicable, business records, audit evidence and synchronization outbox entries commit together.\n\n## Common mistakes and correction\n\nDo not treat a button, toast or browser preview as proof that a business transaction was committed. Correct mistakes through the documented reversal, void, refund, count or manager-approved workflow rather than deleting historical transactions.",
+      "keywords": [
+        "tables and cleaning",
+        "tables",
+        "ServOS"
+      ]
+    },
+    {
+      "id": "11-cash",
+      "title": "Cash Payments",
+      "section": "Payments",
+      "roles": [
+        "Admin",
+        "Manager",
+        "Server"
+      ],
+      "permissions": [
+        "payment.record"
+      ],
+      "screen": "pos",
+      "summary": "Cash payments require an open till and actual cash tendered.",
+      "body": "Section: Payments\nRoles: Admin, Manager, Server\nPermission: payment.record\nScreen: pos\nKeywords: cash payments, payments, ServOS\n\n## Overview\n\nCash payments require an open till and actual cash tendered.\n\n## Procedure\n\nChoose Cash, enter the payment amount and cash tendered, then record payment. ServOS increases expected drawer cash by the paid amount and calculates change in the UI. Partial payments remain attached to the same order.\n\n## What ServOS records\n\nActions that change the business are committed through the native backend. When applicable, business records, audit evidence and synchronization outbox entries commit together.\n\n## Common mistakes and correction\n\nDo not treat a button, toast or browser preview as proof that a business transaction was committed. Correct mistakes through the documented reversal, void, refund, count or manager-approved workflow rather than deleting historical transactions.",
+      "keywords": [
+        "cash payments",
+        "payments",
+        "ServOS"
+      ]
+    },
+    {
+      "id": "12-mpesa",
+      "title": "Manual M-Pesa",
+      "section": "M-Pesa",
+      "roles": [
+        "Admin",
+        "Manager",
+        "Server"
+      ],
+      "permissions": [
+        "mpesa.record"
+      ],
+      "screen": "pos",
+      "summary": "M-Pesa is manually confirmed from the real business receipt, then reconciled later by a manager.",
+      "body": "Section: M-Pesa\nRoles: Admin, Manager, Server\nPermission: mpesa.record\nScreen: pos\nKeywords: manual m-pesa, m-pesa, ServOS\n\n## Overview\n\nM-Pesa is manually confirmed from the real business receipt, then reconciled later by a manager.\n\n## Procedure\n\nCheck the business M-Pesa receipt. Select M-Pesa and enter the transaction code against the configured account. ServOS enforces account/code uniqueness and allocation limits. This is not Daraja verification.\n\n## What ServOS records\n\nActions that change the business are committed through the native backend. When applicable, business records, audit evidence and synchronization outbox entries commit together.\n\n## Common mistakes and correction\n\nDo not treat a button, toast or browser preview as proof that a business transaction was committed. Correct mistakes through the documented reversal, void, refund, count or manager-approved workflow rather than deleting historical transactions.",
+      "keywords": [
+        "manual m-pesa",
+        "m-pesa",
+        "ServOS"
+      ]
+    },
+    {
+      "id": "13-card",
+      "title": "Card Payments",
+      "section": "Payments",
+      "roles": [
+        "Admin",
+        "Manager",
+        "Server"
+      ],
+      "permissions": [
+        "payment.record"
+      ],
+      "screen": "pos",
+      "summary": "Card is an external handoff. ServOS stores the external approval reference.",
+      "body": "Section: Payments\nRoles: Admin, Manager, Server\nPermission: payment.record\nScreen: pos\nKeywords: card payments, payments, ServOS\n\n## Overview\n\nCard is an external handoff. ServOS stores the external approval reference.\n\n## Procedure\n\nRun the card on the actual terminal/provider. In ServOS select Card, enter the exact approval/reference code and record payment. ServOS never claims it processed the external provider transaction.\n\n## What ServOS records\n\nActions that change the business are committed through the native backend. When applicable, business records, audit evidence and synchronization outbox entries commit together.\n\n## Common mistakes and correction\n\nDo not treat a button, toast or browser preview as proof that a business transaction was committed. Correct mistakes through the documented reversal, void, refund, count or manager-approved workflow rather than deleting historical transactions.",
+      "keywords": [
+        "card payments",
+        "payments",
+        "ServOS"
+      ]
+    },
+    {
+      "id": "14-split",
+      "title": "Mixed / Split Tender",
+      "section": "Payments",
+      "roles": [
+        "Admin",
+        "Manager",
+        "Server"
+      ],
+      "permissions": [
+        "payment.split"
+      ],
+      "screen": "pos",
+      "summary": "Split tender posts multiple payment lines atomically against the exact outstanding balance.",
+      "body": "Section: Payments\nRoles: Admin, Manager, Server\nPermission: payment.split\nScreen: pos\nKeywords: mixed / split tender, payments, ServOS\n\n## Overview\n\nSplit tender posts multiple payment lines atomically against the exact outstanding balance.\n\n## Procedure\n\nChoose Split Tender. Pick two enabled payment methods and allocate the amounts so they equal the outstanding balance. Supply M-Pesa/card evidence when those methods are used. If any line fails the transaction rolls back.\n\n## What ServOS records\n\nActions that change the business are committed through the native backend. When applicable, business records, audit evidence and synchronization outbox entries commit together.\n\n## Common mistakes and correction\n\nDo not treat a button, toast or browser preview as proof that a business transaction was committed. Correct mistakes through the documented reversal, void, refund, count or manager-approved workflow rather than deleting historical transactions.",
+      "keywords": [
+        "mixed / split tender",
+        "payments",
+        "ServOS"
+      ]
+    },
+    {
+      "id": "15-drawer",
+      "title": "Cash Drawer Movements",
+      "section": "Cash Drawer",
+      "roles": [
+        "Admin",
+        "Manager"
+      ],
+      "permissions": [
+        "till.cash_movement"
+      ],
+      "screen": "close",
+      "summary": "Paid-in and paid-out movements change expected drawer cash with audit and journal evidence.",
+      "body": "Section: Cash Drawer\nRoles: Admin, Manager\nPermission: till.cash_movement\nScreen: close\nKeywords: cash drawer movements, cash drawer, ServOS\n\n## Overview\n\nPaid-in and paid-out movements change expected drawer cash with audit and journal evidence.\n\n## Procedure\n\nUse Shift & Day Close, choose Paid In or Paid Out, enter amount and reason, and obtain manager approval if your role requires it. Use Paid Out for cash drops/expenses and Paid In for float top-ups.\n\n## What ServOS records\n\nActions that change the business are committed through the native backend. When applicable, business records, audit evidence and synchronization outbox entries commit together.\n\n## Common mistakes and correction\n\nDo not treat a button, toast or browser preview as proof that a business transaction was committed. Correct mistakes through the documented reversal, void, refund, count or manager-approved workflow rather than deleting historical transactions.",
+      "keywords": [
+        "cash drawer movements",
+        "cash drawer",
+        "ServOS"
+      ]
+    },
+    {
+      "id": "16-discounts",
+      "title": "Discounts and Comps",
+      "section": "Discounts & Comps",
+      "roles": [
+        "Admin",
+        "Manager"
+      ],
+      "permissions": [
+        "order.discount"
+      ],
+      "screen": "pos",
+      "summary": "Discounts and comps are protected, reasoned and audited.",
+      "body": "Section: Discounts & Comps\nRoles: Admin, Manager\nPermission: order.discount\nScreen: pos\nKeywords: discounts and comps, discounts & comps, ServOS\n\n## Overview\n\nDiscounts and comps are protected, reasoned and audited.\n\n## Procedure\n\nFor a discount enter the percentage and reason. A comp targets one order item and keeps its stock consumption intact. Operators can request a manager PIN approval; the approval is single-use and attached to the audit.\n\n## What ServOS records\n\nActions that change the business are committed through the native backend. When applicable, business records, audit evidence and synchronization outbox entries commit together.\n\n## Common mistakes and correction\n\nDo not treat a button, toast or browser preview as proof that a business transaction was committed. Correct mistakes through the documented reversal, void, refund, count or manager-approved workflow rather than deleting historical transactions.",
+      "keywords": [
+        "discounts and comps",
+        "discounts & comps",
+        "ServOS"
+      ]
+    },
+    {
+      "id": "17-voids-refunds",
+      "title": "Voids and Refunds",
+      "section": "Voids & Refunds",
+      "roles": [
+        "Admin",
+        "Manager"
+      ],
+      "permissions": [
+        "order.refund"
+      ],
+      "screen": "refunds",
+      "summary": "Money reversal and stock disposition are separate decisions.",
+      "body": "Section: Voids & Refunds\nRoles: Admin, Manager\nPermission: order.refund\nScreen: refunds\nKeywords: voids and refunds, voids & refunds, ServOS\n\n## Overview\n\nMoney reversal and stock disposition are separate decisions.\n\n## Procedure\n\nUnpaid orders can be voided. Fired items require a disposition such as WASTE, CONSUMED, RETURN_SEALED or MANAGER_ADJUSTMENT. Payment refunds reverse money and journals but never automatically recreate consumed cocktail ingredients. Non-cash refunds require external reversal evidence.\n\n## What ServOS records\n\nActions that change the business are committed through the native backend. When applicable, business records, audit evidence and synchronization outbox entries commit together.\n\n## Common mistakes and correction\n\nDo not treat a button, toast or browser preview as proof that a business transaction was committed. Correct mistakes through the documented reversal, void, refund, count or manager-approved workflow rather than deleting historical transactions.",
+      "keywords": [
+        "voids and refunds",
+        "voids & refunds",
+        "ServOS"
+      ]
+    },
+    {
+      "id": "18-inventory",
+      "title": "Inventory Overview",
+      "section": "Inventory",
+      "roles": [
+        "Admin",
+        "Manager",
+        "Server"
+      ],
+      "permissions": [
+        "inventory.view"
+      ],
+      "screen": "inventory",
+      "summary": "Inventory is location-driven and every operational change creates a stock movement.",
+      "body": "Section: Inventory\nRoles: Admin, Manager, Server\nPermission: inventory.view\nScreen: inventory\nKeywords: inventory overview, inventory, ServOS\n\n## Overview\n\nInventory is location-driven and every operational change creates a stock movement.\n\n## Procedure\n\nReview each stock item across the configured locations. Current stock is derived from durable stock records, while the movement ledger explains receipts, opening balance, sale consumption, transfers, counts and waste.\n\n## What ServOS records\n\nActions that change the business are committed through the native backend. When applicable, business records, audit evidence and synchronization outbox entries commit together.\n\n## Common mistakes and correction\n\nDo not treat a button, toast or browser preview as proof that a business transaction was committed. Correct mistakes through the documented reversal, void, refund, count or manager-approved workflow rather than deleting historical transactions.",
+      "keywords": [
+        "inventory overview",
+        "inventory",
+        "ServOS"
+      ]
+    },
+    {
+      "id": "19-receiving",
+      "title": "Receiving Stock",
+      "section": "Inventory",
+      "roles": [
+        "Admin",
+        "Manager"
+      ],
+      "permissions": [
+        "inventory.receive"
+      ],
+      "screen": "inventory",
+      "summary": "Receiving increases stock and updates weighted-average cost with supplier evidence.",
+      "body": "Section: Inventory\nRoles: Admin, Manager\nPermission: inventory.receive\nScreen: inventory\nKeywords: receiving stock, inventory, ServOS\n\n## Overview\n\nReceiving increases stock and updates weighted-average cost with supplier evidence.\n\n## Procedure\n\nChoose Receive, select stock item and location, enter quantity and unit cost, select supplier when available, and record delivery/invoice references. ServOS creates a receipt record and movement in one transaction.\n\n## What ServOS records\n\nActions that change the business are committed through the native backend. When applicable, business records, audit evidence and synchronization outbox entries commit together.\n\n## Common mistakes and correction\n\nDo not treat a button, toast or browser preview as proof that a business transaction was committed. Correct mistakes through the documented reversal, void, refund, count or manager-approved workflow rather than deleting historical transactions.",
+      "keywords": [
+        "receiving stock",
+        "inventory",
+        "ServOS"
+      ]
+    },
+    {
+      "id": "20-transfers-waste",
+      "title": "Transfers and Waste",
+      "section": "Transfers & Waste",
+      "roles": [
+        "Admin",
+        "Manager"
+      ],
+      "permissions": [
+        "inventory.transfer"
+      ],
+      "screen": "inventory",
+      "summary": "Transfers move stock between logical locations; waste removes stock with a reason.",
+      "body": "Section: Transfers & Waste\nRoles: Admin, Manager\nPermission: inventory.transfer\nScreen: inventory\nKeywords: transfers and waste, transfers & waste, ServOS\n\n## Overview\n\nTransfers move stock between logical locations; waste removes stock with a reason.\n\n## Procedure\n\nFor transfer choose source, destination, quantity and reason. ServOS records matching transfer-out and transfer-in movements. For waste select item/location/quantity and state the reason such as spillage or breakage.\n\n## What ServOS records\n\nActions that change the business are committed through the native backend. When applicable, business records, audit evidence and synchronization outbox entries commit together.\n\n## Common mistakes and correction\n\nDo not treat a button, toast or browser preview as proof that a business transaction was committed. Correct mistakes through the documented reversal, void, refund, count or manager-approved workflow rather than deleting historical transactions.",
+      "keywords": [
+        "transfers and waste",
+        "transfers & waste",
+        "ServOS"
+      ]
+    },
+    {
+      "id": "21-stocktake",
+      "title": "Physical Stocktake",
+      "section": "Stocktake",
+      "roles": [
+        "Admin",
+        "Manager"
+      ],
+      "permissions": [
+        "inventory.count"
+      ],
+      "screen": "inventory",
+      "summary": "A stock count posts the difference between expected and physical quantity as an auditable adjustment.",
+      "body": "Section: Stocktake\nRoles: Admin, Manager\nPermission: inventory.count\nScreen: inventory\nKeywords: physical stocktake, stocktake, ServOS\n\n## Overview\n\nA stock count posts the difference between expected and physical quantity as an auditable adjustment.\n\n## Procedure\n\nSelect Count, choose item and location, enter the physically counted base quantity and reason. ServOS calculates the delta and refuses impossible invalid quantities.\n\n## What ServOS records\n\nActions that change the business are committed through the native backend. When applicable, business records, audit evidence and synchronization outbox entries commit together.\n\n## Common mistakes and correction\n\nDo not treat a button, toast or browser preview as proof that a business transaction was committed. Correct mistakes through the documented reversal, void, refund, count or manager-approved workflow rather than deleting historical transactions.",
+      "keywords": [
+        "physical stocktake",
+        "stocktake",
+        "ServOS"
+      ]
+    },
+    {
+      "id": "22-pricing",
+      "title": "Pricing and Happy Hour",
+      "section": "Pricing",
+      "roles": [
+        "Admin",
+        "Manager"
+      ],
+      "permissions": [
+        "pricing.manage"
+      ],
+      "screen": "catalog",
+      "summary": "Price rules are persisted, time-aware and snapshotted onto order items.",
+      "body": "Section: Pricing\nRoles: Admin, Manager\nPermission: pricing.manage\nScreen: catalog\nKeywords: pricing and happy hour, pricing, ServOS\n\n## Overview\n\nPrice rules are persisted, time-aware and snapshotted onto order items.\n\n## Procedure\n\nCreate a fixed or percentage rule. Scope it to all products, a product or category, set time window and priority. Overnight windows such as 17:00–02:00 are supported. Historical order lines retain their original applied rule snapshot.\n\n## What ServOS records\n\nActions that change the business are committed through the native backend. When applicable, business records, audit evidence and synchronization outbox entries commit together.\n\n## Common mistakes and correction\n\nDo not treat a button, toast or browser preview as proof that a business transaction was committed. Correct mistakes through the documented reversal, void, refund, count or manager-approved workflow rather than deleting historical transactions.",
+      "keywords": [
+        "pricing and happy hour",
+        "pricing",
+        "ServOS"
+      ]
+    },
+    {
+      "id": "23-floorplan",
+      "title": "Floorplan",
+      "section": "Floor Plan",
+      "roles": [
+        "Admin",
+        "Manager"
+      ],
+      "permissions": [
+        "floorplan.manage"
+      ],
+      "screen": "floorplan",
+      "summary": "The floorplan saves the complete outlet layout atomically and preserves active table ownership.",
+      "body": "Section: Floor Plan\nRoles: Admin, Manager\nPermission: floorplan.manage\nScreen: floorplan\nKeywords: floorplan, floor plan, ServOS\n\n## Overview\n\nThe floorplan saves the complete outlet layout atomically and preserves active table ownership.\n\n## Procedure\n\nChoose the service outlet, add/edit/remove unoccupied tables and save. Active tables cannot be removed. Each save includes baseline record versions so stale editors cannot overwrite a newer layout.\n\n## What ServOS records\n\nActions that change the business are committed through the native backend. When applicable, business records, audit evidence and synchronization outbox entries commit together.\n\n## Common mistakes and correction\n\nDo not treat a button, toast or browser preview as proof that a business transaction was committed. Correct mistakes through the documented reversal, void, refund, count or manager-approved workflow rather than deleting historical transactions.",
+      "keywords": [
+        "floorplan",
+        "floor plan",
+        "ServOS"
+      ]
+    },
+    {
+      "id": "24-close-day",
+      "title": "Closing the Bar",
+      "section": "Closing the Bar",
+      "roles": [
+        "Admin",
+        "Manager"
+      ],
+      "permissions": [
+        "till.close"
+      ],
+      "screen": "close",
+      "summary": "Close day resolves open tabs, counts the drawer, closes the till, backs up, syncs and generates a persisted report.",
+      "body": "Section: Closing the Bar\nRoles: Admin, Manager\nPermission: till.close\nScreen: close\nKeywords: closing the bar, closing the bar, ServOS\n\n## Overview\n\nClose day resolves open tabs, counts the drawer, closes the till, backs up, syncs and generates a persisted report.\n\n## Procedure\n\nResolve all open tabs first. Reconcile available M-Pesa evidence. Enter the blind physical cash count; a variance requires manager authority and reason. After till close, create backup, synchronize when online and generate the close-day report.\n\n## What ServOS records\n\nActions that change the business are committed through the native backend. When applicable, business records, audit evidence and synchronization outbox entries commit together.\n\n## Common mistakes and correction\n\nDo not treat a button, toast or browser preview as proof that a business transaction was committed. Correct mistakes through the documented reversal, void, refund, count or manager-approved workflow rather than deleting historical transactions.",
+      "keywords": [
+        "closing the bar",
+        "closing the bar",
+        "ServOS"
+      ]
+    },
+    {
+      "id": "25-reports",
+      "title": "Reports",
+      "section": "Reports",
+      "roles": [
+        "Admin",
+        "Manager"
+      ],
+      "permissions": [
+        "reports.view"
+      ],
+      "screen": "reports",
+      "summary": "Close-day reports summarize sales, tenders, cash, tax, adjustments, stock cost, waste, staff sales and system state.",
+      "body": "Section: Reports\nRoles: Admin, Manager\nPermission: reports.view\nScreen: reports\nKeywords: reports, reports, ServOS\n\n## Overview\n\nClose-day reports summarize sales, tenders, cash, tax, adjustments, stock cost, waste, staff sales and system state.\n\n## Procedure\n\nGenerate after the till is closed. Review gross/net sales, VAT/levy, cash/M-Pesa/card, refunds, discounts/comps, COGS/waste, gross profit, cash variance, top products, staff sales and pending sync.\n\n## What ServOS records\n\nActions that change the business are committed through the native backend. When applicable, business records, audit evidence and synchronization outbox entries commit together.\n\n## Common mistakes and correction\n\nDo not treat a button, toast or browser preview as proof that a business transaction was committed. Correct mistakes through the documented reversal, void, refund, count or manager-approved workflow rather than deleting historical transactions.",
+      "keywords": [
+        "reports",
+        "reports",
+        "ServOS"
+      ]
+    },
+    {
+      "id": "26-offline-sync",
+      "title": "Offline Mode and Synchronization",
+      "section": "Offline Mode",
+      "roles": [
+        "Admin",
+        "Manager",
+        "Server"
+      ],
+      "permissions": [
+        "help.view"
+      ],
+      "screen": "help",
+      "summary": "Local committed operations continue when the server is unreachable.",
+      "body": "Section: Offline Mode\nRoles: Admin, Manager, Server\nPermission: help.view\nScreen: help\nKeywords: offline mode and synchronization, offline mode, ServOS\n\n## Overview\n\nLocal committed operations continue when the server is unreachable.\n\n## Procedure\n\nKeep trading after local staff unlock. The outbox records every committed operation. When connectivity returns ServOS uploads operations in sequence and only removes pending status after durable server acknowledgement. Replication is not backup.\n\n## What ServOS records\n\nActions that change the business are committed through the native backend. When applicable, business records, audit evidence and synchronization outbox entries commit together.\n\n## Common mistakes and correction\n\nDo not treat a button, toast or browser preview as proof that a business transaction was committed. Correct mistakes through the documented reversal, void, refund, count or manager-approved workflow rather than deleting historical transactions.",
+      "keywords": [
+        "offline mode and synchronization",
+        "offline mode",
+        "ServOS"
+      ]
+    },
+    {
+      "id": "27-backup",
+      "title": "Backup and Recovery",
+      "section": "Backup & Recovery",
+      "roles": [
+        "Admin",
+        "Manager"
+      ],
+      "permissions": [
+        "backup.create"
+      ],
+      "screen": "admin",
+      "summary": "A local backup copies the authoritative SQLite database consistently.",
+      "body": "Section: Backup & Recovery\nRoles: Admin, Manager\nPermission: backup.create\nScreen: admin\nKeywords: backup and recovery, backup & recovery, ServOS\n\n## Overview\n\nA local backup copies the authoritative SQLite database consistently.\n\n## Procedure\n\nCreate a backup at day close and before upgrades. Keep seven daily and four weekly copies as the target policy. Encryption, remote rotation and replacement-terminal restore must be acceptance-tested before claiming deployment verification.\n\n## What ServOS records\n\nActions that change the business are committed through the native backend. When applicable, business records, audit evidence and synchronization outbox entries commit together.\n\n## Common mistakes and correction\n\nDo not treat a button, toast or browser preview as proof that a business transaction was committed. Correct mistakes through the documented reversal, void, refund, count or manager-approved workflow rather than deleting historical transactions.",
+      "keywords": [
+        "backup and recovery",
+        "backup & recovery",
+        "ServOS"
+      ]
+    },
+    {
+      "id": "28-troubleshooting",
+      "title": "Troubleshooting",
+      "section": "Troubleshooting",
+      "roles": [
+        "Admin",
+        "Manager",
+        "Server"
+      ],
+      "permissions": [
+        "help.view"
+      ],
+      "screen": "help",
+      "summary": "Error messages are designed to describe the failed business invariant without claiming success.",
+      "body": "Section: Troubleshooting\nRoles: Admin, Manager, Server\nPermission: help.view\nScreen: help\nKeywords: troubleshooting, troubleshooting, ServOS\n\n## Overview\n\nError messages are designed to describe the failed business invariant without claiming success.\n\n## Procedure\n\nIf a command fails, read the red runtime message. Reload is safe because committed records are durable. Common issues include no open till, table not ready, insufficient stock, duplicate M-Pesa code, missing manager approval and setup not LIVE.\n\n## What ServOS records\n\nActions that change the business are committed through the native backend. When applicable, business records, audit evidence and synchronization outbox entries commit together.\n\n## Common mistakes and correction\n\nDo not treat a button, toast or browser preview as proof that a business transaction was committed. Correct mistakes through the documented reversal, void, refund, count or manager-approved workflow rather than deleting historical transactions.",
+      "keywords": [
+        "troubleshooting",
+        "troubleshooting",
+        "ServOS"
+      ]
+    },
+    {
+      "id": "29-quick-starts",
+      "title": "Role Quick Starts",
+      "section": "Operator Guide",
+      "roles": [
+        "Admin",
+        "Manager",
+        "Server"
+      ],
+      "permissions": [
+        "help.view"
+      ],
+      "screen": "help",
+      "summary": "Short daily paths for Operator, Manager and Owner/Admin.",
+      "body": "Section: Operator Guide\nRoles: Admin, Manager, Server\nPermission: help.view\nScreen: help\nKeywords: role quick starts, operator guide, ServOS\n\n## Overview\n\nShort daily paths for Operator, Manager and Owner/Admin.\n\n## Procedure\n\nOperator: unlock → open/select tab → add → fire → payment → receipt → clean table → lock. Manager: open till → approve exceptions → adjust stock/waste → reconcile M-Pesa → count cash → close/report. Owner/Admin: configure business → manage staff → pricing → reports → backup/sync.\n\n## What ServOS records\n\nActions that change the business are committed through the native backend. When applicable, business records, audit evidence and synchronization outbox entries commit together.\n\n## Common mistakes and correction\n\nDo not treat a button, toast or browser preview as proof that a business transaction was committed. Correct mistakes through the documented reversal, void, refund, count or manager-approved workflow rather than deleting historical transactions.",
+      "keywords": [
+        "role quick starts",
+        "operator guide",
+        "ServOS"
+      ]
+    },
+    {
+      "id": "30-glossary",
+      "title": "Glossary",
+      "section": "Glossary",
+      "roles": [
+        "Admin",
+        "Manager",
+        "Server"
+      ],
+      "permissions": [
+        "help.view"
+      ],
+      "screen": "help",
+      "summary": "Common ServOS terms used throughout the product.",
+      "body": "Section: Glossary\nRoles: Admin, Manager, Server\nPermission: help.view\nScreen: help\nKeywords: glossary, glossary, ServOS\n\n## Overview\n\nCommon ServOS terms used throughout the product.\n\n## Procedure\n\nOutbox: locally committed operations awaiting server acknowledgement. Snapshot: the current native record set returned to the UI. Portion: sellable measure tied to product/stock. Disposition: stock consequence of a fired void. Go Live: native stage that permits operational trading commands.\n\n## What ServOS records\n\nActions that change the business are committed through the native backend. When applicable, business records, audit evidence and synchronization outbox entries commit together.\n\n## Common mistakes and correction\n\nDo not treat a button, toast or browser preview as proof that a business transaction was committed. Correct mistakes through the documented reversal, void, refund, count or manager-approved workflow rather than deleting historical transactions.",
+      "keywords": [
+        "glossary",
+        "glossary",
+        "ServOS"
+      ]
+    }
+  ]
+}

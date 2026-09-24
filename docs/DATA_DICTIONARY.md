@@ -1,23 +1,30 @@
 # Data dictionary
 
-| Store | Purpose and invariant |
-|---|---|
-| metadata | Installation identity, cloud connection settings and last successful sync |
-| staff | Local identity, role, salted PIN hash, active state and persistent attempt throttling |
-| sessions | Random local bearer session, staff identity and idle deadline |
-| records | Collection/id key, optimistic version, JSON domain payload, archive flag |
-| commands | Unique command ID, serialized request fingerprint and committed result |
-| audit | Ordered command attribution; application-level update/delete rejection |
-| outbox | Exact operation envelope linked to audit sequence; acknowledgement only after server commit |
-| mpesa_codes | Unique receiving account/code mapped to one receipt |
-| remote_requests | Durable processing outcomes; successful request acknowledgement waits for the command's outbox upload |
+## SQLite system tables
 
-BusinessCommand contains id, schemaVersion, operation, optional targetVersion and payload. Actor and terminal identity come from native session/enrollment rather than frontend claims. CommandResult returns record IDs, audit reference and local sequence.
+- `metadata`: terminal/cloud configuration, intake profile, installation stage, last sync and last backup.
+- `staff`: local identity, persisted role, Argon2 PIN hash, active state and login throttling.
+- `sessions`: expiring local bearer sessions; deleted on process restart.
+- `approvals`: short-lived single-use manager approval tokens scoped to initiator/capability/target.
+- `records`: versioned JSON domain records keyed by collection/id.
+- `commands`: command ID + fingerprint + committed result for idempotency.
+- `audit`: immutable ordered attribution record.
+- `outbox`: ordered operation envelope pending server acknowledgement.
+- `mpesa_codes`: unique account/code mapping to receipt.
+- `remote_requests`: durable outcomes for remote manager requests.
 
-Sync operations carry sequence, command ID, operation, actor, time and changed versioned records. Cloud business_records is a read replica, not an independent writer. Remote changes have pending/applied/rejected/conflict state.
+## Setup/domain records
 
-Payments retain integer amountMinor alongside compatibility KES fields. Existing UI-shaped records still contain decimal monetary and quantity fields; full integer/precision normalization remains unfinished. Do not imply that a JSON record store establishes all domain constraints.
+`organization`, `property`, `businessSetup`, `paymentConfig`, `tillPolicy`, `outlets`, `stockLocations`, `employees`.
 
-`floorplan.save` accepts an outlet ID, baseline table IDs/versions and the complete proposed active table layout for that outlet. It checks the whole baseline, preserves operational state, archives omitted unoccupied tables and emits one atomic audit/outbox operation. Table records retain shape, percentage coordinates, capacity, section, minimum-spend configuration and optional staff assignment. Minimum-spend enforcement at settlement remains pending.
+## Bar masters
 
-`table.ready` requires the table's expected version, an unoccupied CLEANING state, and an enrolled staff session. It stores cleanedBy/cleanedAt and changes the state to AVAILABLE. Seating and transfer reject tables that are not available. Floorplan changes cannot reset these states.
+`products`, `stockItems`, `suppliers`, `priceRules`, `tables`.
+
+Product records can contain `portions[]`, `modifiers[]`, `recipeIngredients[]`, barcode/favorite metadata, preparation route and outlet assignment. Order lines freeze the chosen portion, modifier list, ingredient recipe, price rule, tax policy and product version.
+
+## Transactions and ledgers
+
+`orders`, `payments`, `mpesaReceipts`, `refunds`, `tillSessions`, `cashMovements`, `stockMovements`, `inventoryReceipts`, `journalEntries`, `closeDayReports`.
+
+Stock is altered only through explicit movement-producing business commands. Financial refunds create reversal journals and do not automatically recreate consumed ingredients.

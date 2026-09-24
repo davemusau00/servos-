@@ -7,10 +7,9 @@ import { POSView } from './components/pos/POSView';
 import { KDSView } from './components/kds/KDSView';
 import { HotelPMSView } from './components/hotel/HotelPMSView';
 import { HostStandView } from './components/host/HostStandView';
-import { RuntimeProvider, isNative, useRuntime } from './runtime/RuntimeProvider';
-import { NativeServOSProvider } from './runtime/NativeServOSProvider';
-import { BusinessAdminView } from './runtime/BusinessAdminView';
-import { ManualReconciliationView } from './runtime/ManualReconciliationView';
+import { RuntimeProvider, isNative } from './runtime/RuntimeProvider';
+import { NativeRoot } from './native/NativeRoot';
+import { RemoteManagerApp } from './runtime/RemoteManagerApp';
 import { CatalogStudioView } from './components/catalog/CatalogStudioView';
 import { CRM360View } from './components/crm/CRM360View';
 import { EventsNightlifeView } from './components/events/EventsNightlifeView';
@@ -42,7 +41,6 @@ const MainApp: React.FC = () => {
   const [activeTab, setTab] = useState<string>(route);
   const setActiveTab = (tab: string) => { window.location.hash = '/' + tab; setTab(tab); };
   useEffect(() => { const update = () => setTab(route()); window.addEventListener('hashchange', update); return () => window.removeEventListener('hashchange', update); }, []);
-  const runtime = useRuntime();
   const [isHardwareModalOpen, setIsHardwareModalOpen] = useState<boolean>(false);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
@@ -113,7 +111,6 @@ const MainApp: React.FC = () => {
       );
     }
 
-    if (isNative && !['pos', 'catalog', 'kds', 'inventory', 'accounting', 'tender', 'settings', 'staff'].includes(activeTab)) return <div className="p-6 space-y-3"><h1 className="text-xl font-bold">Backend integration pending</h1><p>This module is not yet connected to the installed backend. No sample business records are displayed in production.</p></div>;
     switch (activeTab) {
       case 'command':
         return <CommandCentreView />;
@@ -129,7 +126,7 @@ const MainApp: React.FC = () => {
       case 'reports':
         return <ReportsCenterView />;
       case 'tender':
-        return isNative ? <ManualReconciliationView /> : <TenderReconciliationView />;
+        return <TenderReconciliationView />;
       case 'batch':
         return <BatchProductionView />;
       case 'catalog':
@@ -147,9 +144,9 @@ const MainApp: React.FC = () => {
       case 'control':
         return <ControlEngineView />;
       case 'staff':
-        return isNative ? <BusinessAdminView /> : <StaffCashView />;
+        return <StaffCashView />;
       case 'settings':
-        return isNative ? <BusinessAdminView /> : <SettingsCenterView />;
+        return <SettingsCenterView />;
       default:
         return <POSView />;
     }
@@ -215,9 +212,16 @@ const MainApp: React.FC = () => {
   );
 };
 
+const BrowserRoot = () => {
+  const [mode, setMode] = useState<'LANDING' | 'PREVIEW' | 'REMOTE'>('LANDING');
+  if (mode === 'REMOTE') return <RemoteManagerApp onBack={() => setMode('LANDING')} />;
+  if (mode === 'PREVIEW') return <ServOSProvider><div className="fixed left-0 right-0 top-0 z-[120] bg-amber-300 p-1 text-center text-xs font-bold text-slate-950">UI preview — sample data only. No durable business operations or provider integrations.</div><div className="pt-6"><MainApp /></div></ServOSProvider>;
+  return <div className="grid min-h-screen place-items-center bg-slate-950 p-6 text-white"><div className="max-w-xl rounded-3xl border border-slate-800 bg-slate-900 p-8"><div className="text-xs font-black tracking-[.3em] text-amber-400">SERVOS</div><h1 className="mt-2 text-4xl font-black">Single-business hospitality operations</h1><p className="mt-4 text-slate-400">Live trading runs in the installed Tauri application with local SQLite authority. This browser surface is for remote management or explicitly labelled UI preview only.</p><div className="mt-6 flex flex-wrap gap-3"><button className="rounded-xl bg-amber-400 px-4 py-3 font-bold text-slate-950" onClick={() => setMode('REMOTE')}>Remote management</button><button className="rounded-xl border border-slate-700 px-4 py-3" onClick={() => setMode('PREVIEW')}>Open UI preview</button></div></div></div>;
+};
+
 export function App() {
-  const Provider = isNative ? NativeServOSProvider : ServOSProvider;
-  return <RuntimeProvider><Provider><MainApp /></Provider></RuntimeProvider>;
+  if (isNative) return <RuntimeProvider><NativeRoot /></RuntimeProvider>;
+  return <BrowserRoot />;
 }
 
 export default App;

@@ -1,28 +1,24 @@
 # Feature coverage matrix
 
-Status definitions: **prototype** = visual/local-state behavior only; **implemented** = code exists; **locally verified** = named local checks passed; **sync verified** = real server replay and recovery tests passed; **deployment verified** = packaged-device and business acceptance passed.
+Status vocabulary: **prototype** = preview/local-only behavior; **source implemented** = code exists but acceptance evidence is incomplete; **locally verified** = named checks executed; **sync verified** = live replay/recovery accepted; **deployment verified** = packaged-device business rehearsal passed.
 
-No module is deployment verified. The generated UI inventory does not establish functional coverage. Exact command verification is recorded in CURRENT_RELEASE_STATE.md.
-
-| Module | Current implementation | Remaining acceptance |
+| Module | Current status | Remaining acceptance |
 |---|---|---|
-| Local runtime | Tauri scaffold, SQLite migration, owner enrollment, PIN sessions, command audit/outbox | Native builds, device smoke, recovery and secure credential storage |
-| Catalog | Native product and stock master save/archive, version checks | Recipes/modifiers/portions, price rules, reference constraints |
-| POS | Native simple orders, firing, unpaid transfer/merge, partial/manual payments, atomic split tender, internal receipts | Discounts, comps, item refunds, fired void stock disposition and full workflow acceptance |
-| Floorplan | Atomic outlet layout save/archive and audited cleaning; locally verified Rust persistence/conflict/rollback tests and preview UI checks | Native UI rehearsal, section CRUD, minimum-spend enforcement and synced layout acceptance |
-| KDS | Native ready/recall commands | Item/station routing and all lifecycle transitions |
-| Inventory | Fire-time depletion, counts, transfers and waste commands | Production, approvals, reversal rules and full ledger acceptance |
-| Reconciliation | Native receipt allocation and manager statement confirmation | Statement entry/import, discrepancies, reversals and customer credit UX |
-| Accounting | Balanced payment journals with inclusive tax snapshots and partial-payment allocation | Period locks, receivables, accrual recognition and ledger controls |
-| Staff/till | Local staff enrollment, till opening/closing and variance restriction | Staff lifecycle, shifts, leave, advances, payroll and disbursements |
-| Host and reservations | Prototype | Native lifecycle and conflicts |
-| Hotel | Prototype | Reservations, folios, deposits, check-in/out and room status workflows |
-| CRM | Prototype | Durable profile workflows, loyalty, customer credit and source timelines |
-| Events | Prototype | Ticket sales, capacity, admission, commissions and manual payout evidence |
-| Procurement/AP | Prototype | POs, partial receiving, matching, supplier credits and payments |
-| Batch production | Prototype | Recipes, input/output ledger, yield and reversals |
-| Reports/command centre | Prototype | Shared queries, drilldowns and export parity |
-| Settings/control | Partial native business administration | Configuration, permissions, approvals, derived alerts and audit browser |
-| Guest ordering | Prototype | Restricted online endpoint, heartbeat, acknowledgement and duplicate handling |
-| Remote management | Manager UI, replica queries, request polling, version checks and upload-dependent acknowledgement; SQL protocol/policies locally verified in disposable PostgreSQL | Live Auth/HTTP, conflicts and recovery acceptance; aggregate reporting |
-| Hardware/external services | Unconfigured | Real adapters require separate evidence; no simulated success |
+| Installation/runtime | source implemented | packaged fresh install, restart and recovery |
+| Intake/enrollment/setup | source implemented | native UI/device rehearsal and enrollment server test |
+| RBAC/staff | source implemented | Rust test execution for all capabilities/approval abuse cases |
+| Catalog/portions/modifiers/recipes | source implemented | frontend build, native transaction tests, operator acceptance |
+| Pricing/Happy Hour | source implemented | timed/overnight rule native tests and service rehearsal |
+| POS/tables/tabs | source implemented | packaged shift acceptance |
+| Floorplan/table.ready | source implemented with existing tests adapted as release gate | execute native suite |
+| KDS / Bar Pass | source implemented | device/touch workflow acceptance |
+| Inventory | source implemented for opening/receipt/count/transfer/waste | execute ledger/rollback tests and stocktake rehearsal |
+| Payments | source implemented for cash/card/manual M-Pesa/split | execute duplicate/rounding/restart tests |
+| Refunds/voids/comps/discounts | source implemented | native reversal/disposition tests and manager-approval acceptance |
+| M-Pesa reconciliation | source implemented | statement discrepancy/reversal operational rehearsal |
+| Till/close day | source implemented | blind count, variance approval and complete end-of-day rehearsal |
+| Reports | source implemented close-day reports | report parity/export acceptance |
+| Help Center | locally generatable from Markdown | packaged offline search/context help acceptance |
+| Remote management/sync | existing source implemented | live policy/replay/conflict/recovery acceptance |
+| Backup | local consistent SQLite copy source implemented | encryption/rotation/upload/restore verification |
+| Restaurant/procurement/production/CRM/events/hotel/HR/guest order | browser prototypes or future scope | begins only after bar deployment gate |

@@ -1,43 +1,41 @@
 # Current release state
 
-Updated: 2026-09-24. **Partial implementation. Not deployment ready.**
-
-## Latest progress and next slice
-
-Documentation separates the accepted deployment target from source implementation and local verification. The obsolete platform specification and administration surface were removed; the retained index covers business operations, implementation, verification and deployment. Supabase configuration is stored locally outside version control. The live replica table now rejects anonymous access with a database permission error; this does not establish enrollment or synchronization.
-
-The table-lifecycle slice is implemented: native layout saving is atomic and version-checked; occupied table ownership is preserved; removing occupied tables is rejected; cleaning completion is attributable; seating and transfer require availability. The designer preserves stored positions, uses real staff assignments, supports coordinate editing and keeps errors/drafts visible. SQL migration 003 rejects malformed remote requests without changing business records. Native execution and full trading acceptance remain priorities.
+Updated: 2026-09-24. **Bar-first source implementation substantially expanded. Production acceptance is still required on a supported target device.**
 
 ## Implemented in source
 
-- Tauri scaffold, typed command boundary, versioned SQLite records, audit, command deduplication and transactional outbox.
-- Argon2 PIN verification, persistent retry throttling, role checks and expiring local sessions.
-- Selected master save/archive commands; simple orders, firing, recipe stock depletion, KDS transitions, unpaid transfer/merge and unfired voids.
-- Atomic outlet floorplans and versioned table cleaning confirmation; table lifecycle cannot be reset by layout edits.
-- Stock counts, waste and transfers with movement records and negative-stock rejection.
-- Till opening/closing, manual cash/card/M-Pesa, atomic split payments, receipt uniqueness/allocation and manager reconciliation.
-- Configured inclusive-tax snapshots and balanced payment journals, including partial-payment rounding. Full accrual accounting remains pending.
-- Internal receipt preview, text export and OS print/PDF handoff; simulated device diagnostics removed.
-- Restart-safe enrollment credentials, ordered Supabase uploads, remote request polling/version checks and acknowledgements after replica upload.
-- Online manager login, replica browsing, terminal health and selected administrative change requests.
-- Consistent manual SQLite backup. Credentials are included; encryption and restore are not implemented.
+- Native installation state machine from intake through Go Live.
+- Resumable pre-enrollment Intake Wizard and owner enrollment that no longer seeds fake operational outlets/stores.
+- Business Setup Wizard with real tax, payments, service areas, stock locations, catalog, opening balances, staff access, till policy, floorplan and backup/sync rehearsal.
+- Rust capability registry returned with authenticated runtime snapshots; installed UI no longer simulates roles.
+- Single-use, target-aware manager approval tokens and staff create/update/deactivate/PIN-reset/role-change lifecycle.
+- One-terminal SQLite transactions with command deduplication, immutable audit and ordered outbox.
+- Native floorplan atomic save plus `table.ready` cleaning lifecycle.
+- Bar POS orders, quick tabs/tables, quantities, portions, modifiers, recipe snapshots, price-rule snapshots, firing and ingredient depletion.
+- Item-specific KDS states: FIRED → PREPARING → READY → SERVED.
+- Unpaid transfer/merge, protected discounts/comps, fired-void stock disposition.
+- Cash/card/manual M-Pesa and atomic split tender, manual M-Pesa reconciliation, refunds/reversals without automatic ingredient restock.
+- Opening balance, stock receipt with weighted-average cost/evidence, physical count, transfer and waste movements.
+- Till open, paid-in/out, blind close and protected variance override.
+- Persisted close-day report covering sales, tax/levy, tenders, cash, discounts/comps/refunds, COGS/waste, gross profit, top products, staff sales and system state.
+- Offline Help Center generated from 30 Markdown user-guide articles.
+- Windows/Linux/Android build scripts and GitHub Actions CI source.
+- Existing ordered Supabase replica and remote-request architecture retained.
 
-These are source implementation claims. Verification below applies only to the named checks, not whole-module acceptance.
+## Verification executed in this environment
 
-## Verification evidence
+The current execution environment has Node but no Rust/Cargo or Docker and package installation timed out. Therefore native, Tauri, cloud-container and packaged-device acceptance are **not** claimed here.
 
-- `npm run lint`, `npm run build`, and `npm test`: passed; five documentation/SQLite integrity tests. Build warns about the large frontend bundle.
-- Browser preview: four desktop/narrow-layout checks passed, covering module navigation and floorplan draft editing/cancellation/truthful preview saving. These do not verify native UI persistence.
-- Static interaction inventory: 1,209 controls, handlers and routes; all require workflow classification and acceptance.
-- Native domain tests: **14 passed** on Windows against the actual Rust store and bundled SQLite. Coverage includes restart persistence, payment replay, changed-payload rejection, split rollback, M-Pesa allocation limits, tax rounding, stock bounds, role checks, PIN throttling, audit immutability, stale floorplan conflicts, occupied-table preservation and cleaning/reseating. `cargo check --tests` also passed. This used Rust GNU, Zig for C compilation (sanitizer instrumentation disabled), and Rust LLD; the earlier linker failure is resolved for domain tests. Tauri package verification remains separate and open. The optional Linux container test has not been verified; its image download did not complete.
-- `npm run test:cloud`: passed in disposable PostgreSQL 18.6 with minimal Supabase Auth fixtures. All three migrations apply. Assertions cover retry-safe enrollment, one active terminal, unchanged/changed replays, sequence-gap rollback, read/write permissions, malformed requests, upload-before-applied acknowledgement, revoked request authors and fenced terminals.
-- Configured project: Auth settings HTTP 200. Latest anonymous replica probe HTTP 401 / PostgreSQL 42501, permission denied for business_records (previously 404). No remote migrations or business-data mutations performed by this agent; no sync claim established.
-- Live Supabase Auth/HTTP integration, authenticated native end-to-end, physical devices, offline shift and restore rehearsals: not verified.
+Dependency-independent checks are recorded in [TEST_EVIDENCE.md](TEST_EVIDENCE.md). The target development machine must run the full `npm run verify` gate after `npm ci`.
 
-## Release blockers
+## Remaining release gates
 
-Unconnected native modules display an integration-pending screen. Browser fixtures and legacy handlers remain prototype behavior, not production functionality.
+- successful `npm ci`, TypeScript/Vite build and Playwright run against the finished tree;
+- successful Rust domain tests and Tauri desktop build;
+- disposable PostgreSQL/Supabase protocol test;
+- actual Windows/Linux/Android package builds as applicable;
+- physical printer/drawer behavior where configured;
+- complete Phase 16 fresh-install/offline/restart/reconnect/backup acceptance rehearsal;
+- encrypted/rotated remote backups and verified replacement-terminal restore remain beyond the current local backup implementation.
 
-Outstanding: modifiers/portions/discounts/comps/refunds; full stock disposition and period locks; customer credit accounting and UI; procurement, hotel, CRM, events, HR and production integration; staff revocation; secure credentials; backup encryption/rotation/upload/restore; complete domain constraints and asynchronous UI contracts; platform packaging and every interaction's acceptance scenario. Guest ordering remains a prototype. Remote requests and enrollment recovery exist in source but need adverse-condition server tests.
-
-No module is sync verified or deployment verified. Continue the [accepted implementation plan](IMPLEMENTATION_PLAN.md), beginning with native execution, cloud migration verification and the complete trading rehearsal.
+No claim of **deployment verified** should be made until [BAR_PRODUCTION_ACCEPTANCE.md](BAR_PRODUCTION_ACCEPTANCE.md) is completed on the target hardware.

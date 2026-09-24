@@ -13,18 +13,31 @@ struct Runtime {
 }
 #[tauri::command]
 fn runtime_status(state: State<Runtime>) -> store::Result<Value> {
-    let db = state.db.lock().map_err(|e| e.to_string())?;
-    let mut stmt = db
-        .prepare("SELECT id,name FROM staff WHERE active=1 ORDER BY name")
-        .map_err(|e| e.to_string())?;
-    let staff = stmt
-        .query_map([], |r| {
-            Ok(json!({"id":r.get::<_,String>(0)?,"name":r.get::<_,String>(1)?}))
-        })
-        .map_err(|e| e.to_string())?
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|e| e.to_string())?;
-    Ok(json!({"enrolled":store::meta(&db,"terminal_id")?.is_some(),"staff":staff}))
+    let db=state.db.lock().map_err(|e|e.to_string())?;
+    let mut stmt=db.prepare("SELECT id,name,role FROM staff WHERE active=1 ORDER BY name").map_err(|e|e.to_string())?;
+    let staff=stmt.query_map([],|r|Ok(json!({"id":r.get::<_,String>(0)?,"name":r.get::<_,String>(1)?,"role":r.get::<_,String>(2)?}))).map_err(|e|e.to_string())?.collect::<Result<Vec<_>,_>>().map_err(|e|e.to_string())?;
+    let intake=store::meta(&db,"intake_profile")?.and_then(|value|serde_json::from_str::<Value>(&value).ok());
+    Ok(json!({"enrolled":store::meta(&db,"terminal_id")?.is_some(),"installationStage":store::installation_stage(&db)?,"staff":staff,"intakeProfile":intake}))
+}
+#[tauri::command]
+fn runtime_intake_save(state: State<Runtime>, profile: Value) -> store::Result<Value> {
+    let db=state.db.lock().map_err(|e|e.to_string())?;
+    if store::meta(&db,"terminal_id")?.is_some(){return Err("Intake cannot be changed after enrollment".into());}
+    if !profile.is_object(){return Err("Intake profile must be an object".into());}
+    store::set_meta(&db,"intake_profile",&profile.to_string())?; store::set_meta(&db,"installation_stage","INTAKE_IN_PROGRESS")?; Ok(profile)
+}
+#[tauri::command]
+fn runtime_intake_complete(state: State<Runtime>, profile: Value) -> store::Result<Value> {
+    let db=state.db.lock().map_err(|e|e.to_string())?;
+    if store::meta(&db,"terminal_id")?.is_some(){return Err("Intake cannot be changed after enrollment".into());}
+    if !profile.is_object(){return Err("Intake profile must be an object".into());}
+    store::set_meta(&db,"intake_profile",&profile.to_string())?; store::set_meta(&db,"installation_stage","READY_FOR_ENROLLMENT")?; Ok(profile)
+}
+#[tauri::command]
+fn runtime_intake_clear(state: State<Runtime>) -> store::Result<()> {
+    let db=state.db.lock().map_err(|e|e.to_string())?;
+    if store::meta(&db,"terminal_id")?.is_some(){return Err("Intake cannot be cleared after enrollment".into());}
+    db.execute("DELETE FROM metadata WHERE key IN ('intake_profile','installation_stage')",[]).map_err(|e|e.to_string())?; Ok(())
 }
 #[tauri::command]
 fn runtime_login(
@@ -58,6 +71,11 @@ fn runtime_command(
 ) -> store::Result<Value> {
     let mut db = state.db.lock().map_err(|e| e.to_string())?;
     store::execute(&mut db, &token, command)
+}
+#[tauri::command]
+fn runtime_manager_approve(state: State<Runtime>, token: String, approver_id: String, pin: String, permission: String, target: Option<String>) -> store::Result<Value> {
+    let db=state.db.lock().map_err(|e|e.to_string())?;
+    store::create_approval(&db,&token,&approver_id,&pin,&permission,target.as_deref())
 }
 
 fn validate_url(url: &str) -> store::Result<String> {
@@ -118,6 +136,12 @@ async fn runtime_enroll(
 ) -> store::Result<()> {
     let url = validate_url(&url)?;
     store::hash_pin(&pin)?;
+    {
+        let db=state.db.lock().map_err(|e|e.to_string())?;
+        let stage=store::installation_stage(&db)?;
+        if !["READY_FOR_ENROLLMENT","ENROLLMENT_PENDING"].contains(&stage.as_str()){return Err("Complete and confirm the Intake Wizard before owner enrollment".into());}
+        store::set_meta(&db,"installation_stage","ENROLLMENT_PENDING")?;
+    }
     if owner_name.trim().is_empty() || business_name.trim().is_empty() {
         return Err("Owner and business names are required".into());
     }
@@ -323,9 +347,7 @@ async fn sync_inner(state: &Runtime, token: &str) -> store::Result<Value> {
 fn runtime_backup(state: State<Runtime>, token: String) -> store::Result<String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
     let actor = store::actor(&db, &token, true)?;
-    if actor.role == "Server" {
-        return Err("Manager permission required".into());
-    }
+    if !store::permissions(&actor.role).contains(&"backup.create") { return Err("Backup permission required".into()); }
     let folder = state
         .path
         .parent()
@@ -336,8 +358,8 @@ fn runtime_backup(state: State<Runtime>, token: String) -> store::Result<String>
         "servos-{}.sqlite",
         chrono::Utc::now().format("%Y%m%dT%H%M%S%f")
     ));
-    db.backup(rusqlite::DatabaseName::Main, &path, None)
-        .map_err(|e| e.to_string())?;
+    db.backup(rusqlite::DatabaseName::Main, &path, None).map_err(|e|e.to_string())?;
+    store::set_meta(&db,"last_backup",&chrono::Utc::now().to_rfc3339())?;
     Ok(path.to_string_lossy().into())
 }
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -359,10 +381,14 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             runtime_status,
+            runtime_intake_save,
+            runtime_intake_complete,
+            runtime_intake_clear,
             runtime_login,
             runtime_lock,
             runtime_snapshot,
             runtime_command,
+            runtime_manager_approve,
             runtime_enroll,
             runtime_sync,
             runtime_backup

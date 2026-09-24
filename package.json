@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
-    "build": "vite build",
+    "build": "npm run help:build && vite build",
     "preview": "vite preview",
     "clean": "node scripts/clean.mjs",
     "lint": "tsc --noEmit",
@@ -18,7 +18,11 @@
     "test:desktop": "cargo test --manifest-path src-tauri/Cargo.toml --lib",
     "test:cloud": "node scripts/test-supabase.mjs",
     "test": "node --test tests/*.test.mjs",
-    "test:browser": "playwright test"
+    "test:browser": "playwright test",
+    "help:build": "node scripts/build-help-index.mjs",
+    "docs:check": "npm run help:build && node scripts/docs-check.mjs",
+    "verify:source": "node scripts/verify-production.mjs",
+    "verify": "npm run help:build && npm run lint && npm run build && npm test && npm run test:browser && npm run test:native:container && npm run audit:ui && npm run docs:check"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",

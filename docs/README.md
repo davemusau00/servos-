@@ -1,15 +1,20 @@
 # ServOS documentation
 
-ServOS targets one business and one installed terminal. Multiple internal outlets and stock locations remain business configuration.
+ServOS targets one business and one installed terminal.
 
-- [Current release state](CURRENT_RELEASE_STATE.md): evidence and blockers.
-- [Accepted implementation plan](IMPLEMENTATION_PLAN.md): decisions, sequence and completion criteria.
-- [Architecture](SYSTEM_ARCHITECTURE.md): local backend, data ownership and replication.
-- [Feature coverage](FEATURE_COVERAGE_MATRIX.md): module implementation status.
-- [Implementation roadmap](GAP_ANALYSIS_AND_ROADMAP.md): remaining work in dependency order.
-- [Operational workflows](MODULE_WORKFLOWS.md): expected transactions and completion rules.
-- [Business operations specification](BUSINESS_OPERATIONS_SPEC.md): accepted scope.
-- [Decomposition guide](REFACTORING_AND_DECOMPOSITION_GUIDE.md): migration boundaries.
-- [Deployment and recovery](DEPLOYMENT_RUNBOOK.md): enrollment, backups and release gates.
-- [Data dictionary](DATA_DICTIONARY.md): persisted contracts.
-- [Interaction inventory](generated/UI_INTERACTION_INVENTORY.json): static controls and handlers; not evidence of acceptance.
+- [Current release state](CURRENT_RELEASE_STATE.md)
+- [Feature coverage](FEATURE_COVERAGE_MATRIX.md)
+- [Implementation plan](IMPLEMENTATION_PLAN.md)
+- [Gap analysis and roadmap](GAP_ANALYSIS_AND_ROADMAP.md)
+- [Architecture](SYSTEM_ARCHITECTURE.md)
+- [RBAC and permissions](RBAC_AND_PERMISSIONS.md)
+- [Onboarding and setup](ONBOARDING_AND_SETUP.md)
+- [Operational workflows](MODULE_WORKFLOWS.md)
+- [Data dictionary](DATA_DICTIONARY.md)
+- [Deployment runbook](DEPLOYMENT_RUNBOOK.md)
+- [Completion ledger](COMPLETION_LEDGER.md)
+- [Test evidence](TEST_EVIDENCE.md)
+- [Bar production acceptance](BAR_PRODUCTION_ACCEPTANCE.md)
+- [Changelog](CHANGELOG.md)
+- `user-guide/`: source of truth for the offline in-app Help Center.
+- `generated/UI_INTERACTION_INVENTORY.json`: static interaction inventory, not acceptance evidence.

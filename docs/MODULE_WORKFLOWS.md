@@ -1,31 +1,29 @@
 # Operational workflows
 
-These are acceptance targets. Consult the coverage matrix before treating a workflow as available.
+## Setup
 
-## Trading and restaurant service
+Intake → owner enrollment → business setup → native readiness validation → Admin Go Live → staff unlock.
 
-Enroll owner -> configure outlets, stock locations, catalog, taxes and opening balances -> enroll staff -> open till -> create table/walk-in order -> add seats, courses, portions and modifiers -> fire courses -> deplete snapshotted ingredients once -> prepare/serve -> allocate payments -> issue an internal receipt -> reconcile tenders -> close till.
+## Bar service
 
-Reservations progress booked/confirmed/arrived/seated/completed, with cancelled/no-show alternatives. Waitlist parties seat against actual availability. Floorplan edits preserve active orders. Splits and merges preserve item ownership and payment allocation. Fired voids require return-versus-waste disposition. Refunds reverse money without automatically returning stock.
+Open till → open quick tab/table → add quantity/portion/modifier → snapshot price/tax/recipe → fire → deplete frozen ingredients once → KDS PREPARING/READY/SERVED → repeat rounds → settle → table CLEANING → staff Mark Ready.
 
-The implemented table lifecycle is AVAILABLE -> ORDERING -> CLEANING after payment, transfer or eligible void -> AVAILABLE after staff select Mark clean. Cleaning confirmation does not open a new order. Floor Studio saves all changes together, preserves occupied table ownership and rejects stale layout versions. Failed saves leave the draft open with an error. Preview saves explicitly require the installed application.
+Unpaid transfer/merge and protected void/discount/comp flows retain audit attribution. Fired voids require a stock disposition.
 
-## Manual M-Pesa
+## Payments
 
-Cashier checks the business receipt, enters code/account/amount/time and confirms it. The terminal records the payment as manually confirmed, with reconciliation pending. Codes are normalized and unique per account. Allocations cannot exceed the recorded receipt; surplus needs a customer credit owner. Managers compare statement evidence and confirm matching amounts. Discrepancy and reversal workflows remain required before full release.
+Cash updates expected drawer. Card requires external approval evidence. M-Pesa requires cashier confirmation of the actual business receipt, unique configured account/code recording and later manager statement reconciliation. Split tender must equal the exact outstanding balance and posts atomically.
 
-## Procurement and production
+Refund reverses an original payment/journal up to the remaining refundable amount. Non-cash refunds require external evidence. Refund does not automatically return ingredients to stock.
 
-Supplier -> PO -> approval -> partial GRN -> inventory receipt -> supplier invoice -> three-way match -> AP allocation. Repeated receipt cannot duplicate stock. Batch production consumes raw inputs and produces measured output in one command; waste and yield are explicit.
+## Inventory
 
-## Hotel, CRM and events
+Opening balance during setup → receipts with weighted-average cost → transfers/counts/waste → sale consumption at order fire. Every change produces stock movements.
 
-Reservation -> conflict check -> deposit -> check-in/manual key issuance -> folio charges -> settlement -> checkout -> housekeeping inspection. Room-charge settlement must not recognize the same revenue twice. CRM timelines and loyalty derive from these records. Event capacity controls ticket sale; each ticket can be admitted once. Commissions and refunds require actual manually confirmed outgoing payment references.
+## Day close
 
-## Staff and accounting
+Resolve open tabs → reconcile tenders → physical drawer count → manager variance approval if necessary → close till → backup/sync → generate persisted close-day report.
 
-Provision staff -> schedule/attendance -> leave/advances -> payroll calculation using effective configuration -> approval -> manually evidenced disbursement. Till movements and variances are attributable. Every posted journal balances; closed periods reject ordinary mutation. Corrections use reversals and linked replacement records.
+## Offline/recovery
 
-## Offline and recovery
-
-Enrolled staff unlock locally. Every accepted command saves records, audit and outbox atomically. Restart must retain them. Reconnection replays commands idempotently. Remote changes stay pending until the terminal applies them. Restore must include pending outbox data and fence the replaced terminal before syncing.
+Locally enrolled staff work against SQLite without server availability. Accepted commands atomically persist records/audit/outbox. Reconnection uploads in sequence idempotently. Replication is not backup.
