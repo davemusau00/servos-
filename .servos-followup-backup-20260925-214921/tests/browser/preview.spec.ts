@@ -29,7 +29,7 @@ test('native shell mounts its fresh-install intake without runtime provider erro
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'Configure the business and its first administrator' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'What kind of business are we configuring?' })).toBeVisible();
   expect(errors).toEqual([]);
 });
 
