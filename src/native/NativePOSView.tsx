@@ -6,13 +6,14 @@ import { recordsOf, money, fieldClass, buttonClass, primaryButtonClass } from '.
 import { ManagerApprovalDialog } from './ManagerApprovalDialog';
 import { ActionDialog } from './ActionDialog';
 import { NativeReceiptDialog } from './NativeReceiptDialog';
+import { barcodeEquals, useBarcodeScanner } from '../hooks/useBarcodeScanner';
 
 export function NativePOSView(){
   const runtime=useRuntime(); const snapshot=runtime.snapshot!; const perms=snapshot.actor.permissions;
   const outlets=recordsOf(snapshot,'outlets'); const products=recordsOf(snapshot,'products'); const tables=recordsOf(snapshot,'tables'); const orders=recordsOf(snapshot,'orders');
   const openOrders=orders.filter(o=>!['COMPLETED','VOIDED'].includes(o.state));
   const [outletId,setOutletId]=useState(outlets[0]?.id||''); const [activeId,setActiveId]=useState(openOrders[0]?.id||''); const active=openOrders.find(o=>o.id===activeId)||openOrders[0];
-  const [query,setQuery]=useState(''); const [modal,setModal]=useState<{kind:string;data?:any}|null>(null); const [notice,setNotice]=useState('');
+  const [query,setQuery]=useState(''); const [modal,setModal]=useState<{kind:string;data?:any}|null>(null); const [notice,setNotice]=useState(''); const [scannerTest,setScannerTest]=useState(false); const [lastTestScan,setLastTestScan]=useState('');
   const [printerJobs,setPrinterJobs]=useState<any[]>([]);
   const [approval,setApproval]=useState<{permission:Permission;target?:string;run:(token:string)=>Promise<void>}|null>(null);
   const refreshPrinterJobs=async()=>{try{setPrinterJobs(await runtime.printerJobs())}catch{/* Session expiry is handled by the runtime shell. */}};
@@ -23,6 +24,16 @@ export function NativePOSView(){
   const createTab=async()=>{if(!outletId)return;const name=`Walk-in ${new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}`;const r=await runtime.command('order.create',{outletId,name});setActiveId(r.recordIds.find(Boolean)||'');};
   const createTableOrder=async(table:any)=>{const r=await runtime.command('order.create',{outletId:table.outletId,tableId:table.id,name:`Table ${table.label}`});setActiveId(r.recordIds.find(Boolean)||'');};
   const addProduct=(product:any)=>{if((product.portions?.length||0)>0||(product.modifiers?.length||0)>0)setModal({kind:'CONFIG',data:{product,quantity:1,portionId:product.portions?.[0]?.id||'',modifierIds:[]}});else if(active)void run('order.addItem',{orderId:active.id,productId:product.id,quantity:1});};
+  useBarcodeScanner({enabled:modal===null,onScan:barcode=>{
+    if(scannerTest){setLastTestScan(barcode);setScannerTest(false);setQuery('');setNotice(`Scanner test received ${barcode}. No sale or stock change was made.`);return;}
+    const matches=products.filter((p:any)=>(!outletId||p.outletIds?.includes(outletId))&&(barcodeEquals(p.barcode,barcode)||barcodeEquals(p.code,barcode)));
+    setQuery('');
+    if(matches.length>1){setNotice(`Barcode ${barcode} matches more than one sellable. Resolve the duplicate catalog assignment before scanning sales.`);return;}
+    if(!matches.length){setNotice(`Barcode ${barcode} is not assigned to a sellable in this service area.`);return;}
+    if(!active){setNotice(`Scanned ${matches[0].name}. Open or select a tab before adding it.`);return;}
+    setNotice(`Scanned ${matches[0].name}.`);
+    addProduct(matches[0]);
+  }});
   const updateItem=(item:any,quantity:number)=>quantity<=0?void run('order.removeItem',{orderId:active.id,itemId:item.id}):void run('order.updateItem',{orderId:active.id,itemId:item.id,quantity});
   const balance=active?Math.max(0,Number(active.grandTotal||0)-Number(active.amountPaid||0)):0;
   const finishPayment=async(p:any)=>{
@@ -45,7 +56,8 @@ export function NativePOSView(){
 
   return <div className="grid h-full min-h-0 grid-cols-1 xl:grid-cols-[1fr_430px] bg-slate-950 text-white">
     <section className="min-h-0 overflow-auto p-4">
-      <div className="mb-4 flex flex-wrap items-center gap-2"><select className={fieldClass+' max-w-xs'} value={outletId} onChange={e=>setOutletId(e.target.value)}>{outlets.map(o=><option key={o.id} value={o.id}>{o.name}</option>)}</select><button className={primaryButtonClass} onClick={()=>void createTab()}>Quick tab</button><div className="relative min-w-[220px] flex-1"><Search className="absolute left-3 top-3 h-4 w-4 text-slate-500"/><input className={fieldClass+' pl-9'} placeholder="Search name, SKU or barcode" value={query} onChange={e=>setQuery(e.target.value)}/></div></div>
+      <div className="mb-2 flex flex-wrap items-center gap-2"><select className={fieldClass+' max-w-xs'} value={outletId} onChange={e=>setOutletId(e.target.value)}>{outlets.map(o=><option key={o.id} value={o.id}>{o.name}</option>)}</select><button className={primaryButtonClass} onClick={()=>void createTab()}>Quick tab</button><div className="relative min-w-[220px] flex-1"><Search className="absolute left-3 top-3 h-4 w-4 text-slate-500"/><input data-barcode-capture="true" className={fieldClass+' pl-9'} placeholder="Search or scan barcode" value={query} onChange={e=>setQuery(e.target.value)}/></div><button className={buttonClass} onClick={()=>{setLastTestScan('');setScannerTest(true);setNotice('Scan any barcode now. This test will not change a sale or stock count.')}}>{scannerTest?'Waiting for scan…':'Test scanner'}</button></div>
+      <p className="mb-4 text-xs text-slate-500">USB keyboard-wedge scanner ready when connected. {lastTestScan&&<>Last test: <span className="font-mono text-emerald-300">{lastTestScan}</span></>}</p>
       <div className="mb-5 flex gap-2 overflow-x-auto pb-2">{tables.filter(t=>t.outletId===outletId).map(t=><button key={t.id} disabled={t.state!=='AVAILABLE'&&t.state!=='CLEANING'} onClick={()=>t.state==='CLEANING'?void run('table.ready',{tableId:t.id},recordVersion(snapshot,'tables',t.id)):void createTableOrder(t)} className={`min-w-24 rounded-xl border p-3 text-left ${t.state==='AVAILABLE'?'border-emerald-700 bg-emerald-950/40':t.state==='CLEANING'?'border-amber-700 bg-amber-950/40':'border-slate-800 bg-slate-900 opacity-50'}`}><b className="block">{t.label}</b><span className="text-xs text-slate-400">{t.state}</span></button>)}</div>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">{visible.map(p=><button key={p.id} disabled={!active} onClick={()=>addProduct(p)} className="rounded-xl border border-slate-800 bg-slate-900 p-4 text-left hover:border-amber-500 disabled:opacity-40"><div className="text-xs uppercase text-slate-500">{p.category||p.routeTo}</div><div className="mt-1 font-bold">{p.name}</div><div className="mt-2 text-amber-300">{money(p.price)}</div>{p.favorite&&<div className="mt-2 text-xs text-amber-400">★ Favorite</div>}</button>)}</div>
     </section>
