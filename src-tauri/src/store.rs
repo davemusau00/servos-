@@ -1741,7 +1741,36 @@ pub fn snapshot(db: &Connection, token: &str) -> Result<Value> {
     let mut stmt=db.prepare("SELECT DISTINCT collection FROM records").map_err(error)?;
     let collections=stmt.query_map([],|r|r.get::<_,String>(0)).map_err(error)?;
     let server_allowed=["organization","property","outlets","products","stockItems","stockLocations","tables","orders","tillSessions","customers","payments","refunds","paymentConfig","employees","priceRules","closeDayReports","suppliers","purchaseOrders","goodsReceipts","inventoryReceipts"];
-    for row in collections { let c=row.map_err(error)?; if user.role=="Server"&&!server_allowed.contains(&c.as_str()){continue;} records.extend(list(db,&c)?); }
+    for row in collections {
+        let c=row.map_err(error)?;
+        if user.role=="Server"&&!server_allowed.contains(&c.as_str()){continue;}
+        let mut collection_records=list(db,&c)?;
+        if user.role=="Server" {
+            for record in &mut collection_records {
+                let Some(data)=record.get_mut("data").and_then(Value::as_object_mut) else { continue; };
+                match c.as_str() {
+                    "products" => { data.remove("costPrice"); }
+                    "stockItems" => { data.remove("averageUnitCost"); }
+                    "stockMovements" => { data.remove("unitCostSnapshot"); data.remove("totalCostValuation"); }
+                    "purchaseOrders" => {
+                        data.remove("subtotal"); data.remove("taxTotal"); data.remove("grandTotal");
+                        if let Some(items)=data.get_mut("items").and_then(Value::as_array_mut) {
+                            for item in items { if let Some(fields)=item.as_object_mut(){fields.remove("unitPrice");fields.remove("lineTotal");} }
+                        }
+                    }
+                    "goodsReceipts" => {
+                        data.remove("acceptedValue"); data.remove("supplierInvoiceNumber");
+                        if let Some(lines)=data.get_mut("lines").and_then(Value::as_array_mut) {
+                            for line in lines { if let Some(fields)=line.as_object_mut(){fields.remove("unitCost");fields.remove("acceptedValue");} }
+                        }
+                    }
+                    "inventoryReceipts" => { data.remove("unitCost"); data.remove("supplierInvoiceNumber"); }
+                    _ => {}
+                }
+            }
+        }
+        records.extend(collection_records);
+    }
     let pending:i64=db.query_row("SELECT COUNT(*) FROM outbox WHERE acknowledged_at IS NULL",[],|r|r.get(0)).map_err(error)?;
     Ok(json!({
         "records":records,"pendingCount":pending,"lastSync":meta(db,"last_sync")?,"lastBackup":meta(db,"last_backup")?,"terminalId":meta(db,"terminal_id")?,
