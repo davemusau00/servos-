@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { BookOpen, Boxes, ClipboardCheck, CreditCard, Database, HelpCircle, LayoutGrid, Lock, Martini, PackageSearch, RefreshCw, Settings, SlidersHorizontal, Truck, WalletCards } from 'lucide-react';
+import { BookOpen, Boxes, ClipboardCheck, CreditCard, HelpCircle, LayoutGrid, Lock, Martini, PackageSearch, RefreshCw, Settings, SlidersHorizontal, Truck, WalletCards } from 'lucide-react';
 import { useRuntime } from '../runtime/RuntimeProvider';
 import type { Permission } from '../types/runtime';
 import { NativePOSView } from './NativePOSView';
@@ -10,7 +10,6 @@ import { NativeReconciliationView, NativeCloseDayView, NativeReportsView, Native
 import { NativeFloorplanView } from './NativeFloorplanView';
 import { NativeProcurementView } from './NativeProcurementView';
 import { HelpCenterView } from './HelpCenterView';
-import { NativeMasterDataView } from './NativeMasterDataView';
 
 const routes:Array<{id:string;label:string;permission:Permission;icon:any;help:string}>=[
   {id:'pos',label:'Bar POS',permission:'pos.sell',icon:Martini,help:'pos-tabs'},
@@ -18,7 +17,6 @@ const routes:Array<{id:string;label:string;permission:Permission;icon:any;help:s
   {id:'inventory',label:'Inventory',permission:'inventory.view',icon:Boxes,help:'inventory'},
   {id:'procurement',label:'Procurement',permission:'procurement.view',icon:Truck,help:'19-receiving'},
   {id:'catalog',label:'Catalog',permission:'catalog.view',icon:PackageSearch,help:'portions'},
-  {id:'master',label:'Master Data',permission:'catalog.manage',icon:Database,help:'master-data'},
   {id:'tender',label:'M-Pesa',permission:'mpesa.reconcile',icon:WalletCards,help:'mpesa'},
   {id:'refunds',label:'Refunds',permission:'payment.record',icon:CreditCard,help:'refunds'},
   {id:'floorplan',label:'Floorplan',permission:'floorplan.view',icon:LayoutGrid,help:'floorplan'},
@@ -35,7 +33,7 @@ export function NativeBarShell(){
   useEffect(()=>{if(!allowed.some(x=>x.id===tab))setTab(allowed[0]?.id||'help')},[allowed,tab]);
   const go=(id:string)=>{window.location.hash=`/${id}`;setTab(id)};
   const current=allowed.find(r=>r.id===tab);
-  const content=tab==='pos'?<NativePOSView/>:tab==='kds'?<NativeKDSView/>:tab==='inventory'?<NativeInventoryView/>:tab==='procurement'?<NativeProcurementView onOpenCatalog={()=>go('catalog')}/>:tab==='catalog'?<NativeCatalogView/>:tab==='master'?<NativeMasterDataView/>:tab==='tender'?<NativeReconciliationView/>:tab==='refunds'?<NativeRefundsView/>:tab==='floorplan'?<NativeFloorplanView/>:tab==='close'?<NativeCloseDayView/>:tab==='reports'?<NativeReportsView/>:tab==='admin'?<NativeAdminView/>:<HelpCenterView key={helpQuery} initialQuery={helpQuery}/>;
+  const content=tab==='pos'?<NativePOSView/>:tab==='kds'?<NativeKDSView/>:tab==='inventory'?<NativeInventoryView/>:tab==='procurement'?<NativeProcurementView onOpenCatalog={()=>go('catalog')}/>:tab==='catalog'?<NativeCatalogView/>:tab==='tender'?<NativeReconciliationView/>:tab==='refunds'?<NativeRefundsView/>:tab==='floorplan'?<NativeFloorplanView/>:tab==='close'?<NativeCloseDayView/>:tab==='reports'?<NativeReportsView/>:tab==='admin'?<NativeAdminView/>:<HelpCenterView key={helpQuery} initialQuery={helpQuery}/>;
   return <div className="flex h-screen overflow-hidden bg-slate-950 text-slate-100">
     <aside className="hidden w-64 shrink-0 flex-col border-r border-slate-800 bg-slate-900 md:flex"><div className="border-b border-slate-800 p-4"><div className="text-xs font-black tracking-[.25em] text-amber-400">SERVOS</div><div className="mt-1 font-bold">Bar Operations</div></div><nav className="flex-1 space-y-1 overflow-auto p-2">{allowed.map(r=>{const I=r.icon;return <button key={r.id} onClick={()=>go(r.id)} className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm ${tab===r.id?'bg-amber-400 font-bold text-slate-950':'text-slate-300 hover:bg-slate-800'}`}><I className="h-4 w-4"/>{r.label}</button>})}</nav><div className="border-t border-slate-800 p-3"><div className="text-sm font-semibold">{snapshot.actor.name}</div><div className="text-xs text-slate-500">{snapshot.actor.role} · authenticated PIN session</div></div></aside>
     <div className="flex min-w-0 flex-1 flex-col"><header className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-800 bg-slate-900 px-4 py-3"><div className="min-w-0"><div className="truncate font-bold">{current?.label||'ServOS'}</div><div className="text-xs text-slate-500">{navigator.onLine?'Online':'Offline · local trading active'} · {snapshot.pendingCount} pending sync</div></div><div className="flex items-center gap-2"><button className="rounded-lg border border-slate-700 p-2" title="Context help" onClick={()=>{setHelpQuery(current?.help||'');go('help')}}><HelpCircle className="h-4 w-4"/></button>{snapshot.actor.permissions.includes('sync.manual')&&<button className="rounded-lg border border-slate-700 p-2" title="Sync" disabled={runtime.syncing} onClick={()=>void runtime.sync()}><RefreshCw className={`h-4 w-4 ${runtime.syncing?'animate-spin':''}`}/></button>}<button className="rounded-lg border border-slate-700 p-2" title="Change staff / lock" onClick={()=>void runtime.lock()}><Lock className="h-4 w-4"/></button></div></header>

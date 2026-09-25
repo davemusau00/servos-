@@ -15,5 +15,3 @@ src-tauri/gen/
 native-tests/target/
 test-results/
 playwright-report/
-
-.playwright-tmp/

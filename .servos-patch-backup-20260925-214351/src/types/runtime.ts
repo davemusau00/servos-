@@ -52,27 +52,7 @@ export interface RuntimeStatus {
 }
 export type PrinterJobState = 'SENT' | 'QUEUED' | 'DELIVERY_UNCERTAIN' | 'SENDING' | 'OS_DIALOG' | 'MANUAL';
 export interface PrinterJobResult { jobId?: string; orderId?: string; state: PrinterJobState; message?: string; createdAt?: string }
-export interface IntakeBusinessIdentity {
-  tradingName: string;
-  legalName: string;
-  registrationNumber: string;
-  kraPin: string;
-  phone: string;
-  email: string;
-  address: string;
-}
-export interface IntakeOwnerProfile { fullName: string; phone: string; email: string }
-export interface IntakeAdministratorProfile {
-  fullName: string;
-  phone: string;
-  email: string;
-  jobTitle: string;
-  isBusinessOwner: boolean;
-}
 export interface IntakeProfile {
-  business: IntakeBusinessIdentity;
-  owner: IntakeOwnerProfile;
-  initialAdministrator: IntakeAdministratorProfile;
   venueType: 'BAR' | 'PUB' | 'LOUNGE' | 'CLUB' | 'RESTAURANT_BAR' | 'OTHER';
   serviceModes: Array<'COUNTER' | 'TABS' | 'TABLES'>;
   operatingHours: string;

@@ -1,12 +1,3 @@
-## 2026-09-26 - Intake/Admin and safe CRUD hardening
-
-- Moved business, owner and initial System Administrator configuration into pre-enrollment Intake without persisting credentials.
-- Enrollment now derives the local Admin identity from the confirmed Intake and stores commissioning evidence.
-- Added permission-aware Master Data CRUD for customers, suppliers, service areas and stock locations.
-- Added master-data archive guards for live dependencies.
-- Corrected price-rule scope/day compatibility and exposed weekday controls.
-- Fixed multi-permission documentation validation that was making CI fail after procurement permissions were documented.
-
 # Changelog
 
 ## 2026-09-24 — Bar-first v2 source integration

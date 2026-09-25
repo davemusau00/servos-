@@ -231,77 +231,43 @@ pub fn initialize(
     pin: &str,
     business: &str,
 ) -> Result<()> {
-    let profile=json!({
-        "business":{"tradingName":business,"legalName":business,"registrationNumber":"","kraPin":"","phone":"","email":"","address":""},
-        "owner":{"fullName":name,"phone":"","email":""},
-        "initialAdministrator":{"fullName":name,"phone":"","email":"","jobTitle":"Owner","isBusinessOwner":true}
-    });
-    initialize_from_intake(db,terminal,pin,&profile)
-}
-pub fn initialize_from_intake(
-    db: &mut Connection,
-    terminal: &str,
-    pin: &str,
-    profile: &Value,
-) -> Result<()> {
-    let business=profile["business"]["tradingName"].as_str().map(str::trim).filter(|v|!v.is_empty()).ok_or("Business trading name is required")?;
-    let admin_name=profile["initialAdministrator"]["fullName"].as_str().map(str::trim).filter(|v|!v.is_empty()).ok_or("Initial Administrator name is required")?;
-    let admin_job=profile["initialAdministrator"]["jobTitle"].as_str().map(str::trim).filter(|v|!v.is_empty()).unwrap_or("System Administrator");
-    let admin_phone=profile["initialAdministrator"]["phone"].as_str().unwrap_or("").trim();
-    let admin_email=profile["initialAdministrator"]["email"].as_str().unwrap_or("").trim();
-    let owner_name=profile["owner"]["fullName"].as_str().unwrap_or("").trim();
-    let owner_phone=profile["owner"]["phone"].as_str().unwrap_or("").trim();
-    let owner_email=profile["owner"]["email"].as_str().unwrap_or("").trim();
-    let legal_name=profile["business"]["legalName"].as_str().map(str::trim).filter(|v|!v.is_empty()).unwrap_or(business);
-    let registration=profile["business"]["registrationNumber"].as_str().unwrap_or("").trim();
-    let kra_pin=profile["business"]["kraPin"].as_str().unwrap_or("").trim();
-    let phone=profile["business"]["phone"].as_str().unwrap_or("").trim();
-    let email=profile["business"]["email"].as_str().unwrap_or("").trim();
-    let address=profile["business"]["address"].as_str().unwrap_or("").trim();
     let hash = hash_pin(pin)?;
-
+    if name.trim().is_empty() || business.trim().is_empty() {
+        return Err("Owner and business names are required".into());
+    }
     let tx = db.transaction().map_err(error)?;
-    if meta(&tx, "terminal_id")?.is_some() { return Err("Terminal already enrolled".into()); }
+    if meta(&tx, "terminal_id")?.is_some() {
+        return Err("Terminal already enrolled".into());
+    }
     set_meta(&tx, "terminal_id", terminal)?;
     set_meta(&tx, "installation_stage", "SETUP_REQUIRED")?;
-
-    let admin_id = id();
+    let owner = id();
     tx.execute(
         "INSERT INTO staff(id,name,role,pin_hash) VALUES(?,?,'Admin',?)",
-        params![admin_id, admin_name, hash],
+        params![owner, name.trim(), hash],
     ).map_err(error)?;
-
     let mut changes = vec![];
     put(&tx,"organization","business",json!({
-        "id":"business","name":business,"legalName":legal_name,"registrationNumber":registration,"code":"BUSINESS",
-        "baseCurrency":"KES","phone":phone,"email":email,"address":address,
-        "ownerName":owner_name,"ownerPhone":owner_phone,"ownerEmail":owner_email
+        "id":"business","name":business.trim(),"legalName":business.trim(),"code":"BUSINESS",
+        "baseCurrency":"KES","phone":"","email":"","address":""
     }),&mut changes)?;
     put(&tx,"property","property",json!({
-        "id":"property","organizationId":"business","name":business,"code":"MAIN",
-        "currency":"KES","timezone":"Africa/Nairobi","kraPin":kra_pin,"etimsCuNumber":"",
-        "phone":phone,"email":email,"address":address,
+        "id":"property","organizationId":"business","name":business.trim(),"code":"MAIN",
+        "currency":"KES","timezone":"Africa/Nairobi","kraPin":"","etimsCuNumber":"",
         "taxConfigured":false,"pricesIncludeTax":true,"vatRatePct":0,"levyRatePct":0,"receiptFooter":""
     }),&mut changes)?;
-    put(&tx,"employees",&admin_id,json!({
-        "id":admin_id,"name":admin_name,"jobTitle":admin_job,"role":"Admin","status":"ACTIVE",
-        "phone":admin_phone,"email":admin_email,"isBusinessOwner":profile["initialAdministrator"]["isBusinessOwner"].as_bool().unwrap_or(false)
-    }),&mut changes)?;
-    put(&tx,"installationProfile","initial",json!({
-        "id":"initial","terminalId":terminal,"commissionedAt":now(),"initialAdministratorId":admin_id,
-        "businessName":business,"owner":{"name":owner_name,"phone":owner_phone,"email":owner_email},
-        "intake":profile.clone()
+    put(&tx,"employees",&owner,json!({
+        "id":owner,"name":name.trim(),"jobTitle":"Owner","role":"Admin","status":"ACTIVE","phone":"","email":""
     }),&mut changes)?;
     put(&tx,"businessSetup","business",json!({
         "id":"business","version":1,"currentStep":"BUSINESS_IDENTITY","completedSteps":[],"skippedOptionalSteps":[],
         "startedAt":now(),"updatedAt":now(),"completedAt":null,"goLiveApprovedAt":null,"goLiveApprovedBy":null
     }),&mut changes)?;
-
     let command = BusinessCommand {
         id: id(), schema_version: 1, operation: "installation.enroll".into(), target_version: None,
-        payload: json!({"business":business,"initialAdministratorId":admin_id})
+        payload: json!({"business":business.trim()})
     };
-    finish(&tx,&command,&admin_id,changes)?;
+    finish(&tx,&command,&owner,changes)?;
     tx.commit().map_err(error)
 }
 #[derive(Serialize, Deserialize, Clone)]
@@ -394,7 +360,6 @@ fn active_price_rule(tx: &Connection, product: &Value, base_minor: i64) -> Resul
     let local=Utc::now()+Duration::hours(3);
     let today=local.format("%Y-%m-%d").to_string();
     let weekday=format!("{:?}",local.weekday()).to_ascii_uppercase();
-    let weekday_number=local.weekday().number_from_monday() as i64;
     let minute=(local.hour() as i32)*60+local.minute() as i32;
     let mut best: Option<(i64,Value)>=None;
     for record in list(tx,"priceRules")? {
@@ -402,29 +367,14 @@ fn active_price_rule(tx: &Connection, product: &Value, base_minor: i64) -> Resul
         if rule["active"]==false { continue; }
         if let Some(start)=rule["startDate"].as_str(){if today.as_str()<start{continue;}}
         if let Some(end)=rule["endDate"].as_str(){if today.as_str()>end{continue;}}
-        if let Some(days)=rule["days"].as_array(){
-            let day_matches=days.is_empty() || days.iter().any(|d|{
-                d.as_i64()==Some(weekday_number) ||
-                d.as_str().is_some_and(|raw|{
-                    let normalized=raw.trim().to_ascii_uppercase();
-                    normalized==weekday || normalized.starts_with(&weekday)
-                })
-            });
-            if !day_matches { continue; }
-        }
+        if let Some(days)=rule["days"].as_array(){if !days.is_empty() && !days.iter().any(|d|d.as_str().map(|x|x.to_ascii_uppercase())==Some(weekday.clone())){continue;}}
         let starts=rule["startTime"].as_str().and_then(parse_clock);
         let ends=rule["endTime"].as_str().and_then(parse_clock);
         if let (Some(a),Some(b))=(starts,ends){let active=if a<=b{minute>=a&&minute<=b}else{minute>=a||minute<=b};if !active{continue;}}
-
-        let scope_type=rule["scopeType"].as_str().or_else(||rule["scope"].as_str()).unwrap_or("ALL").to_ascii_uppercase();
-        let scope_id=rule["scopeId"].as_str();
-        let legacy_product=rule["productIds"].as_array().map(|ids|ids.iter().any(|v|v==&product["id"])).unwrap_or(false);
-        let legacy_category=rule["category"].as_str().zip(product["category"].as_str()).map(|(a,b)|a.eq_ignore_ascii_case(b)).unwrap_or(false);
-        let product_match=(scope_type=="PRODUCT" && scope_id==product["id"].as_str()) || legacy_product;
-        let category_match=(scope_type=="CATEGORY" && scope_id.zip(product["category"].as_str()).is_some_and(|(a,b)|a.eq_ignore_ascii_case(b))) || legacy_category;
-        let all=scope_type=="ALL";
+        let product_match=rule["productIds"].as_array().map(|ids|ids.iter().any(|v|v==&product["id"])).unwrap_or(false);
+        let category_match=rule["category"].as_str().zip(product["category"].as_str()).map(|(a,b)|a.eq_ignore_ascii_case(b)).unwrap_or(false);
+        let all=rule["scope"].as_str()==Some("ALL");
         if !(product_match||category_match||all){continue;}
-
         let priority=rule["priority"].as_i64().unwrap_or(0);
         if best.as_ref().is_some_and(|(p,_)|*p>priority){continue;}
         best=Some((priority,rule.clone()));
@@ -576,19 +526,6 @@ const MASTER: &[&str] = &[
     "paymentConfig",
     "tillPolicy",
 ];
-fn master_permission(collection: &str) -> Option<&'static str> {
-    match collection {
-        "organization" | "property" | "paymentConfig" | "tillPolicy" | "outlets"
-        | "rooms" | "events" | "promoters" | "reservations" | "waitlist" | "housekeeping" | "maintenance"
-            => Some("business.configure"),
-        "stockItems" | "stockLocations" => Some("inventory.adjust"),
-        "tables" => Some("floorplan.manage"),
-        "priceRules" => Some("pricing.manage"),
-        "suppliers" => Some("procurement.manage"),
-        "products" | "customers" | "recipes" => Some("catalog.manage"),
-        _ => None,
-    }
-}
 pub fn execute(db: &mut Connection, token: &str, cmd: BusinessCommand) -> Result<Value> {
     let user = actor(db, token, true)?;
     execute_as(db, &user, cmd)
@@ -630,8 +567,13 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
             if !MASTER.contains(&collection) {
                 return Err("This collection requires a dedicated business command".into());
             }
-            let required = master_permission(collection)
-                .ok_or("This collection requires a dedicated business command")?;
+            let required = match collection {
+                "organization" | "property" | "paymentConfig" | "tillPolicy" => "business.configure",
+                "stockItems" | "stockLocations" => "inventory.adjust",
+                "tables" => "floorplan.manage",
+                "priceRules" => "pricing.manage",
+                _ => "catalog.manage",
+            };
             if !permissions(&user.role).contains(&required) {
                 return Err(format!("Permission required: {required}"));
             }
@@ -644,25 +586,10 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
                 if existing.is_none() {
                     return Err("Record not found".into());
                 }
-                if ["organization","property","paymentConfig","tillPolicy","outlets"].contains(&collection) {
-                    return Err("Primary business configuration cannot be archived through generic CRUD".into());
+                if collection == "property" || collection == "outlets" {
+                    return Err("Primary business configuration cannot be archived".into());
                 }
                 let data = &existing.as_ref().unwrap().1;
-                if collection=="stockLocations" {
-                    let stock_in_location=list(&tx,"stockItems")?.iter().any(|r|r["data"]["currentStock"][record_id].as_f64().unwrap_or(0.0)!=0.0);
-                    if stock_in_location { return Err("Move or count stock to zero before archiving this location".into()); }
-                    let used_by_outlet=list(&tx,"outlets")?.iter().any(|r|r["data"]["defaultStockLocationId"].as_str()==Some(record_id));
-                    if used_by_outlet { return Err("Change the service area's default stock location before archiving this location".into()); }
-                }
-                if collection=="suppliers" {
-                    let open_po=list(&tx,"purchaseOrders")?.iter().any(|r|r["data"]["supplierId"].as_str()==Some(record_id) && !["RECEIVED","INVOICED","PAID","CANCELLED"].contains(&r["data"]["status"].as_str().unwrap_or("")));
-                    let open_payable=list(&tx,"supplierPayables")?.iter().any(|r|r["data"]["supplierId"].as_str()==Some(record_id) && r["data"]["amountDue"].as_f64().unwrap_or(0.0)>0.0);
-                    if open_po || open_payable { return Err("Settle or close this supplier's open procurement records before archiving".into()); }
-                }
-                if collection=="customers" {
-                    let open_order=list(&tx,"orders")?.iter().any(|r|r["data"]["customerId"].as_str()==Some(record_id) && !["COMPLETED","VOIDED"].contains(&r["data"]["state"].as_str().unwrap_or("")));
-                    if open_order { return Err("Resolve the customer's open tab before archiving".into()); }
-                }
                 if collection == "tables" && data["currentOrderId"].as_str().is_some() {
                     return Err(
                         "Close or transfer the active order before archiving this table".into(),
@@ -710,10 +637,6 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
                     if data["pricesIncludeTax"] != true {
                         return Err("This release requires tax-inclusive selling prices".into());
                     }
-                }
-                if collection == "outlets" {
-                    let location=text(&data,"defaultStockLocationId")?;
-                    get(&tx,"stockLocations",location)?;
                 }
                 if collection == "products" {
                     money(&data, "price")?;

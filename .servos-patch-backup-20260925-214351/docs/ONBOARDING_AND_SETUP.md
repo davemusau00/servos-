@@ -36,12 +36,3 @@ Opening stock uses `inventory.openingBalance` and creates explicit stock movemen
 `setup.goLive` is Admin-only and revalidates the required persisted business state. Once successful it writes approval actor/time into `businessSetup` and sets installation stage `LIVE`.
 
 The Rust command boundary blocks till, order, payment, reconciliation, operational inventory and close-day commands until the stage is `LIVE`. UI gating is therefore not the only protection.
-
-
-## Initial System Administrator from Intake
-
-The confirmed Intake carries business identity, owner identity and the intended first System Administrator. Intake never stores online passwords or local PINs.
-
-Enrollment authenticates the owner online, then the native backend rereads the confirmed Intake from SQLite and creates the initial local `Admin` from that profile. The PIN is validated and Argon2-hashed only during enrollment.
-
-Owner and initial Administrator may be different people. Commissioning evidence is stored as `installationProfile/initial`.

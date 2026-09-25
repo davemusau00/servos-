@@ -14,7 +14,7 @@ interface RuntimeContextValue {
   reloadStatus: () => Promise<void>;
   saveIntake: (profile: IntakeProfile) => Promise<void>;
   completeIntake: (profile: IntakeProfile) => Promise<void>;
-  enroll: (input: { email: string; password: string; pin: string }) => Promise<void>;
+  enroll: (input: { businessName: string; ownerName: string; email: string; password: string; pin: string }) => Promise<void>;
   login: (staffId: string, pin: string) => Promise<void>;
   lock: () => Promise<void>;
   refresh: () => Promise<void>;
@@ -79,17 +79,16 @@ export const RuntimeProvider = ({ children }: { children: React.ReactNode }) => 
     try { await invoke('runtime_intake_complete', { profile }); await reloadStatus(); }
     catch (e) { report(e); throw e; } finally { setBusy(false); }
   };
-  const enroll = async ({ email, password, pin }: { email: string; password: string; pin: string }) => {
+  const enroll = async ({ businessName, ownerName, email, password, pin }: { businessName: string; ownerName: string; email: string; password: string; pin: string }) => {
     setBusy(true); setError('');
     try {
-      if (!status?.intakeProfile) throw new Error('Complete terminal Intake before enrollment.');
       const url = import.meta.env.VITE_SUPABASE_URL;
       const publishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
       if (!url || !publishableKey) throw new Error('This installation has no business server configured. Configure .env.local before enrollment.');
       const response = await fetch(`${url}/auth/v1/token?grant_type=password`, { method: 'POST', headers: { apikey: publishableKey, 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
       const auth = await response.json();
       if (!response.ok || !auth.access_token) throw new Error(auth?.msg || auth?.error_description || 'Owner sign-in failed');
-      await invoke('runtime_enroll', { url, publishableKey, accessToken: auth.access_token, pin });
+      await invoke('runtime_enroll', { url, publishableKey, accessToken: auth.access_token, ownerName, pin, businessName });
       await reloadStatus();
     } catch (e) { report(e); throw e; } finally { setBusy(false); }
   };

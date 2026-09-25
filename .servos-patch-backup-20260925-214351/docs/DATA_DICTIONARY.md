@@ -32,8 +32,3 @@ Product and stock records may include `barcode` as text, preserving leading zero
 `orders`, `payments`, `mpesaReceipts`, `refunds`, `tillSessions`, `cashMovements`, `stockMovements`, `inventoryReceipts`, `goodsReceipts`, `supplierPayables`, `supplierPayments`, `journalEntries`, `closeDayReports`.
 
 Stock is altered only through explicit movement-producing business commands. Financial refunds create reversal journals and do not automatically recreate consumed ingredients.
-
-
-## Commissioning evidence
-
-`installationProfile`: commissioning snapshot containing confirmed non-secret Intake, terminal ID, owner identity and initial Administrator ID. It is not part of generic CRUD.

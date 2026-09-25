@@ -20,66 +20,18 @@ fn runtime_status(state: State<Runtime>) -> store::Result<Value> {
     let intake=store::meta(&db,"intake_profile")?.and_then(|value|serde_json::from_str::<Value>(&value).ok());
     Ok(json!({"enrolled":store::meta(&db,"terminal_id")?.is_some(),"installationStage":store::installation_stage(&db)?,"staff":staff,"intakeProfile":intake}))
 }
-
-fn intake_required<'a>(profile: &'a Value, group: &str, key: &str) -> store::Result<&'a str> {
-    profile.get(group)
-        .and_then(|v| v.get(key))
-        .and_then(Value::as_str)
-        .map(str::trim)
-        .filter(|v| !v.is_empty())
-        .ok_or_else(|| format!("Intake requires {group}.{key}"))
-}
-fn reject_intake_secrets(value: &Value) -> store::Result<()> {
-    match value {
-        Value::Object(map) => {
-            for (key, child) in map {
-                let normalized = key.to_ascii_lowercase().replace(['_', '-'], "");
-                if ["pin","password","passwordconfirm","accesstoken","devicetoken","devicesecret","publishablekey"].contains(&normalized.as_str()) {
-                    return Err(format!("Sensitive credential field '{key}' cannot be persisted in Intake"));
-                }
-                reject_intake_secrets(child)?;
-            }
-        }
-        Value::Array(items) => for item in items { reject_intake_secrets(item)?; },
-        _ => {}
-    }
-    Ok(())
-}
-fn validate_intake_profile(profile: &Value, complete: bool) -> store::Result<()> {
-    if !profile.is_object() { return Err("Intake profile must be an object".into()); }
-    reject_intake_secrets(profile)?;
-    if !complete { return Ok(()); }
-
-    intake_required(profile,"business","tradingName")?;
-    let owner_email=intake_required(profile,"owner","email")?;
-    intake_required(profile,"owner","fullName")?;
-    let admin_email=intake_required(profile,"initialAdministrator","email")?;
-    intake_required(profile,"initialAdministrator","fullName")?;
-    intake_required(profile,"initialAdministrator","jobTitle")?;
-    if !owner_email.contains('@') || !admin_email.contains('@') {
-        return Err("Owner and Administrator emails must be valid email addresses".into());
-    }
-
-    for key in ["paymentMethods","serviceAreas","stockAreas"] {
-        if !profile.get(key).and_then(Value::as_array).is_some_and(|v| !v.is_empty()) {
-            return Err(format!("Intake requires at least one {key} entry"));
-        }
-    }
-    Ok(())
-}
-
 #[tauri::command]
 fn runtime_intake_save(state: State<Runtime>, profile: Value) -> store::Result<Value> {
     let db=state.db.lock().map_err(|e|e.to_string())?;
     if store::meta(&db,"terminal_id")?.is_some(){return Err("Intake cannot be changed after enrollment".into());}
-    validate_intake_profile(&profile,false)?;
+    if !profile.is_object(){return Err("Intake profile must be an object".into());}
     store::set_meta(&db,"intake_profile",&profile.to_string())?; store::set_meta(&db,"installation_stage","INTAKE_IN_PROGRESS")?; Ok(profile)
 }
 #[tauri::command]
 fn runtime_intake_complete(state: State<Runtime>, profile: Value) -> store::Result<Value> {
     let db=state.db.lock().map_err(|e|e.to_string())?;
     if store::meta(&db,"terminal_id")?.is_some(){return Err("Intake cannot be changed after enrollment".into());}
-    validate_intake_profile(&profile,true)?;
+    if !profile.is_object(){return Err("Intake profile must be an object".into());}
     store::set_meta(&db,"intake_profile",&profile.to_string())?; store::set_meta(&db,"installation_stage","READY_FOR_ENROLLMENT")?; Ok(profile)
 }
 #[tauri::command]
@@ -179,30 +131,36 @@ async fn runtime_enroll(
     url: String,
     publishable_key: String,
     access_token: String,
+    owner_name: String,
     pin: String,
+    business_name: String,
 ) -> store::Result<()> {
     let url = validate_url(&url)?;
     store::hash_pin(&pin)?;
-    let profile = {
+    {
         let db=state.db.lock().map_err(|e|e.to_string())?;
         let stage=store::installation_stage(&db)?;
-        if !["READY_FOR_ENROLLMENT","ENROLLMENT_PENDING"].contains(&stage.as_str()){
-            return Err("Complete and confirm the Intake Wizard before owner enrollment".into());
-        }
-        let raw=store::meta(&db,"intake_profile")?.ok_or("Confirmed Intake profile is missing")?;
-        let profile:Value=serde_json::from_str(&raw).map_err(|_|"Stored Intake profile is invalid".to_string())?;
-        validate_intake_profile(&profile,true)?;
+        if !["READY_FOR_ENROLLMENT","ENROLLMENT_PENDING"].contains(&stage.as_str()){return Err("Complete and confirm the Intake Wizard before owner enrollment".into());}
         store::set_meta(&db,"installation_stage","ENROLLMENT_PENDING")?;
-        profile
-    };
-    let business_name=intake_required(&profile,"business","tradingName")?.to_string();
-
+    }
+    if owner_name.trim().is_empty() || business_name.trim().is_empty() {
+        return Err("Owner and business names are required".into());
+    }
     let (terminal, credential) = {
         let mut db = state.db.lock().map_err(|e| e.to_string())?;
-        if store::meta(&db, "terminal_id")?.is_some() { return Err("Already enrolled".into()); }
+        if store::meta(&db, "terminal_id")?.is_some() {
+            return Err("Already enrolled".into());
+        }
         let tx = db.transaction().map_err(|e| e.to_string())?;
-        let terminal = store::meta(&tx, "pending_terminal")?.unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
-        let credential = store::meta(&tx, "device_token")?.unwrap_or_else(|| format!("{}{}",uuid::Uuid::new_v4().simple(),uuid::Uuid::new_v4().simple()));
+        let terminal = store::meta(&tx, "pending_terminal")?
+            .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+        let credential = store::meta(&tx, "device_token")?.unwrap_or_else(|| {
+            format!(
+                "{}{}",
+                uuid::Uuid::new_v4().simple(),
+                uuid::Uuid::new_v4().simple()
+            )
+        });
         store::set_meta(&tx, "pending_terminal", &terminal)?;
         store::set_meta(&tx, "device_token", &credential)?;
         store::set_meta(&tx, "cloud_url", &url)?;
@@ -210,12 +168,12 @@ async fn runtime_enroll(
         tx.commit().map_err(|e| e.to_string())?;
         (terminal, credential)
     };
-
     let result=rpc(&url,&publishable_key,Some(&access_token),"servos_enroll",json!({"business_name":business_name,"installation_id":terminal,"device_secret":credential})).await?;
-    if store::text(&result, "terminalId")? != terminal { return Err("Unexpected enrollment response".into()); }
-
+    if store::text(&result, "terminalId")? != terminal {
+        return Err("Unexpected enrollment response".into());
+    }
     let mut db = state.db.lock().map_err(|e| e.to_string())?;
-    store::initialize_from_intake(&mut db, &terminal, &pin, &profile)?;
+    store::initialize(&mut db, &terminal, &owner_name, &pin, &business_name)?;
     Ok(())
 }
 #[tauri::command]
