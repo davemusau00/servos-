@@ -15,7 +15,7 @@ const routes:Array<{id:string;label:string;permission:Permission;icon:any;help:s
   {id:'pos',label:'Bar POS',permission:'pos.sell',icon:Martini,help:'pos-tabs'},
   {id:'kds',label:'Bar Pass',permission:'kds.view',icon:ClipboardCheck,help:'kds'},
   {id:'inventory',label:'Inventory',permission:'inventory.view',icon:Boxes,help:'inventory'},
-  {id:'procurement',label:'Procurement',permission:'procurement.view',icon:Truck,help:'receiving'},
+  {id:'procurement',label:'Procurement',permission:'procurement.view',icon:Truck,help:'19-receiving'},
   {id:'catalog',label:'Catalog',permission:'catalog.view',icon:PackageSearch,help:'portions'},
   {id:'tender',label:'M-Pesa',permission:'mpesa.reconcile',icon:WalletCards,help:'mpesa'},
   {id:'refunds',label:'Refunds',permission:'payment.record',icon:CreditCard,help:'refunds'},
@@ -39,7 +39,7 @@ export function NativeBarShell(){
     <div className="flex min-w-0 flex-1 flex-col"><header className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-800 bg-slate-900 px-4 py-3"><div className="min-w-0"><div className="truncate font-bold">{current?.label||'ServOS'}</div><div className="text-xs text-slate-500">{navigator.onLine?'Online':'Offline · local trading active'} · {snapshot.pendingCount} pending sync</div></div><div className="flex items-center gap-2"><button className="rounded-lg border border-slate-700 p-2" title="Context help" onClick={()=>{setHelpQuery(current?.help||'');go('help')}}><HelpCircle className="h-4 w-4"/></button>{snapshot.actor.permissions.includes('sync.manual')&&<button className="rounded-lg border border-slate-700 p-2" title="Sync" disabled={runtime.syncing} onClick={()=>void runtime.sync()}><RefreshCw className={`h-4 w-4 ${runtime.syncing?'animate-spin':''}`}/></button>}<button className="rounded-lg border border-slate-700 p-2" title="Change staff / lock" onClick={()=>void runtime.lock()}><Lock className="h-4 w-4"/></button></div></header>
       {runtime.error&&<div className="shrink-0 bg-rose-950 px-4 py-2 text-sm text-rose-200">{runtime.error}<button className="float-right underline" onClick={runtime.clearError}>Dismiss</button></div>}
       <main className="min-h-0 flex-1 overflow-hidden">{content}</main>
-      <nav className="grid shrink-0 grid-cols-5 border-t border-slate-800 bg-slate-900 p-1 md:hidden">{allowed.slice(0,4).map(r=>{const I=r.icon;return <button key={r.id} onClick={()=>go(r.id)} className={`grid place-items-center rounded-lg p-2 text-[10px] ${tab===r.id?'bg-amber-400 text-slate-950':'text-slate-400'}`}><I className="h-4 w-4"/><span>{r.label}</span></button>})}<button onClick={()=>go('help')} className="grid place-items-center p-2 text-[10px] text-slate-400"><HelpCircle className="h-4 w-4"/><span>Help</span></button></nav>
+      <nav aria-label="POS sections" className="flex shrink-0 gap-1 overflow-x-auto border-t border-slate-800 bg-slate-900 p-1 md:hidden">{allowed.map(r=>{const I=r.icon;return <button key={r.id} onClick={()=>go(r.id)} className={`grid min-w-16 shrink-0 place-items-center rounded-lg p-2 text-[10px] ${tab===r.id?'bg-amber-400 text-slate-950':'text-slate-400'}`}><I className="h-4 w-4"/><span>{r.label}</span></button>})}<button onClick={()=>go('help')} className="grid min-w-16 shrink-0 place-items-center p-2 text-[10px] text-slate-400"><HelpCircle className="h-4 w-4"/><span>Help</span></button></nav>
     </div>
   </div>;
 }
