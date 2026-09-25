@@ -18,6 +18,7 @@ Updated: 2026-09-25. **Bar-first source implementation substantially expanded. P
 - Opening balance, stock receipt with weighted-average cost/evidence, physical count, transfer and waste movements.
 - USB HID keyboard-wedge scanning for POS lookup, product/stock barcode assignment, package scan quantities, inventory count drafts and PO/GRN selection. Barcode uniqueness and scan-unit validation run in the native backend.
 - Native PO creation and partial GRN receiving. GRNs retain delivered/accepted/rejected quantities; accepted stock, movement ledger, payable accrual, journal, PO state, audit and outbox commit together. Over-receipts require a single-use approval from a different Admin or Manager.
+- Native AP invoice matching compares each billed quantity to accepted GRN quantity and each unit price/total to the approved PO. Mismatches block settlement. Admin/Manager-only supplier payments support partial settlement, manual external confirmation, payment reference, AP journal and due-date tracking.
 - Till open, paid-in/out, blind close and protected variance override.
 - Persisted close-day report covering sales, tax/levy, tenders, cash, discounts/comps/refunds, COGS/waste, gross profit, top products, staff sales and system state.
 - Offline Help Center generated from 31 Markdown user-guide articles.
@@ -49,6 +50,7 @@ Dependency-independent checks are recorded in [TEST_EVIDENCE.md](TEST_EVIDENCE.m
 - successful `npm ci`, TypeScript/Vite build and Playwright run against the finished tree;
 - scanner focused component/browser coverage and native command acceptance for duplicate barcodes, partial/rejected receipts, offline commit, stale PO versions and separate over-receipt approval; physical scanner validation remains required on the target terminal;
 - successful Rust domain tests and Tauri desktop build;
+- native procurement acceptance for exact and mismatched 3-way invoice lines, invoice reference uniqueness, partial settlement, duplicate payment references and balanced AP journals; source implementation is not yet build/test verified in this turn;
 - disposable PostgreSQL/Supabase protocol test;
 - fresh Windows 10 installation acceptance and Linux/Android packages if those are release targets;
 - packaged-app XP-80T USB printing and customer/business two-copy paper output, optional cut behavior, LAN handoff, retry/restart recovery, and acceptance on the fresh Windows 10 terminal;

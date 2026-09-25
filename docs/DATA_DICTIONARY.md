@@ -25,10 +25,10 @@ Product and stock records may include `barcode` as text, preserving leading zero
 
 ## Procurement records
 
-`purchaseOrders` store supplier, approved quantities in stock base units, agreed unit cost, cumulative delivered/accepted/rejected quantities and PO status. The line's `scanUnitQuantity` snapshots the package size when the order is created. `goodsReceipts` are immutable GRNs with delivery evidence, receiver, location, per-line accepted/rejected quantities and rejection reason. `inventoryReceipts` and `stockMovements` record accepted quantity only. `supplierPayables` and the paired `journalEntries` accrue accepted quantity at the approved PO cost; invoice matching and payment settlement are separate workflows.
+`purchaseOrders` store supplier, approved quantities in stock base units, agreed unit cost, cumulative delivered/accepted/rejected quantities and PO status. The line's `scanUnitQuantity` snapshots the package size when the order is created. `goodsReceipts` are immutable GRNs with delivery evidence, receiver, location, per-line accepted/rejected quantities and rejection reason. `inventoryReceipts` and `stockMovements` record accepted quantity only. `supplierPayables` accrue accepted quantity at the approved PO cost; invoice-match fields retain exact PO/GRN comparison and due date. `supplierPayments` are manually confirmed external settlements. Each payment and payable accrual has a balanced paired `journalEntries` record.
 
 ## Transactions and ledgers
 
-`orders`, `payments`, `mpesaReceipts`, `refunds`, `tillSessions`, `cashMovements`, `stockMovements`, `inventoryReceipts`, `goodsReceipts`, `supplierPayables`, `journalEntries`, `closeDayReports`.
+`orders`, `payments`, `mpesaReceipts`, `refunds`, `tillSessions`, `cashMovements`, `stockMovements`, `inventoryReceipts`, `goodsReceipts`, `supplierPayables`, `supplierPayments`, `journalEntries`, `closeDayReports`.
 
 Stock is altered only through explicit movement-producing business commands. Financial refunds create reversal journals and do not automatically recreate consumed ingredients.
