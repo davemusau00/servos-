@@ -18,10 +18,12 @@ export function NativeProcurementView({ onOpenCatalog }: { onOpenCatalog: () => 
   const orders = recordsOf(snapshot, 'purchaseOrders').slice().reverse();
   const receipts = recordsOf(snapshot, 'goodsReceipts').slice().reverse();
   const payables = recordsOf(snapshot, 'supplierPayables').slice().reverse();
+  const supplierPayments = recordsOf(snapshot, 'supplierPayments').slice().reverse();
   const permissions = snapshot.actor.permissions;
   const canManage = permissions.includes('procurement.manage');
   const canReceive = permissions.includes('procurement.receive');
   const canViewPayables = permissions.includes('accounting.view');
+  const canEditCatalog = permissions.includes('catalog.manage');
   const canPay = permissions.includes('procurement.pay');
 
   const [section, setSection] = useState<'ORDERS' | 'RECEIPTS' | 'PAYABLES'>('ORDERS');
