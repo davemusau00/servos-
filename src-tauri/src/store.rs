@@ -1622,7 +1622,7 @@ pub fn snapshot(db: &Connection, token: &str) -> Result<Value> {
     let mut records=vec![];
     let mut stmt=db.prepare("SELECT DISTINCT collection FROM records").map_err(error)?;
     let collections=stmt.query_map([],|r|r.get::<_,String>(0)).map_err(error)?;
-    let server_allowed=["organization","property","outlets","products","stockItems","stockLocations","tables","orders","tillSessions","customers","payments","refunds","paymentConfig","employees","priceRules","closeDayReports"];
+    let server_allowed=["organization","property","outlets","products","stockItems","stockLocations","tables","orders","tillSessions","customers","payments","refunds","paymentConfig","employees","priceRules","closeDayReports","suppliers","purchaseOrders","goodsReceipts","inventoryReceipts"];
     for row in collections { let c=row.map_err(error)?; if user.role=="Server"&&!server_allowed.contains(&c.as_str()){continue;} records.extend(list(db,&c)?); }
     let pending:i64=db.query_row("SELECT COUNT(*) FROM outbox WHERE acknowledged_at IS NULL",[],|r|r.get(0)).map_err(error)?;
     Ok(json!({
