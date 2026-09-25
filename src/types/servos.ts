@@ -472,6 +472,40 @@ export interface PurchaseOrder {
   supplierInvoiceNumber?: string;
 }
 
+export type SupplierPayableStatus = 'RECEIVED_UNINVOICED' | 'MATCHED_UNPAID' | 'PARTIALLY_PAID' | 'PAID';
+
+export interface SupplierPayable {
+  id: string;
+  payableNumber: string;
+  supplierId: string;
+  supplierName: string;
+  purchaseOrderId: string;
+  goodsReceiptId: string;
+  grnNumber: string;
+  amount: number;
+  paidAmount: number;
+  amountDue: number;
+  status: SupplierPayableStatus;
+  supplierInvoiceNumber?: string;
+  invoiceDate?: string;
+  dueDate?: string;
+}
+
+export interface SupplierPayment {
+  id: string;
+  paymentNumber: string;
+  supplierId: string;
+  supplierName: string;
+  supplierPayableId: string;
+  supplierInvoiceNumber: string;
+  amount: number;
+  method: 'CASH' | 'BANK' | 'MPESA';
+  reference: string;
+  reason: string;
+  status: 'MANUALLY_CONFIRMED';
+  occurredAt: string;
+}
+
 // User Roles & Authentication Permissions Context
 export type UserRole = 'Admin' | 'Manager' | 'Server';
 
