@@ -96,6 +96,8 @@ export interface RecipeModifier {
 export interface ProductSellable {
   id: string;
   code: string;
+  /** Physical retail barcode, stored as text so leading zeroes are preserved. */
+  barcode?: string;
   name: string;
   category: 'SPIRITS' | 'BEER' | 'WINE' | 'COCKTAIL' | 'FOOD' | 'PACKAGE' | 'ROOM' | 'EXPERIENCE';
   productType?: ProductType;
@@ -141,6 +143,10 @@ export interface StockLocation {
 export interface StockItem {
   id: string;
   code: string;
+  /** Physical package barcode; distinct from the internal stock code. */
+  barcode?: string;
+  /** Quantity represented by one package scan, in baseUnit. */
+  scanUnitQuantity?: number;
   name: string;
   dimension: UnitDimension;
   baseUnit: string; // 'ml', 'g', 'unit'
@@ -437,10 +443,14 @@ export interface Supplier {
 export interface PurchaseOrderItem {
   stockItemId: string;
   stockItemName: string;
+  /** Ordered in the stock item's base unit. */
   quantityOrdered: number;
+  /** Agreed cost per stock base unit, in KES. */
   unitPrice: number;
   unitSymbol: string;
   lineTotal: number;
+  scanUnitQuantity?: number;
+  quantityDelivered?: number;
   quantityReceived?: number;
   quantityRejected?: number;
 }

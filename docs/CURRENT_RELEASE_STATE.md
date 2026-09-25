@@ -32,9 +32,11 @@ Updated: 2026-09-24. **Bar-first source implementation substantially expanded. P
 
 ## Verification executed in this environment
 
-PowerShell parsing passed for the build bootstrap, Windows build wrapper, target installer and printer-queue helper. Git Bash passed `-n` syntax checking and the deployment script's `--help` path. `git diff --check` passed.
+The Windows package was built on Windows 11 Pro (build 26200) with Node 26.5, Rust 1.98.1 MSVC, Visual Studio C++ Build Tools and WebView2. `bash scripts/deploy-windows-pos.sh --package` passed lint, 11 Node tests, 8 Playwright cases across desktop/mobile projects, 21 native domain tests, 25 Tauri desktop tests, 31 guide/15 core-document checks, and the UI inventory. `npm ci` reported zero vulnerabilities. Vite emitted its existing large-chunk warning.
 
-The Windows packaging preflight ran on Windows 11 Pro (build 26200) with Node 26.5, Git Bash, Visual Studio C++ Build Tools and WebView2 available. Rust/Cargo were missing, so the preflight correctly stopped and no Tauri installer was produced. The target Windows 10 installation, USB queue creation, paper output and LAN printing remain unverified.
+The NSIS installer is `src-tauri/target/release/bundle/nsis/ServOS_0.1.0_x64-setup.exe` (4,036,233 bytes). Its `.sha256` sidecar was independently verified as `0220498af115878c4b0c46b0fb47439a229ba76bc81deed9e5fbfa5b17be5d35`. The installer is not Authenticode-signed; the SHA-256 sidecar checks file integrity but does not identify a publisher.
+
+This package build ran on Windows 11. Installation and first-run setup on the fresh Windows 10 terminal, packaged-app USB printing, the customer/business paper pair, cutter behavior and LAN printing remain unverified there.
 
 The bootstrap warns about unsupported standard Windows 10 editions; the target install script handles the WebView2 runtime and installer integrity check without putting business data or enrollment state in the build scripts.
 
@@ -45,7 +47,7 @@ Dependency-independent checks are recorded in [TEST_EVIDENCE.md](TEST_EVIDENCE.m
 - successful `npm ci`, TypeScript/Vite build and Playwright run against the finished tree;
 - successful Rust domain tests and Tauri desktop build;
 - disposable PostgreSQL/Supabase protocol test;
-- actual Windows/Linux/Android package builds as applicable;
+- fresh Windows 10 installation acceptance and Linux/Android packages if those are release targets;
 - packaged-app XP-80T USB printing and customer/business two-copy paper output, optional cut behavior, LAN handoff, retry/restart recovery, and acceptance on the fresh Windows 10 terminal;
 - complete Phase 16 fresh-install/offline/restart/reconnect/backup acceptance rehearsal;
 - encrypted/rotated remote backups and verified replacement-terminal restore remain beyond the current local backup implementation.

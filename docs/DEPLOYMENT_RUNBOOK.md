@@ -25,7 +25,7 @@ Run this on a 64-bit Windows build computer with administrator access. Node, Rus
    bash scripts/deploy-windows-pos.sh --check
    ```
 
-4. Configure `.env.local` from `.env.example` with the dedicated Supabase project URL and publishable key. Never use a service-role or secret key in the client. Apply/rehearse the checked-in migrations and provision the real owner identity before enrolling the production terminal.
+4. Configure `.env.local` from `.env.example` with the production business Supabase project URL and publishable key. These values are bundled into the frontend at build time, so changing `.env.local` later requires a rebuild. Never use a service-role or secret key in the client. Apply/rehearse the checked-in migrations and provision the real owner identity before enrolling the production terminal.
 5. Build and verify the installer:
 
    ```bash
@@ -36,7 +36,9 @@ Run this on a 64-bit Windows build computer with administrator access. Node, Rus
 
 ## Install on a fresh Windows POS terminal
 
-The target machine does not need Bash, Node, Rust or C++ Build Tools. Copy the generated setup executable, its `.sha256` file and `scripts/install-windows-pos.ps1` to it. The installer script checks 64-bit Windows, installs WebView2 only when missing, verifies the sidecar when provided, and then offers to launch the setup executable.
+The target machine does not need Bash, Node, Rust or C++ Build Tools. Copy the generated setup executable, its `.sha256` file and `scripts/install-windows-pos.ps1` to it. For USB setup, also copy `scripts/configure-xprinter-usb.ps1` and `scripts/test-xprinter-usb.ps1`. The installer script checks 64-bit Windows, installs WebView2 only when missing, verifies the sidecar when provided, and then offers to launch the setup executable.
+
+The current NSIS setup executable is unsigned. The `.sha256` sidecar detects file changes but does not identify a publisher, so Windows may show an unknown-publisher or reputation warning. A trusted code-signing certificate is needed for a publisher-identified installer.
 
 For USB printing, install the XP-80T vendor driver, connect and power on the printer, then run elevated PowerShell:
 
