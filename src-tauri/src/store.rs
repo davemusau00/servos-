@@ -123,7 +123,7 @@ pub const ALL_PERMISSIONS: &[&str] = &[
     "mpesa.record","mpesa.reconcile",
     "catalog.view","catalog.manage","pricing.manage",
     "inventory.view","inventory.receive","inventory.transfer","inventory.waste","inventory.count","inventory.adjust",
-    "procurement.view","procurement.manage","procurement.receive","procurement.over_receive",
+    "procurement.view","procurement.manage","procurement.receive","procurement.over_receive","procurement.pay",
     "floorplan.view","floorplan.manage","kds.view","kds.update",
     "accounting.view","reports.view","audit.view","backup.create","backup.restore","sync.manual","system.configure","help.view"
 ];
@@ -154,7 +154,7 @@ fn live_required(tx: &Transaction, operation: &str) -> Result<()> {
         "till.open","till.cashMovement","till.close","order.create","order.addItem","order.updateItem",
         "order.removeItem","order.fire","order.kds","order.transfer","order.merge","order.void","order.discount",
         "order.compItem","payment.record","payment.split","payment.refund","payment.reverse","mpesa.reconcile","mpesa.discrepancy","mpesa.discrepancy.resolve",
-        "inventory.receive","inventory.adjust","inventory.waste","inventory.transfer","purchaseOrder.create","purchaseOrder.receive","table.ready","closeDay.generate"
+        "inventory.receive","inventory.adjust","inventory.waste","inventory.transfer","purchaseOrder.create","purchaseOrder.receive","supplierPayable.matchInvoice","supplierPayable.pay","table.ready","closeDay.generate"
     ];
     if TRADING.contains(&operation) && installation_stage(tx)? != "LIVE" {
         return Err("Complete business setup and approve Go Live before trading".into());
@@ -875,9 +875,9 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
                 let payable_id=id();
                 put(&tx,"supplierPayables",&payable_id,json!({
                     "id":payable_id,"payableNumber":format!("AP-{}",payable_id[..8].to_ascii_uppercase()),
-                    "supplierId":supplier_id,"supplierName":order["supplierName"],"purchaseOrderId":order_id,
-                    "goodsReceiptId":receipt_id,"grnNumber":grn_number,"supplierInvoiceNumber":invoice_reference,
-                    "amount":accepted_value_minor as f64/100.0,"status":"RECEIVED_UNINVOICED",
+            "supplierId":supplier_id,"supplierName":order["supplierName"],"purchaseOrderId":order_id,
+            "goodsReceiptId":receipt_id,"grnNumber":grn_number,"supplierInvoiceNumber":invoice_reference,
+                    "amount":accepted_value_minor as f64/100.0,"paidAmount":0,"amountDue":accepted_value_minor as f64/100.0,"status":"RECEIVED_UNINVOICED",
                     "basis":"Accepted quantities at approved purchase-order cost","createdAt":receipt_time
                 }),&mut changes)?;
                 let journal_id=id();
@@ -900,6 +900,119 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
             order["lastGoodsReceiptId"]=json!(receipt_id);
             order["lastGoodsReceiptAt"]=json!(receipt_time);
             put(&tx,"purchaseOrders",&order_id,order,&mut changes)?;
+        }
+        "supplierPayable.matchInvoice" => {
+            if !permissions(&user.role).contains(&"procurement.manage") { return Err("Supplier invoice matching permission required".into()); }
+            let payable_id=text(p,"payableId")?.to_string();
+            let (payable_version,mut payable)=get(&tx,"supplierPayables",&payable_id)?;
+            if cmd.target_version!=Some(payable_version) { return Err("CONFLICT: Payable changed; reload before matching the invoice".into()); }
+            if payable["status"]!="RECEIVED_UNINVOICED" { return Err("This payable is already matched or settled".into()); }
+            let invoice_number=text(p,"invoiceNumber")?.trim().to_string();
+            if invoice_number.len()>80 { return Err("Supplier invoice number cannot exceed 80 characters".into()); }
+            let invoice_total=money(p,"invoiceAmount")?;
+            let invoice_date=p.get("invoiceDate").and_then(Value::as_str).unwrap_or("").trim();
+            if !invoice_date.is_empty() && chrono::NaiveDate::parse_from_str(invoice_date,"%Y-%m-%d").is_err() { return Err("Invoice date must use YYYY-MM-DD".into()); }
+            let supplier_id=text(&payable,"supplierId")?;
+            let duplicate_invoice=list(&tx,"supplierPayables")?.iter().any(|record| {
+                record["id"].as_str()!=Some(payable_id.as_str()) &&
+                record["data"]["supplierId"].as_str()==Some(supplier_id) &&
+                record["data"]["supplierInvoiceNumber"].as_str().map(|value|value.trim().to_lowercase())==Some(invoice_number.to_lowercase())
+            });
+            if duplicate_invoice { return Err("This supplier invoice number is already assigned to another receipt".into()); }
+            let receipt_id=text(&payable,"goodsReceiptId")?;
+            let (_,receipt)=get(&tx,"goodsReceipts",receipt_id)?;
+            let order_id=text(&payable,"purchaseOrderId")?.to_string();
+            let (_,mut order)=get(&tx,"purchaseOrders",&order_id)?;
+            let expected_lines=receipt["lines"].as_array().ok_or("Goods receipt lines are invalid")?;
+            let billed_lines=p["lines"].as_array().ok_or("Enter invoice line quantities and prices")?;
+            if billed_lines.is_empty() || billed_lines.len()>100 { return Err("Invoice must contain between 1 and 100 matched lines".into()); }
+            let mut seen=Vec::<String>::new();
+            let mut invoice_line_total=0i64;
+            for billed in billed_lines {
+                let stock_id=text(billed,"stockItemId")?.to_string();
+                if seen.iter().any(|id|id==&stock_id) { return Err("A stock item can appear only once on an invoice match".into()); }
+                seen.push(stock_id.clone());
+                let expected=expected_lines.iter().find(|line|line["stockItemId"].as_str()==Some(stock_id.as_str()) && line["quantityAccepted"].as_f64().unwrap_or(0.0)>0.0).ok_or("Invoice line is not an accepted line on this GRN")?;
+                let quantity_billed=quantity(billed,"quantityBilled")?;
+                let expected_quantity=expected["quantityAccepted"].as_f64().unwrap_or(0.0);
+                if (quantity_billed-expected_quantity).abs()>0.000001 { return Err(format!("Invoice quantity for {} does not match accepted GRN quantity {}",expected["stockItemName"].as_str().unwrap_or("item"),expected_quantity)); }
+                let invoice_unit_price=quantity(billed,"unitPrice")?;
+                let agreed_unit_price=expected["unitCost"].as_f64().unwrap_or(0.0);
+                if (invoice_unit_price-agreed_unit_price).abs()>0.000001 { return Err(format!("Invoice unit cost for {} does not match the approved PO cost",expected["stockItemName"].as_str().unwrap_or("item"))); }
+                let raw_line_total=quantity_billed*invoice_unit_price;
+                if !raw_line_total.is_finite() || raw_line_total>1_000_000_000.0 { return Err("Invoice line total is too large".into()); }
+                invoice_line_total+=(raw_line_total*100.0).round() as i64;
+            }
+            let accepted_lines=expected_lines.iter().filter(|line|line["quantityAccepted"].as_f64().unwrap_or(0.0)>0.0).count();
+            if billed_lines.len()!=accepted_lines { return Err("Invoice must account for every accepted GRN line and no rejected quantity".into()); }
+            let payable_total=money(&payable,"amount")?;
+            if invoice_line_total!=invoice_total || invoice_total!=payable_total { return Err(format!("Invoice line total must equal the accepted GRN payable of KES {:.2}; mismatch prevents payment",payable_total as f64/100.0)); }
+            payable["supplierInvoiceNumber"]=json!(invoice_number);
+            payable["invoiceAmount"]=json!(invoice_total as f64/100.0);
+            payable["invoiceDate"]=json!(invoice_date);
+            payable["invoiceMatchedAt"]=json!(now());
+            payable["invoiceMatchedBy"]=json!(user.staff_id);
+            payable["invoiceMatchedByName"]=json!(user.name);
+            payable["status"]=json!("MATCHED_UNPAID");
+            put(&tx,"supplierPayables",&payable_id,payable,&mut changes)?;
+            let all_grns_matched=list(&tx,"supplierPayables")?.iter().filter(|record|record["data"]["purchaseOrderId"].as_str()==Some(order_id.as_str())).all(|record|record["data"]["status"].as_str().is_some_and(|status|["MATCHED_UNPAID","PARTIALLY_PAID","PAID"].contains(&status)));
+            if order["status"]=="RECEIVED" && all_grns_matched {
+                order["status"]=json!("INVOICED");
+                put(&tx,"purchaseOrders",&order_id,order,&mut changes)?;
+            }
+        }
+        "supplierPayable.pay" => {
+            if !permissions(&user.role).contains(&"procurement.pay") { return Err("Supplier payment permission required".into()); }
+            let payable_id=text(p,"payableId")?.to_string();
+            let (payable_version,mut payable)=get(&tx,"supplierPayables",&payable_id)?;
+            if cmd.target_version!=Some(payable_version) { return Err("CONFLICT: Payable changed; reload before recording payment".into()); }
+            if !["MATCHED_UNPAID","PARTIALLY_PAID"].contains(&payable["status"].as_str().unwrap_or("")) { return Err("Match the supplier invoice to its PO and GRN before paying this payable".into()); }
+            if p["confirmed"]!=true { return Err("Confirm the supplier was actually paid before recording settlement".into()); }
+            let amount=money(p,"amount")?;
+            if amount<=0 { return Err("Payment amount must be positive".into()); }
+            let amount_due=payable["amountDue"].as_f64().unwrap_or_else(||payable["amount"].as_f64().unwrap_or(0.0)-payable["paidAmount"].as_f64().unwrap_or(0.0));
+            let amount_due_minor=(amount_due*100.0).round() as i64;
+            if amount>amount_due_minor { return Err("Payment cannot exceed the outstanding payable balance".into()); }
+            let method=text(p,"method")?;
+            let (account_id,account_code,account_name)=match method {
+                "CASH"=>("CASH_ON_HAND","1000","Cash on hand"),
+                "BANK"=>("BANK","1010","Bank"),
+                "MPESA"=>("MPESA","1020","Business M-Pesa"),
+                _=>return Err("Choose CASH, BANK or MPESA for the manually confirmed supplier payment".into())
+            };
+            let reference=text(p,"reference")?.trim().to_string();
+            if reference.len()>100 { return Err("Payment reference cannot exceed 100 characters".into()); }
+            let duplicate_reference=list(&tx,"supplierPayments")?.iter().any(|record|record["data"]["method"].as_str()==Some(method) && record["data"]["reference"].as_str().map(|value|value.trim().to_lowercase())==Some(reference.to_lowercase()));
+            if duplicate_reference { return Err("This supplier payment reference has already been recorded".into()); }
+            let reason=text(p,"reason")?.trim().to_string();
+            let payment_id=id();
+            let stamp=now();
+            let supplier_name=payable["supplierName"].as_str().unwrap_or("Supplier");
+            put(&tx,"supplierPayments",&payment_id,json!({
+                "id":payment_id,"paymentNumber":format!("SP-{}",&payment_id[..8].to_ascii_uppercase()),
+                "supplierId":payable["supplierId"],"supplierName":supplier_name,"supplierPayableId":payable_id,
+                "supplierInvoiceNumber":payable["supplierInvoiceNumber"],"amount":amount as f64/100.0,
+                "method":method,"reference":reference,"reason":reason,"status":"MANUALLY_CONFIRMED",
+                "confirmed":true,"occurredAt":stamp,"recordedBy":user.staff_id,"recordedByName":user.name
+            }),&mut changes)?;
+            let journal_id=id();
+            put(&tx,"journalEntries",&journal_id,json!({
+                "id":journal_id,"entryNumber":format!("JE-{}",&journal_id[..8].to_ascii_uppercase()),
+                "propertyId":"property","occurredAt":stamp,"postedAt":stamp,"sourceType":"SUPPLIER_PAYMENT",
+                "sourceId":payment_id,"memo":format!("Manually confirmed {} payment to {}",method,supplier_name),
+                "lines":[
+                    {"id":id(),"accountId":"ACCOUNTS_PAYABLE","accountCode":"2000","accountName":"Accounts payable","debit":amount as f64/100.0,"credit":0,"debitMinor":amount,"creditMinor":0},
+                    {"id":id(),"accountId":account_id,"accountCode":account_code,"accountName":account_name,"debit":0,"credit":amount as f64/100.0,"debitMinor":0,"creditMinor":amount}
+                ],"totalDebit":amount as f64/100.0,"totalCredit":amount as f64/100.0,"balanced":true
+            }),&mut changes)?;
+            let paid_before=payable["paidAmount"].as_f64().unwrap_or(0.0);
+            let paid_after=((paid_before*100.0).round() as i64+amount) as f64/100.0;
+            let remaining=amount_due_minor-amount;
+            payable["paidAmount"]=json!(paid_after);
+            payable["amountDue"]=json!(remaining as f64/100.0);
+            payable["status"]=json!(if remaining==0 {"PAID"} else {"PARTIALLY_PAID"});
+            payable["lastPaymentAt"]=json!(stamp);
+            put(&tx,"supplierPayables",&payable_id,payable,&mut changes)?;
         }
         "inventory.openingBalance" | "inventory.receive" | "inventory.adjust" | "inventory.waste" | "inventory.transfer" => {
             let permission=match cmd.operation.as_str(){"inventory.receive"=>"inventory.receive","inventory.transfer"=>"inventory.transfer","inventory.waste"=>"inventory.waste","inventory.adjust"=>"inventory.count",_=>"inventory.adjust"};

@@ -22,6 +22,7 @@ export function NativeProcurementView({ onOpenCatalog }: { onOpenCatalog: () => 
   const canManage = permissions.includes('procurement.manage');
   const canReceive = permissions.includes('procurement.receive');
   const canViewPayables = permissions.includes('accounting.view');
+  const canPay = permissions.includes('procurement.pay');
 
   const [section, setSection] = useState<'ORDERS' | 'RECEIPTS' | 'PAYABLES'>('ORDERS');
   const [notice, setNotice] = useState('');
@@ -41,6 +42,18 @@ export function NativeProcurementView({ onOpenCatalog }: { onOpenCatalog: () => 
   const [deliveryNote, setDeliveryNote] = useState('');
   const [receiptNotes, setReceiptNotes] = useState('');
   const [approval, setApproval] = useState<{ permission: Permission; target: string; run: (token: string) => Promise<void> } | null>(null);
+  const [matchingPayable, setMatchingPayable] = useState<any | null>(null);
+  const [invoiceNumber, setInvoiceNumber] = useState('');
+  const [invoiceDate, setInvoiceDate] = useState('');
+  const [invoiceDueDate, setInvoiceDueDate] = useState('');
+  const [invoiceAmount, setInvoiceAmount] = useState('');
+  const [invoiceLines, setInvoiceLines] = useState<any[]>([]);
+  const [payingPayable, setPayingPayable] = useState<any | null>(null);
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'BANK' | 'MPESA'>('BANK');
+  const [paymentReference, setPaymentReference] = useState('');
+  const [paymentReason, setPaymentReason] = useState('');
+  const [paymentConfirmed, setPaymentConfirmed] = useState(false);
 
   const selectStockItem = (id: string) => {
     setSelectedStockId(id);
@@ -189,6 +202,79 @@ export function NativeProcurementView({ onOpenCatalog }: { onOpenCatalog: () => 
     } catch (error) {
       setNotice(String(error));
     }
+  };
+
+  const beginInvoiceMatch = (payable: any) => {
+    const receipt = recordsOf(snapshot, 'goodsReceipts').find((item: any) => item.id === payable.goodsReceiptId);
+    const order = recordsOf(snapshot, 'purchaseOrders').find((item: any) => item.id === payable.purchaseOrderId);
+    if (!receipt || !order) { setNotice('The linked GRN or PO is missing from this local snapshot. Refresh the terminal records before matching.'); return; }
+    const lines = (receipt.lines || []).filter((line: any) => Number(line.quantityAccepted) > 0).map((line: any) => ({
+      stockItemId: line.stockItemId,
+      stockItemName: line.stockItemName,
+      quantityBilled: Number(line.quantityAccepted),
+      unitSymbol: line.unitSymbol,
+      unitPrice: Number(line.unitCost),
+    }));
+    const total = lines.reduce((sum: number, line: any) => sum + line.quantityBilled * line.unitPrice, 0);
+    const today = new Date().toISOString().slice(0, 10);
+    const supplier = suppliers.find((item: any) => item.id === payable.supplierId);
+    const due = new Date(`${today}T00:00:00`);
+    due.setDate(due.getDate() + Math.max(0, Number(supplier?.paymentTermsDays) || 0));
+    setMatchingPayable(payable);
+    setInvoiceNumber('');
+    setInvoiceDate(today);
+    setInvoiceDueDate(due.toISOString().slice(0, 10));
+    setInvoiceLines(lines);
+    setInvoiceAmount(total.toFixed(2));
+    setNotice('');
+  };
+
+  const updateInvoiceLine = (index: number, key: 'quantityBilled' | 'unitPrice', value: number) => {
+    const next = invoiceLines.map((line, current) => current === index ? { ...line, [key]: value } : line);
+    setInvoiceLines(next);
+    setInvoiceAmount(next.reduce((sum, line) => sum + Number(line.quantityBilled || 0) * Number(line.unitPrice || 0), 0).toFixed(2));
+  };
+
+  const matchSupplierInvoice = async () => {
+    if (!matchingPayable) return;
+    try {
+      await runtime.command('supplierPayable.matchInvoice', {
+        payableId: matchingPayable.id,
+        invoiceNumber: invoiceNumber.trim(),
+        invoiceDate,
+        dueDate: invoiceDueDate,
+        invoiceAmount: Number(invoiceAmount),
+        lines: invoiceLines.map(({ stockItemId, quantityBilled, unitPrice }) => ({ stockItemId, quantityBilled, unitPrice })),
+      }, recordOf(snapshot, 'supplierPayables', matchingPayable.id)?.version);
+      setMatchingPayable(null);
+      setNotice('Supplier invoice matched to the PO and accepted GRN. This records the match; it does not pay the supplier.');
+    } catch (error) { setNotice(String(error)); }
+  };
+
+  const beginSupplierPayment = (payable: any) => {
+    setPayingPayable(payable);
+    setPaymentAmount(Number(payable.amountDue ?? payable.amount).toFixed(2));
+    setPaymentMethod('BANK');
+    setPaymentReference('');
+    setPaymentReason('');
+    setPaymentConfirmed(false);
+    setNotice('');
+  };
+
+  const recordSupplierPayment = async () => {
+    if (!payingPayable) return;
+    try {
+      await runtime.command('supplierPayable.pay', {
+        payableId: payingPayable.id,
+        amount: Number(paymentAmount),
+        method: paymentMethod,
+        reference: paymentReference.trim(),
+        reason: paymentReason.trim(),
+        confirmed: paymentConfirmed,
+      }, recordOf(snapshot, 'supplierPayables', payingPayable.id)?.version);
+      setPayingPayable(null);
+      setNotice('Supplier payment confirmation recorded locally and posted to accounts payable. Synchronization is queued; ServOS did not transfer funds.');
+    } catch (error) { setNotice(String(error)); }
   };
 
   const sectionButton = (id: typeof section, label: string) => <button key={id} className={section === id ? primaryButtonClass : buttonClass} onClick={() => setSection(id)}>{label}</button>;

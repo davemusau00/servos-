@@ -18,7 +18,7 @@ export type Permission =
   | 'mpesa.record' | 'mpesa.reconcile'
   | 'catalog.view' | 'catalog.manage' | 'pricing.manage'
   | 'inventory.view' | 'inventory.receive' | 'inventory.transfer' | 'inventory.waste' | 'inventory.count' | 'inventory.adjust'
-  | 'procurement.view' | 'procurement.manage' | 'procurement.receive' | 'procurement.over_receive'
+  | 'procurement.view' | 'procurement.manage' | 'procurement.receive' | 'procurement.over_receive' | 'procurement.pay'
   | 'floorplan.view' | 'floorplan.manage'
   | 'kds.view' | 'kds.update'
   | 'accounting.view' | 'reports.view' | 'audit.view'
