@@ -53,6 +53,29 @@ fn quantity(v: &Value, key: &str) -> Result<f64> {
     }
     Ok(n)
 }
+fn normalize_barcode_value(data: &mut Value) -> Result<Option<String>> {
+    match data.get("barcode") {
+        None | Some(Value::Null) => Ok(None),
+        Some(Value::String(raw)) => {
+            let normalized=raw.trim().to_string();
+            if normalized.len()>128 { return Err("Barcode cannot exceed 128 characters".into()); }
+            data["barcode"]=if normalized.is_empty(){Value::Null}else{json!(normalized)};
+            Ok(if normalized.is_empty(){None}else{Some(normalized)})
+        }
+        _ => Err("Barcode must be text".into()),
+    }
+}
+fn validate_unique_barcode(tx: &Transaction, collection: &str, record_id: &str, barcode: Option<&str>) -> Result<()> {
+    let Some(barcode)=barcode else { return Ok(()); };
+    let normalized=barcode.to_lowercase();
+    for record in list(tx,collection)? {
+        if record["id"].as_str()==Some(record_id) { continue; }
+        if record["data"]["barcode"].as_str().map(|value|value.trim().to_lowercase()).as_deref()==Some(normalized.as_str()) {
+            return Err("This barcode already belongs to another record".into());
+        }
+    }
+    Ok(())
+}
 pub fn open(path: &std::path::Path) -> Result<Connection> {
     let db = Connection::open(path).map_err(error)?;
     db.busy_timeout(std::time::Duration::from_secs(5))
@@ -100,6 +123,7 @@ pub const ALL_PERMISSIONS: &[&str] = &[
     "mpesa.record","mpesa.reconcile",
     "catalog.view","catalog.manage","pricing.manage",
     "inventory.view","inventory.receive","inventory.transfer","inventory.waste","inventory.count","inventory.adjust",
+    "procurement.view","procurement.manage","procurement.receive","procurement.over_receive",
     "floorplan.view","floorplan.manage","kds.view","kds.update",
     "accounting.view","reports.view","audit.view","backup.create","backup.restore","sync.manual","system.configure","help.view"
 ];
@@ -113,7 +137,7 @@ pub fn permissions(role: &str) -> Vec<&'static str> {
         _ => vec![
             "business.view","staff.view","pos.sell","pos.open_tab","pos.manage_table","order.fire",
             "payment.record","payment.split","till.open","till.close","mpesa.record",
-            "catalog.view","inventory.view","floorplan.view","kds.view","kds.update","help.view"
+            "catalog.view","inventory.view","procurement.view","procurement.receive","floorplan.view","kds.view","kds.update","help.view"
         ],
     }
 }
@@ -130,7 +154,7 @@ fn live_required(tx: &Transaction, operation: &str) -> Result<()> {
         "till.open","till.cashMovement","till.close","order.create","order.addItem","order.updateItem",
         "order.removeItem","order.fire","order.kds","order.transfer","order.merge","order.void","order.discount",
         "order.compItem","payment.record","payment.split","payment.refund","payment.reverse","mpesa.reconcile","mpesa.discrepancy","mpesa.discrepancy.resolve",
-        "inventory.receive","inventory.adjust","inventory.waste","inventory.transfer","table.ready","closeDay.generate"
+        "inventory.receive","inventory.adjust","inventory.waste","inventory.transfer","purchaseOrder.create","purchaseOrder.receive","table.ready","closeDay.generate"
     ];
     if TRADING.contains(&operation) && installation_stage(tx)? != "LIVE" {
         return Err("Complete business setup and approve Go Live before trading".into());
@@ -154,6 +178,7 @@ pub fn create_approval(db: &Connection, initiator_token: &str, approver_id: &str
     let initiator=actor(db,initiator_token,true)?;
     if !ALL_PERMISSIONS.contains(&permission) { return Err("Unknown permission".into()); }
     let (approver_name,approver_role)=verify_staff_pin(db,approver_id,pin)?;
+    if permission=="procurement.over_receive" && approver_id==initiator.staff_id { return Err("A different Admin or Manager must approve an over-receipt".into()); }
     if !permissions(&approver_role).contains(&permission) { return Err("Approver does not have this permission".into()); }
     let token=id();
     let expires=Utc::now().timestamp()+120;
@@ -174,6 +199,21 @@ fn authorize(tx: &Transaction, user: &Session, permission: &str, payload: &Value
     if let (Some(expected),Some(actual))=(approved_target.as_deref(),target) { if expected!=actual { return Err("Manager approval applies to a different record".into()); } }
     tx.execute("UPDATE approvals SET used_at=? WHERE token=? AND used_at IS NULL",params![Utc::now().timestamp(),token]).map_err(error)?;
     Ok(Some(approver))
+}
+
+fn require_separate_approval(tx: &Transaction, user: &Session, permission: &str, payload: &Value, target: &str) -> Result<String> {
+    let token=text(payload,"approvalToken")?;
+    let row:Option<(String,String,Option<String>,i64,Option<i64>)>=tx.query_row(
+        "SELECT initiator_id,approver_id,target,expires_at,used_at FROM approvals WHERE token=? AND permission=?",
+        params![token,permission], |r| Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?,r.get(4)?))
+    ).optional().map_err(error)?;
+    let (initiator,approver,approved_target,expires,used)=row.ok_or("A different Admin or Manager must approve this over-receipt")?;
+    if initiator!=user.staff_id || approver==user.staff_id || approved_target.as_deref()!=Some(target) || used.is_some() || expires<Utc::now().timestamp() {
+        return Err("Over-receipt approval is expired, already used, or belongs to another purchase order".into());
+    }
+    let updated=tx.execute("UPDATE approvals SET used_at=? WHERE token=? AND used_at IS NULL",params![Utc::now().timestamp(),token]).map_err(error)?;
+    if updated!=1 { return Err("Over-receipt approval was already used".into()); }
+    Ok(approver)
 }
 pub fn hash_pin(pin: &str) -> Result<String> {
     if pin.len() < 6 || pin.len() > 12 || !pin.chars().all(|c| c.is_ascii_digit()) {
@@ -618,6 +658,9 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
                     quantity(&data, "averageUnitCost")?;
                     text(&data, "code")?;
                     text(&data, "baseUnit")?;
+                    if !data["scanUnitQuantity"].is_null() && quantity(&data, "scanUnitQuantity")? <= 0.0 {
+                        return Err("Quantity represented by one scan must be greater than zero".into());
+                    }
                     data["currentStock"] = existing
                         .as_ref()
                         .map(|(_, v)| v["currentStock"].clone())
@@ -647,6 +690,10 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
                     if duplicate {
                         return Err("This code already belongs to another record".into());
                     }
+                }
+                if collection == "products" || collection == "stockItems" {
+                    let barcode=normalize_barcode_value(&mut data)?;
+                    validate_unique_barcode(&tx,collection,record_id,barcode.as_deref())?;
                 }
                 put(&tx, collection, record_id, data, &mut changes)?;
             }
