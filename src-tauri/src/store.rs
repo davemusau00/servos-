@@ -979,7 +979,7 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
             if amount>amount_due_minor { return Err("Payment cannot exceed the outstanding payable balance".into()); }
             let method=text(p,"method")?;
             let (account_id,account_code,account_name)=match method {
-                "CASH"=>("CASH_ON_HAND","1000","Cash on hand"),
+                "CASH"=>("PETTY_CASH","1015","Petty cash outside POS till"),
                 "BANK"=>("BANK","1010","Bank"),
                 "MPESA"=>("MPESA","1020","Business M-Pesa"),
                 _=>return Err("Choose CASH, BANK or MPESA for the manually confirmed supplier payment".into())
