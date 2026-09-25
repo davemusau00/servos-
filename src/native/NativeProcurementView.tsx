@@ -8,6 +8,7 @@ import { ManagerApprovalDialog } from './ManagerApprovalDialog';
 import { buttonClass, fieldClass, money, primaryButtonClass, recordOf, recordsOf, shortDate } from './records';
 
 type ReceiptDraftLine = { delivered: number; rejected: number; rejectionReason: string };
+const dateInput = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 
 export function NativeProcurementView({ onOpenCatalog }: { onOpenCatalog: () => void }) {
   const runtime = useRuntime();
@@ -218,14 +219,14 @@ export function NativeProcurementView({ onOpenCatalog }: { onOpenCatalog: () => 
       unitPrice: Number(line.unitCost),
     }));
     const total = lines.reduce((sum: number, line: any) => sum + line.quantityBilled * line.unitPrice, 0);
-    const today = new Date().toISOString().slice(0, 10);
+    const today = dateInput(new Date());
     const supplier = suppliers.find((item: any) => item.id === payable.supplierId);
-    const due = new Date(`${today}T00:00:00`);
+    const due = new Date(`${today}T12:00:00`);
     due.setDate(due.getDate() + Math.max(0, Number(supplier?.paymentTermsDays) || 0));
     setMatchingPayable(payable);
-    setInvoiceNumber('');
+    setInvoiceNumber(payable.supplierInvoiceNumber || receipt.supplierInvoiceNumber || '');
     setInvoiceDate(today);
-    setInvoiceDueDate(due.toISOString().slice(0, 10));
+    setInvoiceDueDate(dateInput(due));
     setInvoiceLines(lines);
     setInvoiceAmount(total.toFixed(2));
     setNotice('');
@@ -291,7 +292,7 @@ export function NativeProcurementView({ onOpenCatalog }: { onOpenCatalog: () => 
     <nav className="mb-4 flex flex-wrap gap-2">{sectionButton('ORDERS', `Purchase orders (${orders.length})`)}{sectionButton('RECEIPTS', `Goods receipts (${receipts.length})`)}{canViewPayables&&sectionButton('PAYABLES', `Payables (${payables.length})`)}</nav>
 
     {section === 'ORDERS' && <div className="space-y-3">
-      {!suppliers.length && <div className="rounded-xl border border-amber-800 bg-amber-950/30 p-4 text-sm">Add a supplier in Catalog before creating a purchase order. <button className="ml-2 underline" onClick={onOpenCatalog}>Open Catalog</button></div>}
+      {!suppliers.length && <div className="rounded-xl border border-amber-800 bg-amber-950/30 p-4 text-sm">Add a supplier in Catalog before creating a purchase order. {canEditCatalog ? <button className="ml-2 underline" onClick={onOpenCatalog}>Open Catalog</button> : <span className="ml-1 text-amber-200">Ask an Admin or Manager to add the supplier.</span>}</div>}
       {orders.map((order: any) => <article key={order.id} className="rounded-xl border border-slate-800 bg-slate-900 p-4">
         <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="font-bold text-amber-300">{order.poNumber}</h2><p className="text-sm text-slate-300">{order.supplierName} · {shortDate(order.createdAt)}</p><p className="mt-1 text-xs text-slate-500">{order.status} · approved by {order.approvedBy || order.createdByName || '—'}</p></div><div className="text-right"><b>{money(order.grandTotal)}</b>{canReceive && ['APPROVED', 'PARTIALLY_RECEIVED'].includes(order.status) && <button className={buttonClass + ' ml-3'} onClick={() => beginReceiving(order)}>Receive delivery</button>}</div></div>
         <div className="mt-3 divide-y divide-slate-800">{(order.items || []).map((line: any) => <div key={line.stockItemId} className="flex flex-wrap justify-between gap-2 py-2 text-sm"><span>{line.stockItemName}</span><span className="font-mono text-slate-300">Ordered {line.quantityOrdered} {line.unitSymbol} · accepted {line.quantityReceived || 0} · rejected {line.quantityRejected || 0}</span></div>)}</div>
@@ -301,10 +302,49 @@ export function NativeProcurementView({ onOpenCatalog }: { onOpenCatalog: () => 
 
     {section === 'RECEIPTS' && <div className="space-y-3">{receipts.map((receipt: any) => <article key={receipt.id} className="rounded-xl border border-slate-800 bg-slate-900 p-4"><div className="flex flex-wrap justify-between gap-3"><div><h2 className="font-bold text-emerald-300">{receipt.grnNumber}</h2><p className="text-sm text-slate-300">{receipt.poNumber} · {receipt.supplierName}</p><p className="text-xs text-slate-500">{shortDate(receipt.receivedAt)} · {receipt.receivedByName}</p></div><div className="text-right text-sm">Accepted value: {money(receipt.acceptedValue)}<p className="text-xs text-slate-500">{receipt.supplierInvoiceNumber || 'Invoice reference not entered'}</p></div></div><div className="mt-3 space-y-1 text-sm">{(receipt.lines || []).map((line: any) => <p key={line.stockItemId} className="text-slate-300">{line.stockItemName}: delivered {line.quantityDelivered}, accepted {line.quantityAccepted}, rejected {line.quantityRejected} {line.unitSymbol}</p>)}</div></article>)}{!receipts.length && <p className="rounded-xl border border-dashed border-slate-700 p-6 text-slate-400">No goods receipts have been posted.</p>}</div>}
 
-    {section === 'PAYABLES' && canViewPayables && <div className="space-y-3">{payables.map((payable: any) => <article key={payable.id} className="flex flex-wrap justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900 p-4"><div><h2 className="font-bold">{payable.payableNumber} · {payable.supplierName}</h2><p className="text-sm text-slate-400">{payable.grnNumber} · {payable.status}</p><p className="text-xs text-slate-500">{payable.basis}</p></div><b>{money(payable.amount)}</b></article>)}{!payables.length && <p className="rounded-xl border border-dashed border-slate-700 p-6 text-slate-400">Accepted goods create payable accruals. Rejected quantities do not create stock or payable value.</p>}<p className="rounded-lg border border-slate-800 p-3 text-xs text-slate-500">Accruals use accepted quantities at the approved purchase-order unit cost. Supplier invoice matching and payment settlement remain separate accounting steps.</p></div>}
+    {section === 'PAYABLES' && canViewPayables && <div className="space-y-3">
+      {payables.map((payable: any) => {
+        const dueDate = payable.dueDate ? new Date(`${payable.dueDate}T00:00:00`) : null;
+        const daysOverdue = dueDate ? Math.max(0, Math.floor((Date.now() - dueDate.getTime()) / 86400000)) : 0;
+        const linkedPayments = supplierPayments.filter((payment: any) => payment.supplierPayableId === payable.id);
+        const due = Number(payable.amountDue ?? payable.amount);
+        return <article key={payable.id} className="space-y-3 rounded-xl border border-slate-800 bg-slate-900 p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="font-bold">{payable.payableNumber} · {payable.supplierName}</h2><p className="text-sm text-slate-400">{payable.grnNumber} · {payable.status}</p><p className="text-xs text-slate-500">{payable.supplierInvoiceNumber ? `Invoice ${payable.supplierInvoiceNumber}` : 'Invoice not matched'}{payable.dueDate ? ` · Due ${payable.dueDate}` : ''}{daysOverdue > 0 && due > 0 ? ` · ${daysOverdue} days overdue` : ''}</p><p className="text-xs text-slate-500">{payable.basis}</p></div><div className="text-right"><p className="text-xs text-slate-500">Outstanding</p><b>{money(due)}</b></div></div>
+          <div className="flex flex-wrap gap-2">
+            {canManage && payable.status === 'RECEIVED_UNINVOICED' && <button className={buttonClass} onClick={() => beginInvoiceMatch(payable)}>Match supplier invoice</button>}
+            {canPay && due > 0 && ['MATCHED_UNPAID', 'PARTIALLY_PAID'].includes(payable.status) && <button className={primaryButtonClass} onClick={() => beginSupplierPayment(payable)}>Record payment</button>}
+          </div>
+          {linkedPayments.length > 0 && <div className="border-t border-slate-800 pt-2"><p className="mb-1 text-xs font-semibold text-slate-400">Payment history</p>{linkedPayments.map((payment: any) => <p key={payment.id} className="text-xs text-slate-500">{shortDate(payment.occurredAt)} · {payment.method} · {money(payment.amount)} · {payment.reference} · recorded by {payment.recordedByName}</p>)}</div>}
+        </article>;
+      })}
+      {!payables.length && <p className="rounded-xl border border-dashed border-slate-700 p-6 text-slate-400">Accepted goods create supplier payables. Rejected quantities do not create stock or payable value.</p>}
+      <p className="rounded-lg border border-slate-800 p-3 text-xs text-slate-500">Invoice matching checks billed quantities against the GRN and billed prices against the approved PO. Differences block payment. Record only a payment that has already been confirmed outside ServOS; this screen does not transfer cash or call a bank or M-Pesa service.</p>
+    </div>}
 
+    {matchingPayable && <ActionDialog title={`Match invoice for ${matchingPayable.grnNumber}`} onClose={() => setMatchingPayable(null)}>
+      <div className="space-y-3">
+        <p className="text-xs text-slate-400">This invoice is matched to one GRN. Enter quantities in stock base units and unit costs in KES per base unit. Quantity, unit cost and total must match the accepted GRN and approved PO exactly; price variance, discount and invoice tax are not overridden here.</p>
+        <label className="block text-sm">Supplier invoice number<input autoFocus className={fieldClass + ' mt-1'} value={invoiceNumber} onChange={event => setInvoiceNumber(event.target.value)} /></label>
+        <div className="grid gap-2 sm:grid-cols-2"><label className="text-sm">Invoice date<input type="date" className={fieldClass + ' mt-1'} value={invoiceDate} onChange={event => setInvoiceDate(event.target.value)} /></label><label className="text-sm">Due date<input type="date" className={fieldClass + ' mt-1'} min={invoiceDate || undefined} value={invoiceDueDate} onChange={event => setInvoiceDueDate(event.target.value)} /></label></div>
+        <div className="space-y-2">{invoiceLines.map((line: any, index: number) => <div key={line.stockItemId} className="rounded-lg border border-slate-800 p-2"><b className="text-sm">{line.stockItemName}</b><div className="mt-2 grid grid-cols-2 gap-2"><label className="text-xs">Billed quantity ({line.unitSymbol})<input className={fieldClass + ' mt-1'} type="number" min="0" step="0.001" value={line.quantityBilled} onChange={event => updateInvoiceLine(index, 'quantityBilled', Number(event.target.value))} /></label><label className="text-xs">Unit price (KES/{line.unitSymbol})<input className={fieldClass + ' mt-1'} type="number" min="0" step="0.000001" value={line.unitPrice} onChange={event => updateInvoiceLine(index, 'unitPrice', Number(event.target.value))} /></label></div></div>)}</div>
+        <label className="block text-sm">Invoice total (KES)<input className={fieldClass + ' mt-1'} type="number" min="0" step="0.01" value={invoiceAmount} onChange={event => setInvoiceAmount(event.target.value)} /></label>
+        <button className={primaryButtonClass} disabled={!invoiceNumber.trim() || !invoiceLines.length || !invoiceAmount.trim() || !Number.isFinite(Number(invoiceAmount)) || Number(invoiceAmount) < 0} onClick={() => void matchSupplierInvoice()}>Match invoice to PO and GRN</button>
+      </div>
+    </ActionDialog>}
+
+    {payingPayable && <ActionDialog title={`Record supplier payment · ${payingPayable.payableNumber}`} onClose={() => setPayingPayable(null)}>
+      <div className="space-y-3">
+        <p className="text-sm text-slate-300">Outstanding: <b>{money(payingPayable.amountDue ?? payingPayable.amount)}</b>. This records a manual settlement after you have paid the supplier elsewhere; it does not initiate a transfer.</p>
+        <label className="block text-sm">Amount paid (KES)<input className={fieldClass + ' mt-1'} type="number" min="0.01" max={payingPayable.amountDue ?? payingPayable.amount} step="0.01" value={paymentAmount} onChange={event => setPaymentAmount(event.target.value)} /></label>
+        <label className="block text-sm">Paid from<select className={fieldClass + ' mt-1'} value={paymentMethod} onChange={event => setPaymentMethod(event.target.value as typeof paymentMethod)}><option value="BANK">Bank transfer</option><option value="MPESA">Business M-Pesa</option><option value="CASH">Cash / voucher</option></select></label>
+        <label className="block text-sm">Transfer reference or cash voucher<input className={fieldClass + ' mt-1'} value={paymentReference} onChange={event => setPaymentReference(event.target.value)} /></label>
+        <label className="block text-sm">Payment note<input className={fieldClass + ' mt-1'} value={paymentReason} onChange={event => setPaymentReason(event.target.value)} /></label>
+        <label className="flex items-start gap-2 text-xs text-amber-200"><input className="mt-0.5" type="checkbox" checked={paymentConfirmed} onChange={event => setPaymentConfirmed(event.target.checked)} />I confirm this amount has already been paid to the supplier. This is a manual record only.</label>
+        <button className={primaryButtonClass} disabled={!paymentConfirmed || !paymentReference.trim() || !paymentReason.trim() || !Number.isFinite(Number(paymentAmount)) || Number(paymentAmount) <= 0 || Number(paymentAmount) > Number(payingPayable.amountDue ?? payingPayable.amount)} onClick={() => void recordSupplierPayment()}>Record confirmed payment</button>
+      </div>
+    </ActionDialog>}
     {createOpen && <ActionDialog title="Create purchase order" onClose={() => setCreateOpen(false)}>
-      {!suppliers.length ? <div className="space-y-3"><p>No suppliers are configured.</p><button className={buttonClass} onClick={onOpenCatalog}>Open Catalog to add a supplier</button></div> : <div className="space-y-4">
+      {!suppliers.length ? <div className="space-y-3"><p>No suppliers are configured.</p>{canEditCatalog ? <button className={buttonClass} onClick={onOpenCatalog}>Open Catalog to add a supplier</button> : <p className="text-amber-200">Ask an Admin or Manager to add the supplier.</p>}</div> : <div className="space-y-4">
         <label className="block text-sm">Supplier<select className={fieldClass + ' mt-1'} value={supplierId} onChange={event => setSupplierId(event.target.value)}>{suppliers.map((supplier: any) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}</select></label>
         <div className="rounded-xl border border-slate-700 p-3"><label className="block text-sm">Scan stock barcode or SKU<input autoFocus data-barcode-capture="true" className={fieldClass + ' mt-1 font-mono'} placeholder="Focus here, then scan" value={poScanCode} onChange={event => setPoScanCode(event.target.value)} /></label><div className="mt-2 flex items-center gap-2 text-xs text-slate-500"><Barcode className="h-4 w-4" />Scan selects a stock master; it does not set the ordered quantity.</div></div>
         <label className="block text-sm">Stock item<select className={fieldClass + ' mt-1'} value={selectedStockId} onChange={event => selectStockItem(event.target.value)}>{stockItems.map((item: any) => <option key={item.id} value={item.id}>{item.name} · {item.code}</option>)}</select></label>
@@ -334,7 +374,7 @@ export function NativeProcurementView({ onOpenCatalog }: { onOpenCatalog: () => 
             {accepted > remaining + 0.000001 && <p className="mt-2 text-xs text-amber-300">This accepts {accepted - remaining} {line.unitSymbol} above the open PO quantity and requires a different Admin or Manager to approve.</p>}
           </div>;
         })}</div>
-        <label className="block text-sm">Supplier invoice number (optional)<input className={fieldClass + ' mt-1'} value={supplierInvoiceNumber} onChange={event => setSupplierInvoiceNumber(event.target.value)} /></label>
+        <label className="block text-sm">Invoice reference (does not mark the invoice matched)<input className={fieldClass + ' mt-1'} value={supplierInvoiceNumber} onChange={event => setSupplierInvoiceNumber(event.target.value)} /></label>
         <label className="block text-sm">Delivery note (optional)<input className={fieldClass + ' mt-1'} value={deliveryNote} onChange={event => setDeliveryNote(event.target.value)} /></label>
         <label className="block text-sm">Receipt notes<textarea className={fieldClass + ' mt-1'} value={receiptNotes} onChange={event => setReceiptNotes(event.target.value)} /></label>
         <button className={primaryButtonClass} disabled={!receiptLocationId} onClick={() => void postReceipt()}><ClipboardCheck className="mr-1 inline h-4 w-4" />Post goods receipt</button>

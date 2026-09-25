@@ -912,6 +912,9 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
             let invoice_total=money(p,"invoiceAmount")?;
             let invoice_date=p.get("invoiceDate").and_then(Value::as_str).unwrap_or("").trim();
             if !invoice_date.is_empty() && chrono::NaiveDate::parse_from_str(invoice_date,"%Y-%m-%d").is_err() { return Err("Invoice date must use YYYY-MM-DD".into()); }
+            let due_date=p.get("dueDate").and_then(Value::as_str).unwrap_or("").trim();
+            if !due_date.is_empty() && chrono::NaiveDate::parse_from_str(due_date,"%Y-%m-%d").is_err() { return Err("Invoice due date must use YYYY-MM-DD".into()); }
+            if !invoice_date.is_empty() && !due_date.is_empty() && due_date<invoice_date { return Err("Invoice due date cannot be earlier than invoice date".into()); }
             let supplier_id=text(&payable,"supplierId")?;
             let duplicate_invoice=list(&tx,"supplierPayables")?.iter().any(|record| {
                 record["id"].as_str()!=Some(payable_id.as_str()) &&
@@ -950,6 +953,7 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
             payable["supplierInvoiceNumber"]=json!(invoice_number);
             payable["invoiceAmount"]=json!(invoice_total as f64/100.0);
             payable["invoiceDate"]=json!(invoice_date);
+            payable["dueDate"]=json!(due_date);
             payable["invoiceMatchedAt"]=json!(now());
             payable["invoiceMatchedBy"]=json!(user.staff_id);
             payable["invoiceMatchedByName"]=json!(user.name);
