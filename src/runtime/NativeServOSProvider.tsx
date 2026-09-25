@@ -102,7 +102,7 @@ export const NativeServOSProvider = ({ children }: { children: React.ReactNode }
     hotelRooms: list('rooms'), guestStays: list('guestStays'), guestFolios: list('guestFolios'),
     updateRoomStatus: unavailable, postMinibarConsumption: unavailable, settleGuestFolio: unavailable,
     suppliers: list('suppliers'), purchaseOrders: list('purchaseOrders'),
-    receivePurchaseOrder: () => showToast('Open Procurement > Receive delivery and record delivered and rejected quantities. No stock change was made.', 'error'),
+    receivePurchaseOrder: () => showToast('Open Procurement > Receive delivery and record delivered and rejected quantities. No stock change was made.', 'info'),
     createPurchaseOrder,
     anomalyAlerts: list('anomalyAlerts'), approvalRequests: list('approvalRequests'), acknowledgeAlert: unavailable, resolveAlert: unavailable, handleApproval: unavailable,
     isOffline: !navigator.onLine, toggleOfflineMode: () => showToast('Connectivity is detected automatically. Local saving is always enabled.'),

@@ -794,6 +794,7 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
             get(&tx,"stockLocations",&location_id)?;
             let requested=p["lines"].as_array().ok_or("Delivery lines are required")?;
             if requested.is_empty() { return Err("Scan or enter at least one delivered quantity".into()); }
+            if requested.len()>100 { return Err("A goods receipt cannot contain more than 100 lines".into()); }
             let mut order_items=order["items"].as_array().cloned().ok_or("Purchase order lines are invalid")?;
             let mut seen=Vec::<String>::new();
             let mut receipt_lines=Vec::<Value>::new();
