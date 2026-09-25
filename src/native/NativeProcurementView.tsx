@@ -21,6 +21,7 @@ export function NativeProcurementView({ onOpenCatalog }: { onOpenCatalog: () => 
   const permissions = snapshot.actor.permissions;
   const canManage = permissions.includes('procurement.manage');
   const canReceive = permissions.includes('procurement.receive');
+  const canViewPayables = permissions.includes('accounting.view');
 
   const [section, setSection] = useState<'ORDERS' | 'RECEIPTS' | 'PAYABLES'>('ORDERS');
   const [notice, setNotice] = useState('');
@@ -199,7 +200,7 @@ export function NativeProcurementView({ onOpenCatalog }: { onOpenCatalog: () => 
     </header>
 
     {notice && <p role="status" className="mb-4 whitespace-pre-wrap rounded-lg border border-slate-700 bg-slate-900 p-3 text-sm text-slate-200">{notice}</p>}
-    <nav className="mb-4 flex flex-wrap gap-2">{sectionButton('ORDERS', `Purchase orders (${orders.length})`)}{sectionButton('RECEIPTS', `Goods receipts (${receipts.length})`)}{sectionButton('PAYABLES', `Payables (${payables.length})`)}</nav>
+    <nav className="mb-4 flex flex-wrap gap-2">{sectionButton('ORDERS', `Purchase orders (${orders.length})`)}{sectionButton('RECEIPTS', `Goods receipts (${receipts.length})`)}{canViewPayables&&sectionButton('PAYABLES', `Payables (${payables.length})`)}</nav>
 
     {section === 'ORDERS' && <div className="space-y-3">
       {!suppliers.length && <div className="rounded-xl border border-amber-800 bg-amber-950/30 p-4 text-sm">Add a supplier in Catalog before creating a purchase order. <button className="ml-2 underline" onClick={onOpenCatalog}>Open Catalog</button></div>}

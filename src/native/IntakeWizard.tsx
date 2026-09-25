@@ -8,7 +8,7 @@ const defaults: IntakeProfile = {
   paymentMethods: ['CASH', 'MPESA', 'CARD'], mpesaAccount: '', salesStructure: ['DRINKS', 'COCKTAILS'],
   tracksSpiritsByMl: true, usesCocktailRecipes: true, serviceAreas: ['Main Bar'], stockAreas: ['Main Store', 'Bar Store'],
   hasTables: false, estimatedTables: 0, estimatedManagers: 1, estimatedOperators: 3,
-  printerExpected: true, drawerExpected: true, barcodeScannerExpected: false, importMode: 'MANUAL'
+  printerExpected: true, drawerExpected: false, barcodeScannerExpected: true, importMode: 'MANUAL'
 };
 const split = (value: string) => value.split(',').map(v => v.trim()).filter(Boolean);
 

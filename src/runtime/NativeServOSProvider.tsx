@@ -39,6 +39,12 @@ export const NativeServOSProvider = ({ children }: { children: React.ReactNode }
     return result.recordIds[0];
   };
   const mutate = (operation: string, payload: Record<string, unknown>) => run(operation, payload).then(Boolean);
+  const createPurchaseOrder = (supplierId: string, items: { stockItemId: string; quantity: number; unitPrice: number }[]) => {
+    void run('purchaseOrder.create', {
+      supplierId,
+      items: items.map(item => ({ stockItemId: item.stockItemId, quantityOrdered: item.quantity, unitPrice: item.unitPrice })),
+    });
+  };
   const value = {
     userRole: role, userPermissions: ROLE_DEFINITIONS[role], availableRoles: [],
     setUserRole: unavailable, switchUserRole: () => void runtime.lock(),
@@ -95,7 +101,9 @@ export const NativeServOSProvider = ({ children }: { children: React.ReactNode }
     accounts: list('accounts'), journalEntries: list('journalEntries'), etimsInvoices: [],
     hotelRooms: list('rooms'), guestStays: list('guestStays'), guestFolios: list('guestFolios'),
     updateRoomStatus: unavailable, postMinibarConsumption: unavailable, settleGuestFolio: unavailable,
-    suppliers: list('suppliers'), purchaseOrders: list('purchaseOrders'), receivePurchaseOrder: unavailable, createPurchaseOrder: unavailable,
+    suppliers: list('suppliers'), purchaseOrders: list('purchaseOrders'),
+    receivePurchaseOrder: () => showToast('Open Procurement > Receive delivery and record delivered and rejected quantities. No stock change was made.', 'error'),
+    createPurchaseOrder,
     anomalyAlerts: list('anomalyAlerts'), approvalRequests: list('approvalRequests'), acknowledgeAlert: unavailable, resolveAlert: unavailable, handleApproval: unavailable,
     isOffline: !navigator.onLine, toggleOfflineMode: () => showToast('Connectivity is detected automatically. Local saving is always enabled.'),
     offlineQueueCount: runtime.snapshot!.pendingCount, syncOfflineQueue: runtime.sync,

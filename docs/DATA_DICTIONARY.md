@@ -21,10 +21,14 @@
 
 `products`, `stockItems`, `suppliers`, `priceRules`, `tables`.
 
-Product records can contain `portions[]`, `modifiers[]`, `recipeIngredients[]`, barcode/favorite metadata, preparation route and outlet assignment. Order lines freeze the chosen portion, modifier list, ingredient recipe, price rule, tax policy and product version.
+Product and stock records may include `barcode` as text, preserving leading zeroes. It is unique within its own collection; a sellable and its related stock master may intentionally have the same physical code. `stockItems.scanUnitQuantity` is the positive quantity represented by one package scan, expressed in that stock item's `baseUnit`. Product records can also contain `portions[]`, `modifiers[]`, `recipeIngredients[]`, favorite metadata, preparation route and outlet assignment. Order lines freeze the chosen portion, modifier list, ingredient recipe, price rule, tax policy and product version.
+
+## Procurement records
+
+`purchaseOrders` store supplier, approved quantities in stock base units, agreed unit cost, cumulative delivered/accepted/rejected quantities and PO status. The line's `scanUnitQuantity` snapshots the package size when the order is created. `goodsReceipts` are immutable GRNs with delivery evidence, receiver, location, per-line accepted/rejected quantities and rejection reason. `inventoryReceipts` and `stockMovements` record accepted quantity only. `supplierPayables` and the paired `journalEntries` accrue accepted quantity at the approved PO cost; invoice matching and payment settlement are separate workflows.
 
 ## Transactions and ledgers
 
-`orders`, `payments`, `mpesaReceipts`, `refunds`, `tillSessions`, `cashMovements`, `stockMovements`, `inventoryReceipts`, `journalEntries`, `closeDayReports`.
+`orders`, `payments`, `mpesaReceipts`, `refunds`, `tillSessions`, `cashMovements`, `stockMovements`, `inventoryReceipts`, `goodsReceipts`, `supplierPayables`, `journalEntries`, `closeDayReports`.
 
 Stock is altered only through explicit movement-producing business commands. Financial refunds create reversal journals and do not automatically recreate consumed ingredients.
