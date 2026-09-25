@@ -1,6 +1,6 @@
 # Current release state
 
-Updated: 2026-09-24. **Bar-first source implementation substantially expanded. Production acceptance is still required on a supported target device.**
+Updated: 2026-09-25. **Bar-first source implementation substantially expanded. Production acceptance is still required on a supported target device.**
 
 ## Implemented in source
 
@@ -16,6 +16,8 @@ Updated: 2026-09-24. **Bar-first source implementation substantially expanded. P
 - Unpaid transfer/merge, protected discounts/comps, fired-void stock disposition.
 - Cash/card/manual M-Pesa and atomic split tender, manual M-Pesa reconciliation, refunds/reversals without automatic ingredient restock.
 - Opening balance, stock receipt with weighted-average cost/evidence, physical count, transfer and waste movements.
+- USB HID keyboard-wedge scanning for POS lookup, product/stock barcode assignment, package scan quantities, inventory count drafts and PO/GRN selection. Barcode uniqueness and scan-unit validation run in the native backend.
+- Native PO creation and partial GRN receiving. GRNs retain delivered/accepted/rejected quantities; accepted stock, movement ledger, payable accrual, journal, PO state, audit and outbox commit together. Over-receipts require a single-use approval from a different Admin or Manager.
 - Till open, paid-in/out, blind close and protected variance override.
 - Persisted close-day report covering sales, tax/levy, tenders, cash, discounts/comps/refunds, COGS/waste, gross profit, top products, staff sales and system state.
 - Offline Help Center generated from 31 Markdown user-guide articles.
@@ -45,6 +47,7 @@ Dependency-independent checks are recorded in [TEST_EVIDENCE.md](TEST_EVIDENCE.m
 ## Remaining release gates
 
 - successful `npm ci`, TypeScript/Vite build and Playwright run against the finished tree;
+- scanner focused component/browser coverage and native command acceptance for duplicate barcodes, partial/rejected receipts, offline commit, stale PO versions and separate over-receipt approval; physical scanner validation remains required on the target terminal;
 - successful Rust domain tests and Tauri desktop build;
 - disposable PostgreSQL/Supabase protocol test;
 - fresh Windows 10 installation acceptance and Linux/Android packages if those are release targets;
