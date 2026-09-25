@@ -51,12 +51,14 @@ export function NativeProcurementView({ onOpenCatalog }: { onOpenCatalog: () => 
   const [invoiceDueDate, setInvoiceDueDate] = useState('');
   const [invoiceAmount, setInvoiceAmount] = useState('');
   const [invoiceLines, setInvoiceLines] = useState<any[]>([]);
+  const [matchError, setMatchError] = useState('');
   const [payingPayable, setPayingPayable] = useState<any | null>(null);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'BANK' | 'MPESA'>('BANK');
   const [paymentReference, setPaymentReference] = useState('');
   const [paymentReason, setPaymentReason] = useState('');
   const [paymentConfirmed, setPaymentConfirmed] = useState(false);
+  const [paymentError, setPaymentError] = useState('');
 
   const selectStockItem = (id: string) => {
     setSelectedStockId(id);
@@ -218,12 +220,13 @@ export function NativeProcurementView({ onOpenCatalog }: { onOpenCatalog: () => 
       unitSymbol: line.unitSymbol,
       unitPrice: Number(line.unitCost),
     }));
-    const total = lines.reduce((sum: number, line: any) => sum + line.quantityBilled * line.unitPrice, 0);
+    const total = lines.reduce((sum: number, line: any) => sum + Math.round(line.quantityBilled * line.unitPrice * 100) / 100, 0);
     const today = dateInput(new Date());
     const supplier = suppliers.find((item: any) => item.id === payable.supplierId);
     const due = new Date(`${today}T12:00:00`);
     due.setDate(due.getDate() + Math.max(0, Number(supplier?.paymentTermsDays) || 0));
     setMatchingPayable(payable);
+    setMatchError('');
     setInvoiceNumber(payable.supplierInvoiceNumber || receipt.supplierInvoiceNumber || '');
     setInvoiceDate(today);
     setInvoiceDueDate(dateInput(due));
@@ -235,11 +238,12 @@ export function NativeProcurementView({ onOpenCatalog }: { onOpenCatalog: () => 
   const updateInvoiceLine = (index: number, key: 'quantityBilled' | 'unitPrice', value: number) => {
     const next = invoiceLines.map((line, current) => current === index ? { ...line, [key]: value } : line);
     setInvoiceLines(next);
-    setInvoiceAmount(next.reduce((sum, line) => sum + Number(line.quantityBilled || 0) * Number(line.unitPrice || 0), 0).toFixed(2));
+    setInvoiceAmount(next.reduce((sum, line) => sum + Math.round(Number(line.quantityBilled || 0) * Number(line.unitPrice || 0) * 100) / 100, 0).toFixed(2));
   };
 
   const matchSupplierInvoice = async () => {
     if (!matchingPayable) return;
+    setMatchError('');
     try {
       await runtime.command('supplierPayable.matchInvoice', {
         payableId: matchingPayable.id,
@@ -251,7 +255,7 @@ export function NativeProcurementView({ onOpenCatalog }: { onOpenCatalog: () => 
       }, recordOf(snapshot, 'supplierPayables', matchingPayable.id)?.version);
       setMatchingPayable(null);
       setNotice('Supplier invoice matched to the PO and accepted GRN. This records the match; it does not pay the supplier.');
-    } catch (error) { setNotice(String(error)); }
+    } catch (error) { setMatchError(String(error)); }
   };
 
   const beginSupplierPayment = (payable: any) => {
@@ -261,11 +265,13 @@ export function NativeProcurementView({ onOpenCatalog }: { onOpenCatalog: () => 
     setPaymentReference('');
     setPaymentReason('');
     setPaymentConfirmed(false);
+    setPaymentError('');
     setNotice('');
   };
 
   const recordSupplierPayment = async () => {
     if (!payingPayable) return;
+    setPaymentError('');
     try {
       await runtime.command('supplierPayable.pay', {
         payableId: payingPayable.id,
@@ -277,14 +283,14 @@ export function NativeProcurementView({ onOpenCatalog }: { onOpenCatalog: () => 
       }, recordOf(snapshot, 'supplierPayables', payingPayable.id)?.version);
       setPayingPayable(null);
       setNotice('Supplier payment confirmation recorded locally and posted to accounts payable. Synchronization is queued; ServOS did not transfer funds.');
-    } catch (error) { setNotice(String(error)); }
+    } catch (error) { setPaymentError(String(error)); }
   };
 
   const sectionButton = (id: typeof section, label: string) => <button key={id} className={section === id ? primaryButtonClass : buttonClass} onClick={() => setSection(id)}>{label}</button>;
 
   return <div className="h-full overflow-auto bg-slate-950 p-5 text-white">
     <header className="mb-5 flex flex-wrap items-start justify-between gap-3">
-      <div><h1 className="flex items-center gap-2 text-2xl font-bold"><Truck className="h-6 w-6 text-amber-400" />Procurement</h1><p className="mt-1 text-sm text-slate-400">Purchase orders, scanner-assisted goods receipts and accepted-quantity accruals. Changes save locally first.</p></div>
+      <div><h1 className="flex items-center gap-2 text-2xl font-bold"><Truck className="h-6 w-6 text-amber-400" />Procurement</h1><p className="mt-1 text-sm text-slate-400">Purchase orders, scanner-assisted GRNs, three-way invoice matching and accounts payable. Changes save locally first.</p></div>
       {canManage && <button className={primaryButtonClass} onClick={() => { setNotice(''); setSupplierId(suppliers[0]?.id || ''); setPoLines([]); setPoScanCode(''); setCreateOpen(true); }}><Plus className="mr-1 inline h-4 w-4" />New purchase order</button>}
     </header>
 
@@ -344,6 +350,7 @@ export function NativeProcurementView({ onOpenCatalog }: { onOpenCatalog: () => 
       </div>
     </ActionDialog>}
     {createOpen && <ActionDialog title="Create purchase order" onClose={() => setCreateOpen(false)}>
+      {notice && <p role="status" className="mb-3 rounded-lg bg-slate-950 p-3 text-sm text-slate-200">{notice}</p>}
       {!suppliers.length ? <div className="space-y-3"><p>No suppliers are configured.</p>{canEditCatalog ? <button className={buttonClass} onClick={onOpenCatalog}>Open Catalog to add a supplier</button> : <p className="text-amber-200">Ask an Admin or Manager to add the supplier.</p>}</div> : <div className="space-y-4">
         <label className="block text-sm">Supplier<select className={fieldClass + ' mt-1'} value={supplierId} onChange={event => setSupplierId(event.target.value)}>{suppliers.map((supplier: any) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}</select></label>
         <div className="rounded-xl border border-slate-700 p-3"><label className="block text-sm">Scan stock barcode or SKU<input autoFocus data-barcode-capture="true" className={fieldClass + ' mt-1 font-mono'} placeholder="Focus here, then scan" value={poScanCode} onChange={event => setPoScanCode(event.target.value)} /></label><div className="mt-2 flex items-center gap-2 text-xs text-slate-500"><Barcode className="h-4 w-4" />Scan selects a stock master; it does not set the ordered quantity.</div></div>
@@ -358,6 +365,7 @@ export function NativeProcurementView({ onOpenCatalog }: { onOpenCatalog: () => 
 
     {receivingOrder && <ActionDialog title={`Receive ${receivingOrder.poNumber}`} onClose={() => setReceivingOrder(null)}>
       <div className="space-y-4">
+        {notice && <p role="status" className="rounded-lg bg-slate-950 p-3 text-sm text-slate-200">{notice}</p>}
         <label className="block text-sm">Receiving stock location<select className={fieldClass + ' mt-1'} value={receiptLocationId} onChange={event => setReceiptLocationId(event.target.value)}>{locations.map((location: any) => <option key={location.id} value={location.id}>{location.name}</option>)}</select></label>
         <div className="rounded-xl border border-slate-700 p-3"><label className="block text-sm">Scan delivered packages<input autoFocus data-barcode-capture="true" className={fieldClass + ' mt-1 font-mono'} placeholder="Focus here; each scan adds one package" value={grnScanCode} onChange={event => setGrnScanCode(event.target.value)} /></label><p className="mt-2 text-xs text-slate-500">Scans add delivered quantity only. Mark any rejected quantity and its reason before posting.</p></div>
         <div className="space-y-3">{(receivingOrder.items || []).map((line: any) => {

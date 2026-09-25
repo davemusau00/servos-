@@ -1750,6 +1750,7 @@ pub fn snapshot(db: &Connection, token: &str) -> Result<Value> {
                 let Some(data)=record.get_mut("data").and_then(Value::as_object_mut) else { continue; };
                 match c.as_str() {
                     "products" => { data.remove("costPrice"); }
+                    "suppliers" => { data.remove("contactPerson"); data.remove("phone"); data.remove("email"); data.remove("kraPin"); data.remove("paymentTermsDays"); }
                     "stockItems" => { data.remove("averageUnitCost"); }
                     "stockMovements" => { data.remove("unitCostSnapshot"); data.remove("totalCostValuation"); }
                     "purchaseOrders" => {
