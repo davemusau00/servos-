@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+﻿import React, { useMemo, useState } from 'react';
 import { useRuntime } from '../runtime/RuntimeProvider';
 import { fieldClass, primaryButtonClass } from './records';
 
@@ -20,7 +20,7 @@ export const EnrollmentView = () => {
     [business, owner, admin]
   );
 
-  if (!profile || !ready) {
+  if (!profile || !business || !owner || !admin || !ready) {
     return <div className="min-h-screen bg-slate-950 p-6 text-white grid place-items-center">
       <div className="w-full max-w-lg rounded-2xl border border-amber-700/40 bg-slate-900 p-6">
         <div className="text-xs font-bold tracking-[.2em] text-amber-400">INTAKE UPDATE REQUIRED</div>
@@ -47,15 +47,16 @@ export const EnrollmentView = () => {
         <div className="text-slate-500">Business</div><div className="font-bold">{business.tradingName}</div>
         <div className="mt-3 text-slate-500">Authorizing owner</div><div className="font-bold">{owner.fullName}</div>
         <div className="mt-3 text-slate-500">Initial System Administrator</div><div className="font-bold">{admin.fullName}</div>
-        <div className="text-xs text-slate-400">{admin.jobTitle} · Admin role · {admin.email}</div>
+        <div className="text-xs text-slate-400">{admin.jobTitle} Â· Admin role Â· {admin.email}</div>
       </div>
 
       <label className="block text-sm">Owner authorization email<input required type="email" autoComplete="username" className={fieldClass} value={email} onChange={e => setEmail(e.target.value)} /></label>
       <label className="block text-sm">Online account password<input required type="password" autoComplete="current-password" className={fieldClass} value={password} onChange={e => setPassword(e.target.value)} /></label>
-      <label className="block text-sm">Create local Administrator PIN<input required type="password" inputMode="numeric" minLength={6} maxLength={12} className={fieldClass} value={pin} onChange={e => setPin(e.target.value.replace(/\D/g, '').slice(0, 12))} /><span className="text-xs text-slate-500">6–12 digits. Stored only as an Argon2 hash after successful enrollment.</span></label>
+      <label className="block text-sm">Create local Administrator PIN<input required type="password" inputMode="numeric" minLength={6} maxLength={12} className={fieldClass} value={pin} onChange={e => setPin(e.target.value.replace(/\D/g, '').slice(0, 12))} /><span className="text-xs text-slate-500">6â€“12 digits. Stored only as an Argon2 hash after successful enrollment.</span></label>
       <label className="block text-sm">Confirm local PIN<input required type="password" inputMode="numeric" minLength={6} maxLength={12} className={fieldClass} value={confirmPin} onChange={e => setConfirmPin(e.target.value.replace(/\D/g, '').slice(0, 12))} /></label>
       {(localError || runtime.error) && <p className="rounded-xl bg-rose-950 p-3 text-sm text-rose-200">{localError || runtime.error}</p>}
-      <button disabled={runtime.busy || pin.length < 6 || pin !== confirmPin} className={`${primaryButtonClass} w-full`}>{runtime.busy ? 'Enrolling…' : 'Authorize & enroll terminal'}</button>
+      <button disabled={runtime.busy || pin.length < 6 || pin !== confirmPin} className={`${primaryButtonClass} w-full`}>{runtime.busy ? 'Enrollingâ€¦' : 'Authorize & enroll terminal'}</button>
     </form>
   </div>;
 };
+
