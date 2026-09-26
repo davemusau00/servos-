@@ -19,6 +19,7 @@ try {
   }
   if (!ready) throw new Error('Disposable PostgreSQL did not start');
   const files = ['tests/supabase/bootstrap.sql', ...readdirSync('supabase/migrations').filter(f => f.endsWith('.sql')).sort().map(f => `supabase/migrations/${f}`), 'tests/supabase/protocol.sql'];
+  if (process.argv.includes('--expansion')) files.push(...readdirSync('supabase/expansion').filter(f=>f.endsWith('.sql')).sort().map(f=>`supabase/expansion/${f}`),'tests/supabase/expansion.sql');
   for (const file of files) {
     run(['exec', '-i', container, 'psql', '-U', 'postgres', '-v', 'ON_ERROR_STOP=1'], readFileSync(file, 'utf8'));
     console.log(`Passed: ${file}`);
