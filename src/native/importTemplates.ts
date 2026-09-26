@@ -40,9 +40,10 @@ export const IMPORT_TEMPLATES: ImportTemplateDefinition[] = [
       "type",
       "phone",
       "address",
+      "default_stock_location_external_id",
       "active"
     ],
-    "csv": "external_id,name,type,phone,address,active\r\noutlet-main,Main Bar,BAR,+254700000000,Ground Floor,true\r\n"
+    "csv": "external_id,name,type,phone,address,default_stock_location_external_id,active\r\noutlet-main,Main Bar,BAR,+254700000000,Ground Floor,stock-main,true\r\n"
   },
   {
     "key": "stock_locations",
@@ -122,9 +123,10 @@ export const IMPORT_TEMPLATES: ImportTemplateDefinition[] = [
       "taxable",
       "route_to",
       "outlet_external_ids",
+      "stock_item_external_id",
       "active"
     ],
-    "csv": "external_id,code,name,category,barcode,selling_price,taxable,route_to,outlet_external_ids,active\r\nproduct-001,COKE300,Coca-Cola 300ml,Soft Drinks,616110000001,120.00,true,BAR,outlet-main,true\r\n"
+    "csv": "external_id,code,name,category,barcode,selling_price,taxable,route_to,outlet_external_ids,stock_item_external_id,active\r\nproduct-001,COKE300,Coca-Cola 300ml,Soft Drinks,616110000001,120.00,true,BAR,outlet-main,stock-coke300,true\r\n"
   },
   {
     "key": "inventory",

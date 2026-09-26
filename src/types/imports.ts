@@ -38,3 +38,31 @@ export interface StageImportInput {
   fileName: string;
   csvText: string;
 }
+
+// SERVOS_PATCH_04_CONTROLLED_IMPORT
+export type ImportPlanAction = 'CREATE' | 'UPDATE' | 'NO_CHANGE' | 'BLOCKED' | 'CONFLICT';
+export type ImportPlanStatus = 'READY' | 'BLOCKED' | 'APPLYING' | 'APPLIED' | 'PARTIAL' | 'SUPERSEDED';
+export interface ImportPlanStep {
+  stepIndex: number;
+  rowNumber: number;
+  action: ImportPlanAction;
+  status: 'PLANNED' | 'SKIPPED' | 'APPLIED' | 'FAILED' | 'BLOCKED';
+  operation: string | null;
+  targetCollection: string | null;
+  targetId: string | null;
+  expectedVersion: number | null;
+  reason: string;
+  error: string | null;
+}
+export interface ImportApplyPlan {
+  id: string;
+  batchId: string;
+  status: ImportPlanStatus;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+  sourceHash: string;
+  installationStage: string;
+  summary: { total: number; create: number; update: number; noChange: number; blocked: number; conflict: number };
+  steps: ImportPlanStep[];
+}

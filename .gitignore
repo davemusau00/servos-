@@ -21,3 +21,5 @@ playwright-report/
 .servos-followup-backup-*/
 .servos-hardening-backup-*/
 fix-servos-*.ps1
+
+.servos-patch-*-backup-*

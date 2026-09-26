@@ -89,7 +89,7 @@ pub fn open(path: &std::path::Path) -> Result<Connection> {
     let version: i64 = db
         .query_row("PRAGMA user_version", [], |r| r.get(0))
         .map_err(error)?;
-    if version > 4 {
+    if version > 5 {
         return Err("Database requires a newer ServOS version".into());
     }
     if version < 1 {
@@ -104,6 +104,9 @@ pub fn open(path: &std::path::Path) -> Result<Connection> {
     }
     if version < 4 {
         db.execute_batch(include_str!("../migrations/004_import_center.sql")).map_err(error)?;
+    }
+    if version < 5 {
+        db.execute_batch(include_str!("../migrations/005_import_apply.sql")).map_err(error)?;
     }
     Ok(db)
 }
@@ -646,6 +649,18 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
                 if value.len()>500{return Err("Business identity field is too long".into());}
                 organization[key]=json!(value);
                 if ["name","address","phone","email"].contains(&key){property[key]=json!(value);}
+            }
+            if let Some(kra)=data.get("kraPin").and_then(Value::as_str) {
+                let kra=kra.trim(); if kra.len()>100{return Err("Business PIN is too long".into());}
+                organization["kraPin"]=json!(kra); property["kraPin"]=json!(kra);
+            }
+            if let Some(currency)=data.get("currency").and_then(Value::as_str) {
+                if currency!="KES"{return Err("Business identity currency must be KES".into());}
+                property["currency"]=json!(currency);
+            }
+            if let Some(timezone)=data.get("timezone").and_then(Value::as_str) {
+                if timezone!="Africa/Nairobi"{return Err("Business identity timezone must be Africa/Nairobi".into());}
+                property["timezone"]=json!(timezone);
             }
             put(&tx,"organization","business",organization,&mut changes)?;
             put(&tx,"property","property",property,&mut changes)?;
@@ -2528,6 +2543,502 @@ pub fn import_cancel(db: &mut Connection, token: &str, batch_id: &str) -> Result
     ).map_err(error)?;
     tx.commit().map_err(error)?;
     Ok(())
+}
+
+// SERVOS_PATCH_04_CONTROLLED_IMPORT
+fn import_string(row:&Value,key:&str)->Option<String>{
+    row.get(key).and_then(Value::as_str).map(str::trim).filter(|v|!v.is_empty()).map(str::to_string)
+}
+fn import_number(row:&Value,key:&str)->Option<f64>{row.get(key).and_then(Value::as_f64)}
+fn import_boolean(row:&Value,key:&str)->Option<bool>{row.get(key).and_then(Value::as_bool)}
+fn import_code(raw:&str)->String{
+    let mut value=raw.chars().map(|c|if c.is_ascii_alphanumeric(){c.to_ascii_uppercase()}else{'_'}).collect::<String>();
+    while value.contains("__"){value=value.replace("__","_");}
+    value.trim_matches('_').chars().take(64).collect()
+}
+fn import_mapping_lookup(db:&Connection,namespace:&str,external_id:&str)->Result<Option<(String,String)>>{
+    db.query_row(
+        "SELECT collection,record_id FROM import_external_ids WHERE namespace=? AND lower(external_id)=lower(?)",
+        params![namespace,external_id],
+        |r|Ok((r.get(0)?,r.get(1)?))
+    ).optional().map_err(error)
+}
+fn import_find_candidates(db:&Connection,collection:&str,checks:&[(String,String)])->Result<Vec<(String,i64,Value)>>{
+    let mut found:std::collections::BTreeMap<String,(String,i64,Value)>=std::collections::BTreeMap::new();
+    for record in list(db,collection)? {
+        for (field,wanted) in checks {
+            if wanted.trim().is_empty(){continue;}
+            let matches=record["data"][field].as_str().is_some_and(|actual|actual.trim().eq_ignore_ascii_case(wanted.trim()));
+            if matches {
+                let key=record["id"].as_str().unwrap_or("").to_string();
+                found.insert(key.clone(),(key,record["version"].as_i64().unwrap_or(0),record["data"].clone()));
+            }
+        }
+    }
+    Ok(found.into_values().collect())
+}
+fn import_target(
+    db:&Connection,
+    namespace:&str,
+    external_id:&str,
+    collection:&str,
+    checks:&[(String,String)]
+)->Result<(String,Option<i64>,Option<Value>,Option<String>)>{
+    if let Some((mapped_collection,record_id))=import_mapping_lookup(db,namespace,external_id)? {
+        if mapped_collection!=collection {
+            return Ok((record_id,None,None,Some(format!("External ID {external_id} is already mapped to {mapped_collection}, not {collection}"))));
+        }
+        return match get(db,collection,&record_id) {
+            Ok((version,data))=>Ok((record_id,Some(version),Some(data),None)),
+            Err(_)=>Ok((record_id,None,None,Some(format!("External ID {external_id} points to a missing or archived {collection} record")))),
+        };
+    }
+    let candidates=import_find_candidates(db,collection,checks)?;
+    if candidates.len()>1 {
+        return Ok((String::new(),None,None,Some(format!("Natural keys for {external_id} match multiple {collection} records"))));
+    }
+    if let Some((record_id,version,data))=candidates.into_iter().next(){
+        return Ok((record_id,Some(version),Some(data),None));
+    }
+    Ok((id(),None,None,None))
+}
+fn import_patch_matches(existing:&Value,desired:&Value)->bool{
+    let Some(map)=desired.as_object() else{return false;};
+    map.iter().all(|(key,value)|existing.get(key)==Some(value))
+}
+fn import_step(
+    step_index:i64,row_number:i64,action:&str,operation:Option<&str>,collection:Option<&str>,
+    target_id:Option<&str>,expected_version:Option<i64>,payload:Option<Value>,reason:String,
+    map_namespace:Option<&str>,map_external_id:Option<&str>
+)->Value{
+    let status=match action{"NO_CHANGE"=>"SKIPPED","BLOCKED"|"CONFLICT"=>"BLOCKED",_=>"PLANNED"};
+    json!({
+        "stepIndex":step_index,"rowNumber":row_number,"action":action,"status":status,
+        "operation":operation,"targetCollection":collection,"targetId":target_id,
+        "expectedVersion":expected_version,
+        "commandId":if status=="PLANNED"{Value::String(id())}else{Value::Null},
+        "payload":payload,"reason":reason,
+        "mapNamespace":map_namespace,"mapExternalId":map_external_id
+    })
+}
+fn import_plan_row_record(
+    db:&Connection,row_number:i64,template_key:&str,row:&Value,installation_stage:&str,step_index:&mut i64
+)->Result<Vec<Value>>{
+    let external_id=import_string(row,"external_id").ok_or("external_id is required")?;
+    let mut steps=vec![];
+    let mut one=|action:&str,operation:Option<&str>,collection:Option<&str>,target_id:Option<&str>,version:Option<i64>,payload:Option<Value>,reason:String,namespace:Option<&str>,map_id:Option<&str>|{
+        *step_index+=1;
+        steps.push(import_step(*step_index,row_number,action,operation,collection,target_id,version,payload,reason,namespace,map_id));
+    };
+
+    if template_key=="business" {
+        let (organization_version,organization)=get(db,"organization","business")?;
+        let (property_version,property)=get(db,"property","property")?;
+        let currency=import_string(row,"currency").unwrap_or_else(||"KES".into());
+        let timezone=import_string(row,"timezone").unwrap_or_else(||"Africa/Nairobi".into());
+        if currency!="KES" || timezone!="Africa/Nairobi" {
+            one("BLOCKED",None,Some("organization"),Some("business"),Some(organization_version),None,
+                "This installation supports KES and Africa/Nairobi only".into(),Some("business"),Some(&external_id));
+            return Ok(steps);
+        }
+        let data=json!({
+            "name":import_string(row,"trading_name").unwrap_or_default(),
+            "legalName":import_string(row,"legal_name").unwrap_or_default(),
+            "registrationNumber":import_string(row,"registration_number").unwrap_or_default(),
+            "kraPin":import_string(row,"kra_pin").unwrap_or_default(),
+            "phone":import_string(row,"phone").unwrap_or_default(),
+            "email":import_string(row,"email").unwrap_or_default(),
+            "address":import_string(row,"address").unwrap_or_default(),
+            "currency":currency,"timezone":timezone
+        });
+        let same=
+            organization["name"]==data["name"] &&
+            organization["legalName"]==data["legalName"] &&
+            organization["registrationNumber"]==data["registrationNumber"] &&
+            organization["phone"]==data["phone"] &&
+            organization["email"]==data["email"] &&
+            organization["address"]==data["address"] &&
+            property["kraPin"]==data["kraPin"] &&
+            property["currency"]==data["currency"] &&
+            property["timezone"]==data["timezone"];
+        let payload=json!({"data":data,"organizationVersion":organization_version,"propertyVersion":property_version});
+        one(if same{"NO_CHANGE"}else{"UPDATE"},Some("business.identity"),Some("organization"),Some("business"),Some(organization_version),Some(payload),
+            if same{"Business identity already matches the staged row".into()}else{"Update business identity through the dedicated atomic business command".into()},
+            Some("business"),Some(&external_id));
+        return Ok(steps);
+    }
+
+    if template_key=="employees" {
+        one("BLOCKED",None,Some("employees"),None,None,None,
+            "Employee credentials cannot be imported. Create staff accounts through Staff Access so each PIN is established securely.".into(),None,None);
+        return Ok(steps);
+    }
+    if ["room_types","rooms","rate_plans","hotel_services"].contains(&template_key) {
+        one("BLOCKED",None,None,None,None,None,
+            "This staged dataset is reserved for Patch 05 Rooms/PMS so room-state and reservation invariants exist before application.".into(),None,None);
+        return Ok(steps);
+    }
+    if ["asset_categories","assets"].contains(&template_key) {
+        one("BLOCKED",None,None,None,None,None,
+            "This staged dataset is reserved for Patch 08 Assets so custody, maintenance and lifecycle invariants exist before application.".into(),None,None);
+        return Ok(steps);
+    }
+
+    let mut namespace="";
+    let mut collection="";
+    let mut checks:Vec<(String,String)>=vec![];
+    let mut desired=json!({});
+    let mut dependency_error:Option<String>=None;
+    let mut map_external_id=external_id.clone();
+
+    match template_key {
+        "outlets"=>{
+            namespace="outlets";collection="outlets";
+            if let Some(name)=import_string(row,"name"){checks.push(("name".into(),name.clone()));}
+            let mut data=serde_json::Map::new();
+            data.insert("name".into(),json!(import_string(row,"name").unwrap_or_default()));
+            data.insert("type".into(),json!(import_string(row,"type").unwrap_or_else(||"BAR".into())));
+            data.insert("phone".into(),json!(import_string(row,"phone").unwrap_or_default()));
+            data.insert("address".into(),json!(import_string(row,"address").unwrap_or_default()));
+            data.insert("active".into(),json!(import_boolean(row,"active").unwrap_or(true)));
+            data.insert("propertyId".into(),json!("property"));
+            if let Some(location_external)=import_string(row,"default_stock_location_external_id"){
+                match import_mapping_lookup(db,"stock_locations",&location_external)? {
+                    Some((_,record_id))=>{data.insert("defaultStockLocationId".into(),json!(record_id));},
+                    None=>dependency_error=Some(format!("Default stock location external ID {location_external} is not applied yet")),
+                }
+            }
+            desired=Value::Object(data);
+        },
+        "stock_locations"=>{
+            namespace="stock_locations";collection="stockLocations";
+            let name=import_string(row,"name").unwrap_or_default();
+            checks.push(("name".into(),name.clone()));
+            let mut data=serde_json::Map::new();
+            data.insert("name".into(),json!(name));
+            data.insert("code".into(),json!(import_code(&external_id)));
+            data.insert("type".into(),json!(import_string(row,"kind").unwrap_or_else(||"OTHER".into())));
+            data.insert("active".into(),json!(import_boolean(row,"active").unwrap_or(true)));
+            data.insert("propertyId".into(),json!("property"));
+            if let Some(outlet_external)=import_string(row,"outlet_external_id"){
+                match import_mapping_lookup(db,"outlets",&outlet_external)? {
+                    Some((_,record_id))=>{data.insert("outletId".into(),json!(record_id));},
+                    None=>dependency_error=Some(format!("Outlet external ID {outlet_external} is not applied yet")),
+                }
+            }
+            desired=Value::Object(data);
+        },
+        "suppliers"=>{
+            namespace="suppliers";collection="suppliers";
+            if let Some(kra)=import_string(row,"kra_pin"){checks.push(("kraPin".into(),kra));}
+            if let Some(name)=import_string(row,"name"){checks.push(("name".into(),name));}
+            desired=json!({
+                "name":import_string(row,"name").unwrap_or_default(),
+                "code":import_code(&external_id),
+                "contactPerson":import_string(row,"contact_person").unwrap_or_default(),
+                "phone":import_string(row,"phone").unwrap_or_default(),
+                "email":import_string(row,"email").unwrap_or_default(),
+                "kraPin":import_string(row,"kra_pin").unwrap_or_default(),
+                "paymentTermsDays":import_number(row,"payment_terms_days").unwrap_or(0.0),
+                "active":import_boolean(row,"active").unwrap_or(true)
+            });
+        },
+        "customers"=>{
+            namespace="customers";collection="customers";
+            if let Some(email)=import_string(row,"email"){checks.push(("email".into(),email));}
+            if let Some(phone)=import_string(row,"phone"){checks.push(("phone".into(),phone));}
+            desired=json!({
+                "name":import_string(row,"name").unwrap_or_default(),
+                "phone":import_string(row,"phone").unwrap_or_default(),
+                "email":import_string(row,"email").unwrap_or_default(),
+                "creditLimit":import_number(row,"credit_limit").unwrap_or(0.0),
+                "notes":import_string(row,"notes").unwrap_or_default(),
+                "active":import_boolean(row,"active").unwrap_or(true)
+            });
+        },
+        "products"=>{
+            namespace="products";collection="products";
+            let code=import_string(row,"code").unwrap_or_default();
+            checks.push(("code".into(),code.clone()));
+            if let Some(barcode)=import_string(row,"barcode"){checks.push(("barcode".into(),barcode.clone()));}
+            let mut outlet_ids=vec![];
+            if let Some(externals)=row.get("outlet_external_ids").and_then(Value::as_array){
+                for ext in externals.iter().filter_map(Value::as_str) {
+                    match import_mapping_lookup(db,"outlets",ext)? {
+                        Some((_,record_id))=>outlet_ids.push(record_id),
+                        None=>dependency_error=Some(format!("Outlet external ID {ext} is not applied yet")),
+                    }
+                }
+            }
+            if outlet_ids.is_empty() && dependency_error.is_none(){dependency_error=Some("Products require at least one applied outlet external ID".into());}
+            let mut data=serde_json::Map::new();
+            data.insert("name".into(),json!(import_string(row,"name").unwrap_or_default()));
+            data.insert("code".into(),json!(code));
+            data.insert("category".into(),json!(import_string(row,"category").unwrap_or_else(||"OTHER".into())));
+            data.insert("price".into(),json!(import_number(row,"selling_price").unwrap_or(0.0)));
+            data.insert("taxable".into(),json!(import_boolean(row,"taxable").unwrap_or(true)));
+            data.insert("routeTo".into(),json!(import_string(row,"route_to").unwrap_or_else(||"BAR".into())));
+            data.insert("outletIds".into(),json!(outlet_ids));
+            data.insert("active".into(),json!(import_boolean(row,"active").unwrap_or(true)));
+            if let Some(barcode)=import_string(row,"barcode"){data.insert("barcode".into(),json!(barcode));}
+            if let Some(stock_external)=import_string(row,"stock_item_external_id"){
+                match import_mapping_lookup(db,"stock_items",&stock_external)? {
+                    Some((_,record_id))=>{data.insert("stockItemId".into(),json!(record_id));},
+                    None=>dependency_error=Some(format!("Stock item external ID {stock_external} is not applied yet")),
+                }
+            }
+            desired=Value::Object(data);
+        },
+        "inventory"=>{
+            namespace="stock_items";collection="stockItems";
+            map_external_id=import_string(row,"stock_item_external_id").ok_or("stock_item_external_id is required")?;
+            let code=import_string(row,"code").unwrap_or_default();
+            checks.push(("code".into(),code.clone()));
+            if let Some(barcode)=import_string(row,"barcode"){checks.push(("barcode".into(),barcode.clone()));}
+            let mut data=serde_json::Map::new();
+            data.insert("name".into(),json!(import_string(row,"stock_item_name").unwrap_or_default()));
+            data.insert("code".into(),json!(code));
+            data.insert("baseUnit".into(),json!(import_string(row,"base_unit").unwrap_or_else(||"unit".into())));
+            data.insert("averageUnitCost".into(),json!(import_number(row,"average_unit_cost").unwrap_or(0.0)));
+            data.insert("scanUnitQuantity".into(),json!(1.0));
+            data.insert("reorderLevel".into(),json!(import_number(row,"reorder_level").unwrap_or(0.0)));
+            if let Some(barcode)=import_string(row,"barcode"){data.insert("barcode".into(),json!(barcode));}
+            desired=Value::Object(data);
+        },
+        _=>return Err("Unsupported import template".into())
+    }
+
+    let (target_id,version,existing,match_error)=import_target(db,namespace,&map_external_id,collection,&checks)?;
+    if template_key=="inventory" && installation_stage=="LIVE" {
+        if let Some(prior)=&existing {
+            if let Some(cost)=prior.get("averageUnitCost") { desired["averageUnitCost"]=cost.clone(); }
+        }
+    }
+    if let Some(reason)=match_error.or(dependency_error) {
+        one("CONFLICT",None,Some(collection),if target_id.is_empty(){None}else{Some(&target_id)},version,None,reason,Some(namespace),Some(&map_external_id));
+        return Ok(steps);
+    }
+
+    if template_key=="outlets" && installation_stage=="LIVE" && version.is_none() && desired["defaultStockLocationId"].as_str().is_none() {
+        one("BLOCKED",None,Some(collection),Some(&target_id),version,None,
+            "A new LIVE outlet requires an applied default_stock_location_external_id".into(),Some(namespace),Some(&map_external_id));
+        return Ok(steps);
+    }
+
+    let same=existing.as_ref().is_some_and(|prior|import_patch_matches(prior,&desired));
+    let action=if same{"NO_CHANGE"}else if version.is_some(){"UPDATE"}else{"CREATE"};
+    let payload=json!({"collection":collection,"id":target_id,"data":desired});
+    one(action,Some("record.save"),Some(collection),Some(&target_id),version,Some(payload),
+        if same{"Current record already matches the staged fields".into()}else if version.is_some(){"Versioned update through record.save".into()}else{"Create through record.save".into()},
+        Some(namespace),Some(&map_external_id));
+    drop(one);
+
+    if template_key=="inventory" {
+        let location_external=import_string(row,"location_external_id").unwrap_or_default();
+        let location_id=import_mapping_lookup(db,"stock_locations",&location_external)?.map(|(_,id)|id);
+        let opening=import_number(row,"opening_quantity").unwrap_or(0.0);
+        let current=existing.as_ref().and_then(|v|v["currentStock"].as_object())
+            .and_then(|locations|location_id.as_ref().and_then(|id|locations.get(id)))
+            .and_then(Value::as_f64).unwrap_or(0.0);
+        if (opening-current).abs()>0.000001 {
+            *step_index+=1;
+            let movement=if location_id.is_none(){
+                import_step(*step_index,row_number,"BLOCKED",None,Some("stockItems"),Some(&target_id),None,None,
+                    format!("Stock location external ID {location_external} is not applied yet"),None,None)
+            } else if installation_stage=="LIVE" {
+                import_step(*step_index,row_number,"BLOCKED",None,Some("stockItems"),Some(&target_id),None,None,
+                    "Opening inventory cannot be imported after Go Live. Use Procurement/Receive or a controlled inventory count instead.".into(),None,None)
+            } else {
+                import_step(*step_index,row_number,"UPDATE",Some("inventory.openingBalance"),Some("stockItems"),Some(&target_id),None,
+                    Some(json!({"stockItemId":target_id,"locationId":location_id.unwrap(),"quantity":opening,"reason":format!("CSV opening balance · {external_id}")})),
+                    format!("Set opening quantity from {current} to {opening} through inventory.openingBalance"),None,None)
+            };
+            steps.push(movement);
+        }
+    }
+    Ok(steps)
+}
+fn import_plan_db_row(row:&rusqlite::Row<'_>)->rusqlite::Result<Value>{
+    let summary:String=row.get(8)?;
+    Ok(json!({
+        "id":row.get::<_,String>(0)?,"batchId":row.get::<_,String>(1)?,"status":row.get::<_,String>(2)?,
+        "createdBy":row.get::<_,String>(3)?,"createdAt":row.get::<_,String>(4)?,"updatedAt":row.get::<_,String>(5)?,
+        "sourceHash":row.get::<_,String>(6)?,"installationStage":row.get::<_,String>(7)?,
+        "summary":serde_json::from_str::<Value>(&summary).unwrap_or_else(|_|json!({}))
+    }))
+}
+pub fn import_plan_detail(db:&Connection,token:&str,plan_id:&str)->Result<Value>{
+    import_require(db,token,"data.import.view",false)?;
+    let mut plan=db.query_row(
+        "SELECT id,batch_id,status,created_by,created_at,updated_at,source_hash,installation_stage,summary FROM import_apply_plans WHERE id=?",
+        [plan_id],import_plan_db_row
+    ).optional().map_err(error)?.ok_or("Import plan not found")?;
+    let mut stmt=db.prepare(
+        "SELECT step_index,row_number,action,status,operation,target_collection,target_id,expected_version,reason,error FROM import_apply_steps WHERE plan_id=? ORDER BY step_index"
+    ).map_err(error)?;
+    let steps=stmt.query_map([plan_id],|r|Ok(json!({
+        "stepIndex":r.get::<_,i64>(0)?,"rowNumber":r.get::<_,i64>(1)?,"action":r.get::<_,String>(2)?,
+        "status":r.get::<_,String>(3)?,"operation":r.get::<_,Option<String>>(4)?,"targetCollection":r.get::<_,Option<String>>(5)?,
+        "targetId":r.get::<_,Option<String>>(6)?,"expectedVersion":r.get::<_,Option<i64>>(7)?,
+        "reason":r.get::<_,String>(8)?,"error":r.get::<_,Option<String>>(9)?
+    }))).map_err(error)?.collect::<std::result::Result<Vec<_>,_>>().map_err(error)?;
+    plan["steps"]=Value::Array(steps);
+    Ok(plan)
+}
+pub fn import_plan(db:&mut Connection,token:&str,batch_id:&str)->Result<Value>{
+    let user=import_require(db,token,"data.import.stage",true)?;
+    let (template_key,batch_status,source_hash):(String,String,String)=db.query_row(
+        "SELECT template_key,status,source_hash FROM import_batches WHERE id=?",
+        [batch_id],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?))
+    ).optional().map_err(error)?.ok_or("Import batch not found")?;
+    if batch_status!="READY" {return Err("Only READY import batches can be planned".into());}
+    let stage=installation_stage(db)?;
+    let mut stmt=db.prepare("SELECT row_number,normalized_json FROM import_rows WHERE batch_id=? AND status='VALID' ORDER BY row_number").map_err(error)?;
+    let rows=stmt.query_map([batch_id],|r|Ok((r.get::<_,i64>(0)?,r.get::<_,String>(1)?))).map_err(error)?
+        .collect::<std::result::Result<Vec<_>,_>>().map_err(error)?;
+    drop(stmt);
+    let mut step_index=0i64;let mut steps=vec![];
+    for (row_number,raw) in rows {
+        let row:Value=serde_json::from_str(&raw).map_err(error)?;
+        steps.extend(import_plan_row_record(db,row_number,&template_key,&row,&stage,&mut step_index)?);
+    }
+    let count=|name:&str|steps.iter().filter(|s|s["action"]==name).count() as i64;
+    let summary=json!({"total":steps.len(),"create":count("CREATE"),"update":count("UPDATE"),"noChange":count("NO_CHANGE"),"blocked":count("BLOCKED"),"conflict":count("CONFLICT")});
+    let blocked=summary["blocked"].as_i64().unwrap_or(0)+summary["conflict"].as_i64().unwrap_or(0)>0;
+    let plan_id=id();let created=now();let plan_status=if blocked{"BLOCKED"}else{"READY"};
+    let tx=db.transaction().map_err(error)?;
+    tx.execute("UPDATE import_apply_plans SET status='SUPERSEDED',updated_at=? WHERE batch_id=? AND status IN ('READY','BLOCKED','PARTIAL')",params![created,batch_id]).map_err(error)?;
+    tx.execute(
+        "INSERT INTO import_apply_plans(id,batch_id,status,created_by,created_at,updated_at,source_hash,installation_stage,summary) VALUES(?,?,?,?,?,?,?,?,?)",
+        params![plan_id,batch_id,plan_status,user.staff_id,created,created,source_hash,stage,summary.to_string()]
+    ).map_err(error)?;
+    for step in &steps {
+        tx.execute(
+            "INSERT INTO import_apply_steps(plan_id,step_index,row_number,action,status,operation,target_collection,target_id,expected_version,command_id,payload,reason,map_namespace,map_external_id,error) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,NULL)",
+            params![
+                plan_id,step["stepIndex"].as_i64(),step["rowNumber"].as_i64(),step["action"].as_str(),step["status"].as_str(),
+                step["operation"].as_str(),step["targetCollection"].as_str(),step["targetId"].as_str(),step["expectedVersion"].as_i64(),
+                step["commandId"].as_str(),step.get("payload").filter(|v|!v.is_null()).map(Value::to_string),
+                step["reason"].as_str(),step["mapNamespace"].as_str(),step["mapExternalId"].as_str()
+            ]
+        ).map_err(error)?;
+    }
+    tx.execute(
+        "INSERT INTO import_events(batch_id,event_type,actor_id,occurred_at,detail) VALUES(?,?,?,?,?)",
+        params![batch_id,"PLAN_CREATED",user.staff_id,created,json!({"planId":plan_id,"status":plan_status,"summary":summary,"installationStage":stage}).to_string()]
+    ).map_err(error)?;
+    tx.commit().map_err(error)?;
+    import_plan_detail(db,token,&plan_id)
+}
+pub fn import_apply(db:&mut Connection,token:&str,plan_id:&str)->Result<Value>{
+    let user=import_require(db,token,"data.import.execute",true)?;
+    let (batch_id,status,source_hash,planned_stage):(String,String,String,String)=db.query_row(
+        "SELECT batch_id,status,source_hash,installation_stage FROM import_apply_plans WHERE id=?",
+        [plan_id],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?))
+    ).optional().map_err(error)?.ok_or("Import plan not found")?;
+    if status=="APPLIED"{return import_plan_detail(db,token,plan_id);}
+    if status!="READY"&&status!="PARTIAL"{return Err("Import plan is blocked or superseded; create a new dry run".into());}
+    let current_stage=installation_stage(db)?;
+    if current_stage!=planned_stage{return Err("Installation stage changed after dry run; create a new import plan".into());}
+    let (current_hash,batch_status):(String,String)=db.query_row(
+        "SELECT source_hash,status FROM import_batches WHERE id=?",
+        [&batch_id],|r|Ok((r.get(0)?,r.get(1)?))
+    ).map_err(error)?;
+    if current_hash!=source_hash{return Err("Staged source changed after dry run".into());}
+    if batch_status!="READY"{return Err("Import batch is no longer READY; create a new staged batch or plan".into());}
+    let blockers:i64=db.query_row("SELECT COUNT(*) FROM import_apply_steps WHERE plan_id=? AND action IN ('BLOCKED','CONFLICT')",[plan_id],|r|r.get(0)).map_err(error)?;
+    if blockers>0{return Err("Import plan contains blocked or conflicting steps".into());}
+
+    db.execute("UPDATE import_apply_plans SET status='APPLYING',updated_at=? WHERE id=?",params![now(),plan_id]).map_err(error)?;
+    let mut stmt=db.prepare(
+        "SELECT step_index,operation,target_collection,target_id,expected_version,command_id,payload,map_namespace,map_external_id FROM import_apply_steps WHERE plan_id=? AND status IN ('PLANNED','FAILED') ORDER BY step_index"
+    ).map_err(error)?;
+    let rows=stmt.query_map([plan_id],|r|Ok((
+        r.get::<_,i64>(0)?,r.get::<_,String>(1)?,r.get::<_,Option<String>>(2)?,r.get::<_,Option<String>>(3)?,
+        r.get::<_,Option<i64>>(4)?,r.get::<_,String>(5)?,r.get::<_,String>(6)?,
+        r.get::<_,Option<String>>(7)?,r.get::<_,Option<String>>(8)?
+    ))).map_err(error)?.collect::<std::result::Result<Vec<_>,_>>().map_err(error)?;
+    drop(stmt);
+
+    for (step_index,operation,target_collection,target_id,expected_version,command_id,payload_raw,map_namespace,map_external_id) in rows {
+        if let (Some(namespace),Some(external_id),Some(collection),Some(record_id))=(map_namespace.as_deref(),map_external_id.as_deref(),target_collection.as_deref(),target_id.as_deref()) {
+            if let Some((prior_collection,prior_id))=db.query_row(
+                "SELECT collection,record_id FROM import_external_ids WHERE namespace=? AND lower(external_id)=lower(?)",
+                params![namespace,external_id],|r|Ok((r.get::<_,String>(0)?,r.get::<_,String>(1)?))
+            ).optional().map_err(error)? {
+                if prior_collection!=collection||prior_id!=record_id {
+                    let message="External ID mapping changed after dry run".to_string();
+                    db.execute("UPDATE import_apply_steps SET status='FAILED',error=? WHERE plan_id=? AND step_index=?",params![message,plan_id,step_index]).map_err(error)?;
+                    db.execute("UPDATE import_apply_plans SET status='PARTIAL',updated_at=? WHERE id=?",params![now(),plan_id]).map_err(error)?;
+                    return Err(message);
+                }
+            }
+        }
+        let payload:Value=serde_json::from_str(&payload_raw).map_err(error)?;
+        let command=BusinessCommand{id:command_id.clone(),schema_version:1,operation:operation.clone(),target_version:expected_version,payload};
+        match execute_as(db,&user,command) {
+            Ok(_)=>{
+                if let (Some(namespace),Some(external_id),Some(collection),Some(record_id))=(map_namespace.as_deref(),map_external_id.as_deref(),target_collection.as_deref(),target_id.as_deref()){
+                    let prior:Option<(String,String)>=db.query_row(
+                        "SELECT collection,record_id FROM import_external_ids WHERE namespace=? AND lower(external_id)=lower(?)",
+                        params![namespace,external_id],|r|Ok((r.get(0)?,r.get(1)?))
+                    ).optional().map_err(error)?;
+                    if let Some((prior_collection,prior_id))=prior {
+                        if prior_collection!=collection||prior_id!=record_id {
+                            let message="External ID mapping changed after dry run".to_string();
+                            db.execute("UPDATE import_apply_steps SET status='FAILED',error=? WHERE plan_id=? AND step_index=?",params![message,plan_id,step_index]).map_err(error)?;
+                            db.execute("UPDATE import_apply_plans SET status='PARTIAL',updated_at=? WHERE id=?",params![now(),plan_id]).map_err(error)?;
+                            return Err(message);
+                        }
+                    } else {
+                        db.execute(
+                            "INSERT INTO import_external_ids(namespace,external_id,collection,record_id,batch_id,created_at) VALUES(?,?,?,?,?,?)",
+                            params![namespace,external_id,collection,record_id,batch_id,now()]
+                        ).map_err(error)?;
+                    }
+                }
+                db.execute("UPDATE import_apply_steps SET status='APPLIED',error=NULL WHERE plan_id=? AND step_index=?",params![plan_id,step_index]).map_err(error)?;
+            },
+            Err(message)=>{
+                db.execute("UPDATE import_apply_steps SET status='FAILED',error=? WHERE plan_id=? AND step_index=?",params![message,plan_id,step_index]).map_err(error)?;
+                db.execute("UPDATE import_apply_plans SET status='PARTIAL',updated_at=? WHERE id=?",params![now(),plan_id]).map_err(error)?;
+                db.execute(
+                    "INSERT INTO import_events(batch_id,event_type,actor_id,occurred_at,detail) VALUES(?,?,?,?,?)",
+                    params![batch_id,"APPLY_FAILED",user.staff_id,now(),json!({"planId":plan_id,"stepIndex":step_index,"error":message}).to_string()]
+                ).map_err(error)?;
+                return Err(format!("Import stopped at step {step_index}: {message}"));
+            }
+        }
+    }
+    let mut skipped=db.prepare(
+        "SELECT target_collection,target_id,map_namespace,map_external_id FROM import_apply_steps WHERE plan_id=? AND status='SKIPPED' AND map_namespace IS NOT NULL AND map_external_id IS NOT NULL"
+    ).map_err(error)?;
+    let skipped_maps=skipped.query_map([plan_id],|r|Ok((
+        r.get::<_,String>(0)?,r.get::<_,String>(1)?,r.get::<_,String>(2)?,r.get::<_,String>(3)?
+    ))).map_err(error)?.collect::<std::result::Result<Vec<_>,_>>().map_err(error)?;
+    drop(skipped);
+    for (collection,record_id,namespace,external_id) in skipped_maps {
+        if let Some((prior_collection,prior_id))=db.query_row(
+            "SELECT collection,record_id FROM import_external_ids WHERE namespace=? AND lower(external_id)=lower(?)",
+            params![namespace,external_id],|r|Ok((r.get::<_,String>(0)?,r.get::<_,String>(1)?))
+        ).optional().map_err(error)? {
+            if prior_collection!=collection||prior_id!=record_id { return Err("External ID mapping changed after dry run".into()); }
+        } else {
+            db.execute(
+                "INSERT INTO import_external_ids(namespace,external_id,collection,record_id,batch_id,created_at) VALUES(?,?,?,?,?,?)",
+                params![namespace,external_id,collection,record_id,batch_id,now()]
+            ).map_err(error)?;
+        }
+    }
+
+    let finished=now();
+    db.execute("UPDATE import_apply_plans SET status='APPLIED',updated_at=? WHERE id=?",params![finished,plan_id]).map_err(error)?;
+    db.execute("UPDATE import_batches SET status='APPLIED',updated_at=? WHERE id=?",params![finished,batch_id]).map_err(error)?;
+    db.execute(
+        "INSERT INTO import_events(batch_id,event_type,actor_id,occurred_at,detail) VALUES(?,?,?,?,?)",
+        params![batch_id,"BATCH_APPLIED",user.staff_id,finished,json!({"planId":plan_id}).to_string()]
+    ).map_err(error)?;
+    import_plan_detail(db,token,plan_id)
 }
 
 pub fn snapshot(db: &Connection, token: &str) -> Result<Value> {

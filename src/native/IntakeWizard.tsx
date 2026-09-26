@@ -2,6 +2,8 @@ import React, { useMemo, useState } from 'react';
 import type { IntakeProfile } from '../types/runtime';
 import { useRuntime } from '../runtime/RuntimeProvider';
 import { buttonClass, fieldClass, primaryButtonClass } from './records';
+import { parseBusinessIntakeCsv } from './intakeCsv';
+import { IMPORT_TEMPLATES } from './importTemplates';
 
 const defaults: IntakeProfile = {
   business: { tradingName: '', legalName: '', registrationNumber: '', kraPin: '', phone: '', email: '', address: '' },
@@ -20,6 +22,7 @@ const validEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.tr
 export const IntakeWizard = () => {
   const runtime = useRuntime();
   const saved = runtime.status?.intakeProfile;
+  const [csvMessage,setCsvMessage]=useState('');
   const [profile, setProfile] = useState<IntakeProfile>({
     ...defaults,
     ...(saved || {}),
@@ -71,6 +74,9 @@ export const IntakeWizard = () => {
         ? (p[key] as string[]).filter(x => x !== value)
         : [...(p[key] as string[]), value]
     }));
+
+  const loadBusinessCsv=async(file?:File)=>{if(!file)return;try{const business=parseBusinessIntakeCsv(await file.text());setProfile(p=>({...p,business,importMode:'CSV'}));setCsvMessage('business.csv loaded. Review the identity fields before confirmation.')}catch(e){setCsvMessage(String(e))}};
+  const downloadBusinessTemplate=()=>{const t=IMPORT_TEMPLATES.find(x=>x.key==='business')!;const u=URL.createObjectURL(new Blob([t.csv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=u;a.download=t.fileName;a.click();window.setTimeout(()=>URL.revokeObjectURL(u),1000)};
 
   const identityReady =
     !!profile.business.tradingName.trim() &&
@@ -147,6 +153,7 @@ export const IntakeWizard = () => {
           <label>Service areas<input className={fieldClass} value={profile.serviceAreas.join(', ')} onChange={e => set('serviceAreas', split(e.target.value))} /></label>
           <label>Stock areas<input className={fieldClass} value={profile.stockAreas.join(', ')} onChange={e => set('stockAreas', split(e.target.value))} /></label>
           <label>Existing data<select className={fieldClass} value={profile.importMode} onChange={e => set('importMode', e.target.value as IntakeProfile['importMode'])}><option value="MANUAL">Manual entry</option><option value="CSV">CSV import</option><option value="EMPTY">Start empty</option></select></label>
+          {profile.importMode==='CSV'&&<div className="rounded-xl border border-slate-700 p-3 text-sm"><div className="font-semibold">Business identity CSV</div><p className="mt-1 text-xs text-slate-500">Load business.csv to prefill identity only. Owner and administrator authorization remain manual.</p><div className="mt-2 flex flex-wrap gap-2"><button type="button" className={buttonClass} onClick={downloadBusinessTemplate}>Download business.csv</button><label className={buttonClass+' cursor-pointer'}>Load business.csv<input className="hidden" type="file" accept=".csv,text/csv" onChange={e=>{const file=e.target.files?.[0];void loadBusinessCsv(file);e.currentTarget.value=''}}/></label></div>{csvMessage&&<p className="mt-2 text-xs text-amber-200">{csvMessage}</p>}</div>}
           <label>Intended go-live date<input type="date" className={fieldClass} value={profile.intendedGoLiveDate || ''} onChange={e => set('intendedGoLiveDate', e.target.value)} /></label>
           <div className="grid grid-cols-2 gap-3"><label>Managers<input type="number" min="1" className={fieldClass} value={profile.estimatedManagers} onChange={e => set('estimatedManagers', Number(e.target.value))} /></label><label>Operators<input type="number" min="1" className={fieldClass} value={profile.estimatedOperators} onChange={e => set('estimatedOperators', Number(e.target.value))} /></label></div>
           <div className="grid grid-cols-2 gap-3"><label className="flex items-center gap-2"><input type="checkbox" checked={profile.tracksSpiritsByMl} onChange={e => set('tracksSpiritsByMl', e.target.checked)} /> Spirit ml control</label><label className="flex items-center gap-2"><input type="checkbox" checked={profile.usesCocktailRecipes} onChange={e => set('usesCocktailRecipes', e.target.checked)} /> Cocktail recipes</label><label className="flex items-center gap-2"><input type="checkbox" checked={profile.hasTables} onChange={e => set('hasTables', e.target.checked)} /> Tables / seating</label><label className="flex items-center gap-2"><input type="checkbox" checked={profile.lateNight} onChange={e => set('lateNight', e.target.checked)} /> Late-night operation</label></div>

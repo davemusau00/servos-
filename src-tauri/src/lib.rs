@@ -504,6 +504,23 @@ fn runtime_import_cancel(state: State<Runtime>, token: String, batch_id: String)
     store::import_cancel(&mut db,&token,&batch_id)
 }
 
+// SERVOS_PATCH_04_CONTROLLED_IMPORT
+#[tauri::command]
+fn runtime_import_plan(state: State<Runtime>, token: String, batch_id: String) -> store::Result<Value> {
+    let mut db=state.db.lock().map_err(|e|e.to_string())?;
+    store::import_plan(&mut db,&token,&batch_id)
+}
+#[tauri::command]
+fn runtime_import_plan_detail(state: State<Runtime>, token: String, plan_id: String) -> store::Result<Value> {
+    let db=state.db.lock().map_err(|e|e.to_string())?;
+    store::import_plan_detail(&db,&token,&plan_id)
+}
+#[tauri::command]
+fn runtime_import_apply(state: State<Runtime>, token: String, plan_id: String) -> store::Result<Value> {
+    let mut db=state.db.lock().map_err(|e|e.to_string())?;
+    store::import_apply(&mut db,&token,&plan_id)
+}
+
 #[tauri::command]
 fn runtime_backup(state: State<Runtime>, token: String) -> store::Result<String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
@@ -708,6 +725,9 @@ pub fn run() {
             runtime_import_detail,
             runtime_import_stage,
             runtime_import_cancel,
+            runtime_import_plan,
+            runtime_import_plan_detail,
+            runtime_import_apply,
             runtime_reconciliation_compare,
             runtime_print_receipt,
             runtime_receipt,

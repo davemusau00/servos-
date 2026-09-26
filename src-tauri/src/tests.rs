@@ -383,6 +383,57 @@ fn import_center_preserves_invalid_rows_and_rejects_credentials() {
     assert!(import_stage(&mut db,&s.token,"employees","employees.csv",secret).is_err());
 }
 
+// SERVOS_PATCH_04_CONTROLLED_IMPORT
+#[test]
+fn controlled_import_dry_run_and_apply_use_domain_commands_and_are_idempotent() {
+    let (_, mut db, s)=setup();
+    let csv="external_id,name,phone,email,credit_limit,notes,active\ncustomer-import-1,Imported Customer,+254700100100,imported@example.com,0,Migration,true\n";
+    let batch=import_stage(&mut db,&s.token,"customers","customers.csv",csv).unwrap();
+    let before:(i64,i64,i64)=db.query_row(
+        "SELECT (SELECT COUNT(*) FROM commands),(SELECT COUNT(*) FROM audit),(SELECT COUNT(*) FROM outbox)",
+        [],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?))
+    ).unwrap();
+    let plan=import_plan(&mut db,&s.token,batch["id"].as_str().unwrap()).unwrap();
+    assert_eq!(plan["status"],"READY"); assert_eq!(plan["summary"]["create"],1);
+    let plan_id=plan["id"].as_str().unwrap().to_string();
+    assert_eq!(import_apply(&mut db,&s.token,&plan_id).unwrap()["status"],"APPLIED");
+    let after:(i64,i64,i64)=db.query_row(
+        "SELECT (SELECT COUNT(*) FROM commands),(SELECT COUNT(*) FROM audit),(SELECT COUNT(*) FROM outbox)",
+        [],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?))
+    ).unwrap();
+    assert_eq!(after.0,before.0+1);assert_eq!(after.1,before.1+1);assert_eq!(after.2,before.2+1);
+    assert_eq!(import_apply(&mut db,&s.token,&plan_id).unwrap()["status"],"APPLIED");
+    let rerun=import_stage(&mut db,&s.token,"customers","customers.csv",csv).unwrap();
+    let rerun_plan=import_plan(&mut db,&s.token,rerun["id"].as_str().unwrap()).unwrap();
+    assert_eq!(rerun_plan["summary"]["noChange"],1);
+    let rerun_id=rerun_plan["id"].as_str().unwrap().to_string();
+    assert_eq!(import_apply(&mut db,&s.token,&rerun_id).unwrap()["status"],"APPLIED");
+    assert_eq!(db.query_row::<i64,_,_>("SELECT COUNT(*) FROM import_external_ids WHERE namespace='customers' AND external_id='customer-import-1'",[],|r|r.get(0)).unwrap(),1);
+}
+#[test]
+fn controlled_import_blocks_live_opening_inventory_and_deferred_domains() {
+    let (_, mut db, s)=setup();
+    let seed_batch=Uuid::new_v4().to_string();let stamp="2026-09-27T00:00:00Z";
+    db.execute(
+        "INSERT INTO import_batches(id,template_key,file_name,status,created_by,created_at,updated_at,row_count,valid_count,invalid_count,source_hash,headers,notes) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        rusqlite::params![seed_batch,"stock_locations","seed.csv","APPLIED",s.staff_id,stamp,stamp,0,0,0,"seed","[]",""]
+    ).unwrap();
+    db.execute(
+        "INSERT INTO import_external_ids(namespace,external_id,collection,record_id,batch_id,created_at) VALUES('stock_locations','stock-main','stockLocations','main',?,?)",
+        rusqlite::params![seed_batch,stamp]
+    ).unwrap();
+    let inventory="external_id,stock_item_external_id,stock_item_name,code,barcode,base_unit,location_external_id,opening_quantity,average_unit_cost,reorder_level\ninventory-live,stock-live,Live Stock,LIVE1,,unit,stock-main,10,5,2\n";
+    let batch=import_stage(&mut db,&s.token,"inventory","inventory.csv",inventory).unwrap();
+    let plan=import_plan(&mut db,&s.token,batch["id"].as_str().unwrap()).unwrap();
+    assert_eq!(plan["status"],"BLOCKED");
+    assert!(plan["steps"].as_array().unwrap().iter().any(|x|x["reason"].as_str().unwrap().contains("after Go Live")));
+    let rooms="external_id,name,code,capacity_adults,capacity_children,base_rate,active\nroomtype-x,Suite,SUITE,2,0,10000,true\n";
+    let room_batch=import_stage(&mut db,&s.token,"room_types","room_types.csv",rooms).unwrap();
+    let room_plan=import_plan(&mut db,&s.token,room_batch["id"].as_str().unwrap()).unwrap();
+    assert_eq!(room_plan["status"],"BLOCKED");
+    assert!(room_plan["steps"][0]["reason"].as_str().unwrap().contains("Patch 05"));
+}
+
 #[test]
 fn audit_cannot_be_modified() {
     let (_, db, _) = setup();

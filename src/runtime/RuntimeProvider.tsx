@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import type { ReceiptResponse, ReceiptSummary } from '../types/receipt';
-import type { ImportBatchDetail, ImportBatchSummary, StageImportInput } from '../types/imports';
+import type { ImportApplyPlan, ImportBatchDetail, ImportBatchSummary, StageImportInput } from '../types/imports';
 import type { BusinessCommand, CommandResult, IntakeProfile, ManagerApproval, Permission, PrinterJobResult, ProductionHealthAudit, ReconciliationReport, RuntimeSession, RuntimeSnapshot, RuntimeStatus } from '../types/runtime';
 
 export const isNative = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
@@ -30,6 +30,9 @@ interface RuntimeContextValue {
   importBatch: (id: string) => Promise<ImportBatchDetail>;
   stageImport: (input: StageImportInput) => Promise<ImportBatchDetail>;
   cancelImport: (id: string) => Promise<void>;
+  planImport: (batchId: string) => Promise<ImportApplyPlan>;
+  importPlan: (planId: string) => Promise<ImportApplyPlan>;
+  applyImport: (planId: string) => Promise<ImportApplyPlan>;
   reconcile: () => Promise<ReconciliationReport>;
   receipt: (orderId: string, receiptId?: string) => Promise<ReceiptResponse>;
   receiptHistory: () => Promise<ReceiptSummary[]>;
@@ -176,6 +179,21 @@ export const RuntimeProvider = ({ children }: { children: React.ReactNode }) => 
     if (!session) throw new Error('Unlock the terminal first');
     await invoke('runtime_import_cancel', { token: session.token, batchId: id });
   };
+  // SERVOS_PATCH_04_CONTROLLED_IMPORT
+  const planImport = async (batchId: string) => {
+    if (!session) throw new Error('Unlock the terminal first');
+    return invoke<ImportApplyPlan>('runtime_import_plan', { token: session.token, batchId });
+  };
+  const importPlan = async (planId: string) => {
+    if (!session) throw new Error('Unlock the terminal first');
+    return invoke<ImportApplyPlan>('runtime_import_plan_detail', { token: session.token, planId });
+  };
+  const applyImport = async (planId: string) => {
+    if (!session) throw new Error('Unlock the terminal first');
+    const result=await invoke<ImportApplyPlan>('runtime_import_apply', { token: session.token, planId });
+    await refresh();
+    return result;
+  };
   const receipt = async (orderId: string, receiptId?: string) => {
     if (!session) throw new Error('Unlock the terminal first');
     return invoke<ReceiptResponse>('runtime_receipt', { token: session.token, orderId, receiptId: receiptId || null });
@@ -214,5 +232,5 @@ export const RuntimeProvider = ({ children }: { children: React.ReactNode }) => 
     return () => { clearInterval(timer); window.removeEventListener('pointerdown', active); window.removeEventListener('keydown', active); window.removeEventListener('online', resume); window.removeEventListener('servos:local-commit', resume); document.removeEventListener('visibilitychange', resume); };
   }, [session, sync, lock]);
 
-  return <RuntimeContext.Provider value={{ status, session, snapshot, error, syncing, busy, reloadStatus, saveIntake, completeIntake, reopenIntake, enroll, login, lock, refresh, command, approve, sync, backup, healthAudit, importBatches, importBatch, stageImport, cancelImport, reconcile, receipt, receiptHistory, printReceipt, testPrinter, retryPrinterJob, printerJobs, clearError: () => setError('') }}>{children}</RuntimeContext.Provider>;
+  return <RuntimeContext.Provider value={{ status, session, snapshot, error, syncing, busy, reloadStatus, saveIntake, completeIntake, reopenIntake, enroll, login, lock, refresh, command, approve, sync, backup, healthAudit, importBatches, importBatch, stageImport, cancelImport, planImport, importPlan, applyImport, reconcile, receipt, receiptHistory, printReceipt, testPrinter, retryPrinterJob, printerJobs, clearError: () => setError('') }}>{children}</RuntimeContext.Provider>;
 };
