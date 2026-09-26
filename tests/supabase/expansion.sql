@@ -8,7 +8,7 @@ select public.servos_v2_register_device('10000000-0000-4000-8000-000000000001','
 select public.servos_v2_register_device('10000000-0000-4000-8000-000000000002','Browser','WEB');
 reset role;
 do $$declare c jsonb;failed boolean:=false;begin
- c:=jsonb_build_object('id',extensions.gen_random_uuid(),'schemaVersion',2,'deviceId','10000000-0000-4000-8000-000000000001','actorId','00000000-0000-4000-8000-000000000001','clientSequence',1,'operation','record.save');
+ c:=jsonb_build_object('id',pg_catalog.gen_random_uuid(),'schemaVersion',2,'deviceId','10000000-0000-4000-8000-000000000001','actorId','00000000-0000-4000-8000-000000000001','clientSequence',1,'operation','record.save');
  begin perform public.servos_v2_execute(c);exception when others then failed:=sqlerrm like '%PROTOCOL_DISABLED%';end;
  if not failed then raise exception 'v2 allowed writes before cutover';end if;
 end$$;
@@ -40,7 +40,7 @@ select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000002'
 set local role authenticated;
 select public.servos_v2_register_device('10000000-0000-4000-8000-000000000003','Restricted','WEB');
 do $$declare r jsonb;begin
- r:=public.servos_v2_execute(jsonb_build_object('id',extensions.gen_random_uuid(),'schemaVersion',2,'deviceId','10000000-0000-4000-8000-000000000003','actorId','00000000-0000-4000-8000-000000000002','clientSequence',1,'operation','record.save','expectedVersions',jsonb_build_array(jsonb_build_object('collection','customers','id','forbidden','version',0)),'payload',jsonb_build_object('collection','customers','id','forbidden','data',jsonb_build_object('name','Forbidden'))));
+ r:=public.servos_v2_execute(jsonb_build_object('id',pg_catalog.gen_random_uuid(),'schemaVersion',2,'deviceId','10000000-0000-4000-8000-000000000003','actorId','00000000-0000-4000-8000-000000000002','clientSequence',1,'operation','record.save','expectedVersions',jsonb_build_array(jsonb_build_object('collection','customers','id','forbidden','version',0)),'payload',jsonb_build_object('collection','customers','id','forbidden','data',jsonb_build_object('name','Forbidden'))));
  if r->>'status'<>'REJECTED' or r->'error'->>'code'<>'PERMISSION_DENIED' then raise exception 'permission bypass: %',r;end if;
 end$$;
 reset role;
