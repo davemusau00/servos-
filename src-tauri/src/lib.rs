@@ -497,8 +497,9 @@ fn runtime_print_receipt(state: State<Runtime>, token: String, job_id: String, o
 fn runtime_receipt(state: State<Runtime>, token: String, order_id: String, receipt_id: Option<String>) -> store::Result<Value> {
     let db=state.db.lock().map_err(|e|e.to_string())?;
     let document=store::receipts::load(&db,&token,&order_id,receipt_id.as_deref())?;
-    let profile=printer::PrinterProfile::from_policy(&printer_policy(&db))?;
-    Ok(json!({"document":document,"customerLines":store::receipts::lines(&document,false,profile.columns,false),"businessLines":store::receipts::lines(&document,true,profile.columns,false)}))
+    // A misconfigured printer must not prevent viewing an already-paid receipt.
+    let columns=printer::PrinterProfile::from_policy(&printer_policy(&db)).map(|p|p.columns).unwrap_or(48);
+    Ok(json!({"document":document,"customerLines":store::receipts::lines(&document,false,columns,false),"businessLines":store::receipts::lines(&document,true,columns,false)}))
 }
 
 #[tauri::command]

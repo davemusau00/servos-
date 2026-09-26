@@ -22,10 +22,12 @@ pub fn capture(tx: &Transaction, user: &Session, order_id: &str, command_id: &st
     })).collect();
     let device = meta(tx,"terminal_id")?.unwrap_or_else(||"LOCAL".into());
     let receipt_id = format!("receipt-{command_id}");
+    let sequence=meta(tx,"receipt_sequence")?.and_then(|v|v.parse::<u64>().ok()).unwrap_or(0).checked_add(1).ok_or("Receipt sequence exhausted")?;
+    set_meta(tx,"receipt_sequence",&sequence.to_string())?;
     let total=money(&order,"grandTotal")?;
     let doc=json!({
         "id":receipt_id,"schemaVersion":1,"orderId":order_id,"sourceCommandId":command_id,"deviceId":device,
-        "number":format!("{}-{}",device,command_id),"orderNumber":order["orderNumber"],"issuedAt":now(),
+        "number":format!("{}-{:06}",device,sequence),"orderNumber":order["orderNumber"],"issuedAt":now(),
         "business":{"name":business["name"],"address":property["address"],"phone":property["phone"],"email":property["email"]},
         "outlet":outlet["name"],"cashier":user.name,"table":order["tableName"],"tab":order["tabName"],
         "currency":property["currency"].as_str().unwrap_or("KES"),"timezone":property["timezone"].as_str().unwrap_or("Africa/Nairobi"),

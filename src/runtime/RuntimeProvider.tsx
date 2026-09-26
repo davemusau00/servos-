@@ -114,8 +114,14 @@ export const RuntimeProvider = ({ children }: { children: React.ReactNode }) => 
   const command = useCallback(async (operation: string, payload: Record<string, unknown> = {}, targetVersion?: number) => {
     if (!session) throw new Error('Unlock the terminal first');
     const request: BusinessCommand = { id: crypto.randomUUID(), schemaVersion: 1, operation, payload, targetVersion };
-    try { const result = await invoke<CommandResult>('runtime_command', { token: session.token, command: request }); await refresh(); setError(''); return result; }
+    let result: CommandResult;
+    try { result = await invoke<CommandResult>('runtime_command', { token: session.token, command: request }); }
     catch (e) { report(e); throw e; }
+    // The write has committed. A failed reload must not invite a second payment.
+    try { await refresh(); if (operation.startsWith('staff.')) await reloadStatus(); setError(''); }
+    catch (e) { setError(`Saved locally, but refresh failed. Reload before making another change. ${String(e)}`); }
+    nextSync.current = 0;
+    return result;
   }, [session, refresh, report]);
   const approve = async (approverId: string, pin: string, permission: Permission, target?: string) => {
     if (!session) throw new Error('Unlock the terminal first');
@@ -125,8 +131,8 @@ export const RuntimeProvider = ({ children }: { children: React.ReactNode }) => 
   const sync = useCallback(async () => {
     if (!session || inFlight.current) return;
     inFlight.current = true; setSyncing(true);
-    try { await invoke('runtime_sync', { token: session.token }); failures.current = 0; nextSync.current = Date.now() + 60_000; await refresh(); setError(''); }
-    catch (e) { failures.current += 1; nextSync.current = Date.now() + Math.min(900_000, 30_000 * 2 ** Math.min(failures.current, 5)); report(e); throw e; }
+    try { await invoke('runtime_sync', { token: session.token }); failures.current = 0; nextSync.current = Date.now() + 15_000; await refresh(); setError(''); }
+    catch (e) { failures.current += 1; nextSync.current = Date.now() + Math.min(300_000, 5_000 * 2 ** Math.min(failures.current - 1, 6)); report(e); throw e; }
     finally { inFlight.current = false; setSyncing(false); }
   }, [session, refresh, report]);
   const backup = async () => {
