@@ -1907,6 +1907,85 @@ pub fn list(db: &Connection, collection: &str) -> Result<Vec<Value>> {
         .map_err(error)?;
     rows.map(|r| {let (id,version,data,archived)=r.map_err(error)?; Ok(json!({"collection":collection,"id":id,"version":version,"data":serde_json::from_str::<Value>(&data).map_err(error)?,"archived":archived}))}).collect()
 }
+pub fn production_health_audit(db: &Connection, token: &str) -> Result<Value> {
+    let user = actor(db, token, false)?;
+    if !permissions(&user.role).contains(&"audit.view") {
+        return Err("Audit permission required".into());
+    }
+
+    let schema_version: i64 = db.query_row("PRAGMA user_version", [], |r| r.get(0)).map_err(error)?;
+    let quick_check: String = db.query_row("PRAGMA quick_check", [], |r| r.get(0)).map_err(error)?;
+    let stage = installation_stage(db)?;
+    let terminal_id = meta(db, "terminal_id")?;
+    let last_sync = meta(db, "last_sync")?;
+    let last_backup = meta(db, "last_backup")?;
+    let cloud_configured = meta(db, "cloud_url")?.is_some();
+
+    let staff_total: i64 = db.query_row("SELECT COUNT(*) FROM staff", [], |r| r.get(0)).map_err(error)?;
+    let staff_active: i64 = db.query_row("SELECT COUNT(*) FROM staff WHERE active=1", [], |r| r.get(0)).map_err(error)?;
+    let (record_total, record_active, record_archived): (i64, i64, i64) = db.query_row(
+        "SELECT COUNT(*),COALESCE(SUM(CASE WHEN archived=0 THEN 1 ELSE 0 END),0),COALESCE(SUM(CASE WHEN archived<>0 THEN 1 ELSE 0 END),0) FROM records",
+        [],
+        |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+    ).map_err(error)?;
+    let commands: i64 = db.query_row("SELECT COUNT(*) FROM commands", [], |r| r.get(0)).map_err(error)?;
+    let (audit_entries, first_audit, last_audit): (i64, Option<i64>, Option<i64>) = db.query_row(
+        "SELECT COUNT(*),MIN(sequence),MAX(sequence) FROM audit", [], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?))
+    ).map_err(error)?;
+    let (outbox_total, outbox_pending, outbox_acknowledged, last_outbox): (i64, i64, i64, i64) = db.query_row(
+        "SELECT COUNT(*),COALESCE(SUM(CASE WHEN acknowledged_at IS NULL THEN 1 ELSE 0 END),0),COALESCE(SUM(CASE WHEN acknowledged_at IS NOT NULL THEN 1 ELSE 0 END),0),COALESCE(MAX(sequence),0) FROM outbox",
+        [],
+        |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
+    ).map_err(error)?;
+    let remote_requests: i64 = db.query_row("SELECT COUNT(*) FROM remote_requests", [], |r| r.get(0)).map_err(error)?;
+    let open_tills: i64 = db.query_row(
+        "SELECT COUNT(*) FROM records WHERE collection='tillSessions' AND archived=0 AND json_extract(data,'$.status')='OPEN'",
+        [], |r| r.get(0)
+    ).map_err(error)?;
+
+    let collections = {
+        let mut stmt = db.prepare("SELECT collection,COALESCE(SUM(CASE WHEN archived=0 THEN 1 ELSE 0 END),0),COALESCE(SUM(CASE WHEN archived<>0 THEN 1 ELSE 0 END),0),COALESCE(MAX(version),0) FROM records GROUP BY collection ORDER BY collection").map_err(error)?;
+        let rows = stmt.query_map([], |r| Ok(json!({
+            "collection": r.get::<_, String>(0)?,
+            "active": r.get::<_, i64>(1)?,
+            "archived": r.get::<_, i64>(2)?,
+            "maxVersion": r.get::<_, i64>(3)?,
+        }))).map_err(error)?;
+        rows.collect::<std::result::Result<Vec<_>, _>>().map_err(error)?
+    };
+    let manifest = {
+        let mut stmt = db.prepare("SELECT collection,id,version,archived FROM records ORDER BY collection,id").map_err(error)?;
+        let rows = stmt.query_map([], |r| Ok(json!({
+            "collection": r.get::<_, String>(0)?,
+            "id": r.get::<_, String>(1)?,
+            "version": r.get::<_, i64>(2)?,
+            "archived": r.get::<_, bool>(3)?,
+        }))).map_err(error)?;
+        rows.collect::<std::result::Result<Vec<_>, _>>().map_err(error)?
+    };
+
+    let mut warnings: Vec<String> = vec![];
+    if quick_check != "ok" { warnings.push(format!("SQLite quick_check returned: {quick_check}")); }
+    if stage != "LIVE" { warnings.push(format!("Installation stage is {stage}, not LIVE")); }
+    if terminal_id.is_none() { warnings.push("Terminal identity is missing".into()); }
+    if last_backup.is_none() { warnings.push("No successful local backup is recorded".into()); }
+    if outbox_pending > 0 { warnings.push(format!("{outbox_pending} local operation(s) are still pending cloud acknowledgement")); }
+    if !cloud_configured { warnings.push("Cloud synchronization is not configured".into()); }
+    if open_tills > 0 { warnings.push("A till is currently open; take migration checkpoints after close where operationally possible".into()); }
+
+    Ok(json!({
+        "mode": "READ_ONLY_LOCAL_AUDIT",
+        "generatedAt": now(),
+        "appVersion": env!("CARGO_PKG_VERSION"),
+        "database": {"schemaVersion": schema_version, "quickCheck": quick_check},
+        "installation": {"stage": stage, "terminalId": terminal_id, "cloudConfigured": cloud_configured, "lastSync": last_sync, "lastBackup": last_backup},
+        "staff": {"total": staff_total, "active": staff_active},
+        "operations": {"commands": commands, "auditEntries": audit_entries, "firstAuditSequence": first_audit, "lastAuditSequence": last_audit, "outboxTotal": outbox_total, "outboxPending": outbox_pending, "outboxAcknowledged": outbox_acknowledged, "lastOutboxSequence": last_outbox, "remoteRequests": remote_requests, "openTills": open_tills},
+        "records": {"total": record_total, "active": record_active, "archived": record_archived, "collections": collections, "manifest": manifest},
+        "warnings": warnings,
+    }))
+}
+
 pub fn snapshot(db: &Connection, token: &str) -> Result<Value> {
     let user=actor(db,token,false)?;
     let mut records=vec![];

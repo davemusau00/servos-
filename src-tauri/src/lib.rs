@@ -394,6 +394,12 @@ async fn sync_inner(state: &Runtime, token: &str) -> store::Result<Value> {
     Ok(result)
 }
 #[tauri::command]
+fn runtime_health_audit(state: State<Runtime>, token: String) -> store::Result<Value> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    store::production_health_audit(&db, &token)
+}
+
+#[tauri::command]
 fn runtime_backup(state: State<Runtime>, token: String) -> store::Result<String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
     let actor = store::actor(&db, &token, true)?;
@@ -592,6 +598,7 @@ pub fn run() {
             runtime_enroll,
             runtime_sync,
             runtime_backup,
+            runtime_health_audit,
             runtime_print_receipt,
             runtime_receipt,
             runtime_receipt_history,

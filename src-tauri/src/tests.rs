@@ -259,6 +259,34 @@ fn pin_throttling_is_persistent() {
     assert!(login(&reopened, &s.staff_id, "827193").is_err());
 }
 #[test]
+fn production_health_audit_is_read_only_and_excludes_secrets() {
+    let (_, db, s) = setup();
+    set_meta(&db, "cloud_url", "https://example.supabase.co").unwrap();
+    set_meta(&db, "cloud_key", "secret-cloud-key").unwrap();
+    set_meta(&db, "device_token", "secret-device-token").unwrap();
+    let before: (i64, i64, i64, i64) = db.query_row(
+        "SELECT (SELECT COUNT(*) FROM records),(SELECT COUNT(*) FROM commands),(SELECT COUNT(*) FROM audit),(SELECT COUNT(*) FROM outbox)",
+        [],
+        |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
+    ).unwrap();
+    let health = production_health_audit(&db, &s.token).unwrap();
+    assert_eq!(health["mode"], "READ_ONLY_LOCAL_AUDIT");
+    assert_eq!(health["database"]["quickCheck"], "ok");
+    assert_eq!(health["installation"]["stage"], "LIVE");
+    assert_eq!(health["installation"]["cloudConfigured"], true);
+    assert!(health["records"]["manifest"].as_array().unwrap().len() > 0);
+    let rendered = health.to_string();
+    assert!(!rendered.contains("secret-cloud-key"));
+    assert!(!rendered.contains("secret-device-token"));
+    let after: (i64, i64, i64, i64) = db.query_row(
+        "SELECT (SELECT COUNT(*) FROM records),(SELECT COUNT(*) FROM commands),(SELECT COUNT(*) FROM audit),(SELECT COUNT(*) FROM outbox)",
+        [],
+        |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
+    ).unwrap();
+    assert_eq!(before, after);
+}
+
+#[test]
 fn audit_cannot_be_modified() {
     let (_, db, _) = setup();
     assert!(db.execute("DELETE FROM audit", []).is_err());

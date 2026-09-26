@@ -50,6 +50,19 @@ export interface RuntimeStatus {
   staff: Array<{ id: string; name: string; role: StaffRole }>;
   intakeProfile?: IntakeProfile | null;
 }
+export interface ProductionHealthCollection { collection: string; active: number; archived: number; maxVersion: number }
+export interface ProductionHealthRecordVersion { collection: string; id: string; version: number; archived: boolean }
+export interface ProductionHealthAudit {
+  mode: 'READ_ONLY_LOCAL_AUDIT';
+  generatedAt: string;
+  appVersion: string;
+  database: { schemaVersion: number; quickCheck: string };
+  installation: { stage: InstallationStage; terminalId: string | null; cloudConfigured: boolean; lastSync: string | null; lastBackup: string | null };
+  staff: { total: number; active: number };
+  operations: { commands: number; auditEntries: number; firstAuditSequence: number | null; lastAuditSequence: number | null; outboxTotal: number; outboxPending: number; outboxAcknowledged: number; lastOutboxSequence: number; remoteRequests: number; openTills: number };
+  records: { total: number; active: number; archived: number; collections: ProductionHealthCollection[]; manifest: ProductionHealthRecordVersion[] };
+  warnings: string[];
+}
 export type PrinterJobState = 'SENT' | 'QUEUED' | 'DELIVERY_UNCERTAIN' | 'SENDING' | 'OS_DIALOG' | 'MANUAL';
 export interface PrinterJobResult { jobId?: string; orderId?: string; state: PrinterJobState; message?: string; createdAt?: string }
 export interface IntakeBusinessIdentity {

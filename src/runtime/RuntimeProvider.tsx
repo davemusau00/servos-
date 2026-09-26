@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import type { ReceiptResponse, ReceiptSummary } from '../types/receipt';
-import type { BusinessCommand, CommandResult, IntakeProfile, ManagerApproval, Permission, PrinterJobResult, RuntimeSession, RuntimeSnapshot, RuntimeStatus } from '../types/runtime';
+import type { BusinessCommand, CommandResult, IntakeProfile, ManagerApproval, Permission, PrinterJobResult, ProductionHealthAudit, RuntimeSession, RuntimeSnapshot, RuntimeStatus } from '../types/runtime';
 
 export const isNative = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
 
@@ -24,6 +24,7 @@ interface RuntimeContextValue {
   approve: (approverId: string, pin: string, permission: Permission, target?: string) => Promise<ManagerApproval>;
   sync: () => Promise<void>;
   backup: () => Promise<string>;
+  healthAudit: () => Promise<ProductionHealthAudit>;
   receipt: (orderId: string, receiptId?: string) => Promise<ReceiptResponse>;
   receiptHistory: () => Promise<ReceiptSummary[]>;
   printReceipt: (input: { orderId: string; receiptId: string; reprint: boolean }) => Promise<PrinterJobResult>;
@@ -141,6 +142,11 @@ export const RuntimeProvider = ({ children }: { children: React.ReactNode }) => 
     try { const path = await invoke<string>('runtime_backup', { token: session.token }); await refresh(); return path; }
     catch (e) { report(e); throw e; }
   };
+  const healthAudit = async () => {
+    if (!session) throw new Error('Unlock the terminal first');
+    try { return await invoke<ProductionHealthAudit>('runtime_health_audit', { token: session.token }); }
+    catch (e) { report(e); throw e; }
+  };
   const receipt = async (orderId: string, receiptId?: string) => {
     if (!session) throw new Error('Unlock the terminal first');
     return invoke<ReceiptResponse>('runtime_receipt', { token: session.token, orderId, receiptId: receiptId || null });
@@ -179,5 +185,5 @@ export const RuntimeProvider = ({ children }: { children: React.ReactNode }) => 
     return () => { clearInterval(timer); window.removeEventListener('pointerdown', active); window.removeEventListener('keydown', active); window.removeEventListener('online', resume); window.removeEventListener('servos:local-commit', resume); document.removeEventListener('visibilitychange', resume); };
   }, [session, sync, lock]);
 
-  return <RuntimeContext.Provider value={{ status, session, snapshot, error, syncing, busy, reloadStatus, saveIntake, completeIntake, reopenIntake, enroll, login, lock, refresh, command, approve, sync, backup, receipt, receiptHistory, printReceipt, testPrinter, retryPrinterJob, printerJobs, clearError: () => setError('') }}>{children}</RuntimeContext.Provider>;
+  return <RuntimeContext.Provider value={{ status, session, snapshot, error, syncing, busy, reloadStatus, saveIntake, completeIntake, reopenIntake, enroll, login, lock, refresh, command, approve, sync, backup, healthAudit, receipt, receiptHistory, printReceipt, testPrinter, retryPrinterJob, printerJobs, clearError: () => setError('') }}>{children}</RuntimeContext.Provider>;
 };
