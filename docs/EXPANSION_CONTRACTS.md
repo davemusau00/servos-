@@ -39,6 +39,16 @@ SQLite/IndexedDB atomically commit effects plus queue. Initial online login and 
 
 Browser storage scoped by business/device/schema, minimum authorized data, persistent-storage request and durable write/read probe. Disable offline finalization if storage fails. Cache versioned shell only, not arbitrary authenticated responses. Upgrades preserve queues and compatible caches. Browser closure is not promised background sync. Recovery export warns about sensitive content.
 
+## Authenticated web activation and bootstrap
+
+After online authentication the client asks `servos_v2_session` for server-controlled activation, business ID, actor and current permission policy fingerprint. Only an enabled server selects the transactional workspace. Missing v2 endpoints or a disabled pre-cutover server retain the legacy manager UI; errors and revoked membership never silently fall back to a different authorization model.
+
+Device identity is a generated UUID stored per business/operator in browser storage and registered online. Durable queue sequence comes from the server on first registration; existing local sequences ahead of the server retain their pending commands. A server sequence ahead of local history requires recovery, never automatic deletion. Cross-tab synchronization uses the existing Web Locks coordinator.
+
+Initial authorized records load through keyset-paginated snapshots tied to a server cursor and permission fingerprint. A changed cursor/policy invalidates the in-progress snapshot and triggers bounded retry. All pages replace the local read model and cursor in one IndexedDB transaction; drafts and queued commands are preserved. On reconnect the client checks policy before uploading or showing cached records. Permission changes rebuild the authorized read model. This is active-browser synchronization, not offline unlock or permission grants.
+
+Until signed grants exist, disconnected actions save drafts; they never report offline-finalized business effects. Online submissions first persist a stable command in the durable queue, then upload and pull changes. UI distinguishes waiting, rejected/conflicting and synchronized results. Logout clears in-memory session/display data and closes storage without erasing pending work. The initial transactional workspace covers the implemented room/asset flows; remaining modules and desktop convergence retain explicit ledger gaps.
+
 ## Migration/recovery
 
 Backup, drain legacy outbox, checkpoint, import IDs/history/balances, register devices, allocate rights, disable old uploader, enable v2. Never both writers/protocols together. Before v2 writes, legacy rollback may restore checkpoint. After v2 writes, forward repair or coordinated restore/replay with old devices fenced and uncertain allocations quarantined. Verify record counts, balances, audit continuity and pending operations. Browser storage is not the only backup.

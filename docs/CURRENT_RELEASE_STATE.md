@@ -8,6 +8,8 @@ The accepted target now includes shared desktop/Vercel operations with allocated
 
 Receipt documents now capture atomically with payments, preserve cash/change/header snapshots, reject mutation, and support history/reprint with full 80mm previews and fixed attribution. Native identity/tax/payment/printer settings editors are present. The staged cloud master-command/allocation foundation and browser IndexedDB queue have isolated tests; they are not connected as a production multi-writer application. Service-worker shell caching is opt-in and does not enable offline sales. See [current expansion ledger](COMPLETION_LEDGER.md).
 
+Staged cloud domain source now also includes room/rate masters, reservations/availability blocks/housekeeping, Assets custody/lifecycle and shared maintenance with atomic stock, journal and payable effects. Stay/folio source adds check-in/out, moves, paid extensions, accommodation-period posting, deposits/application, manual settlement and unpaid charge reversal. Disposable PostgreSQL checks cover the implemented handlers and restricted read projections. Refund/credit/POS/receipt integration, authenticated operational UI, signed offline grants, device handover and migration acceptance remain open. These additions do not enable production web transactions or establish full Rooms/Assets delivery.
+
 ## Implemented in source
 
 - Native installation state machine from intake through Go Live.

@@ -1,6 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { readFileSync, readdirSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
+import { testRoomConcurrency } from '../tests/supabase/concurrency.mjs';
 
 const container = `servos-policy-test-${randomUUID()}`;
 const run = (args, input) => {
@@ -19,11 +20,12 @@ try {
   }
   if (!ready) throw new Error('Disposable PostgreSQL did not start');
   const files = ['tests/supabase/bootstrap.sql', ...readdirSync('supabase/migrations').filter(f => f.endsWith('.sql')).sort().map(f => `supabase/migrations/${f}`), 'tests/supabase/protocol.sql'];
-  if (process.argv.includes('--expansion')) files.push(...readdirSync('supabase/expansion').filter(f=>f.endsWith('.sql')).sort().map(f=>`supabase/expansion/${f}`),'tests/supabase/expansion.sql','tests/supabase/allocations.sql');
+  if (process.argv.includes('--expansion')) files.push(...readdirSync('supabase/expansion').filter(f=>f.endsWith('.sql')).sort().map(f=>`supabase/expansion/${f}`),'tests/supabase/expansion.sql','tests/supabase/allocations.sql','tests/supabase/assets.sql','tests/supabase/rooms.sql','tests/supabase/folios.sql','tests/supabase/web-session.sql');
   for (const file of files) {
     run(['exec', '-i', container, 'psql', '-U', 'postgres', '-v', 'ON_ERROR_STOP=1'], readFileSync(file, 'utf8'));
     console.log(`Passed: ${file}`);
   }
+  if (process.argv.includes('--expansion')) await testRoomConcurrency(container);
 } finally {
   if (started) run(['stop', container]);
 }

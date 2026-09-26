@@ -25,11 +25,14 @@ When a target-machine check passes, add the commit, OS/device, exact command, da
 | Native receipt documents/layout/history | implemented | payment-transaction capture, cash/change, immutable migration, history/reprint, both copies/footer, print portal; native/browser tests passed; physical output pending |
 | Live business settings | identity, tax/message, payment methods and printer/till editors implemented | atomic identity/version and printer validation tested; broader settings remain pending |
 | Vercel provisioning | config, authenticated production entry, explicit demo flag | no Vercel deployment performed; web remains existing remote manager |
-| Cloud v2 protocol | staged master-command foundation | disposable PostgreSQL tests passed; supports customers/suppliers/room types/asset categories only; production disabled |
+| Cloud v2 protocol | staged command dispatcher and permission-filtered feed | disposable PostgreSQL tests passed for protocol and domain handlers; production disabled |
 | Allocations | private stock/interval/custody primitives | disposable tests passed; signed grants, issuance/handover UI and domain command integration pending |
 | Browser storage/sync | staged IndexedDB queue, pull cursor/tombstones, retry and automatic worker | browser reload/rollback/lost-response tests passed; not wired to live transactional UI |
 | Offline shell | build-generated service worker, opt-in registration | browser offline reload/private-response exclusion tests passed; shell only, not transactional offline rights; queue-aware cache retirement pending |
-| Rooms, Assets and existing-module expansion | specification only | operational commands/UI/end-to-end acceptance pending |
+| Rooms | staged masters, reservations, housekeeping, check-in/out, room moves and paid extensions | disposable database overlap, snapshot, stay/move, paid-extension rollback and booking-race checks passed; UI and end-to-end acceptance pending |
+| Folios | staged accommodation catch-up, services, deposits/application, cash/manual settlement and charge reversals | disposable database replay, revenue/tax/receivable/deposit conservation, checkout and payment-reference checks passed; cloud receipts, refunds, credit/POS transfers and UI remain pending |
+| Assets | staged lifecycle, custody history and maintenance commands | database maintenance stock/journal/payable atomicity and replay checks passed; acquisition integration, UI and end-to-end acceptance pending |
+| Existing-module expansion | specification and existing desktop baseline | cloud operational integration and end-to-end acceptance pending |
 | Multi-device cutover/recovery | not performed | live migration, real two-device trading and replacement-device rehearsal pending |
 
 Baseline and executed checks are recorded in [test evidence](TEST_EVIDENCE.md). See [phase gates](EXPANSION_PLAN.md). The expansion is not complete or deployed.

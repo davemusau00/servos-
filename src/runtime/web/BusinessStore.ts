@@ -55,6 +55,20 @@ export class BusinessStore {
     });
   }
   async cursor():Promise<number>{return this.transaction(['meta'],'readonly',async tx=>(await request(tx.objectStore('meta').get('cursor')) as number|undefined)||0)}
+  async policyVersion():Promise<string|undefined>{return this.transaction(['meta'],'readonly',tx=>request(tx.objectStore('meta').get('policyVersion')))}
+  async replaceSnapshot(records:Array<RecordVersion & {data:Record<string,unknown>;archived:boolean}>,cursor:number,policyVersion:string){
+    if(!Number.isSafeInteger(cursor)||cursor<0||!policyVersion)throw new Error('Invalid authorized snapshot');
+    await this.transaction(['records','meta'],'readwrite',async tx=>{
+      const target=tx.objectStore('records');await request(target.clear());
+      for(const record of records){
+        if(!record.collection||!record.id||!Number.isSafeInteger(record.version)||record.version<1)throw new Error('Invalid snapshot record');
+        await request(target.add(record));
+      }
+      await request(tx.objectStore('meta').put(cursor,'cursor'));
+      await request(tx.objectStore('meta').put(policyVersion,'policyVersion'));
+    });
+  }
+  async drafts():Promise<Array<{id:string;operation:string;payload:Record<string,unknown>;updatedAt:string}>>{return this.transaction(['drafts'],'readonly',tx=>request(tx.objectStore('drafts').getAll()))}
   async applyPage(page:ChangePage){
     await this.transaction(['records','meta'],'readwrite',async tx=>{
       const meta=tx.objectStore('meta');let cursor=(await request(meta.get('cursor')) as number|undefined)||0;
