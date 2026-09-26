@@ -1,5 +1,7 @@
 # Accepted implementation plan — bar-first v2
 
+> Superseded target: the accepted desktop/Vercel expansion is documented in [Expansion implementation plan](EXPANSION_PLAN.md). The historical bar implementation below describes the existing runtime, not the new multi-writer architecture.
+
 ## Product journey
 
 **Install → Intake Wizard → Owner Enrollment → Business Setup Wizard → Go-Live Check → Staff Unlock → Open Till → Operate Bar → Reconcile → Close Day → Backup/Sync → Reports → Help when needed**

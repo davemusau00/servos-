@@ -19,6 +19,12 @@ remote read replica / constrained manager requests
 
 The browser preview is explicitly sample data and is never a production writer. The browser Remote Manager reads replicated records and submits constrained requests that remain pending until the terminal applies and uploads them.
 
+## Accepted replacement architecture (2026-09-26; not yet enabled)
+
+The single-writer model above describes current source, not the accepted target. Vercel React/IndexedDB and Tauri/Rust/SQLite will submit versioned commands to Supabase/PostgreSQL shared transaction authority. Both may commit offline only against device-reserved resources. The legacy snapshot uploader must be disabled at a rehearsed cutover before web writes are enabled.
+
+Decisions: cloud transactional authority; resource reservations rather than silent last-write-wins; atomic local effects/queue; stable command IDs; backend permissions and filtered reads; no privileged VITE secrets; immutable receipt documents from saved transactions. See [implementation](EXPANSION_PLAN.md), [contracts](EXPANSION_CONTRACTS.md), [workflows](EXPANSION_WORKFLOWS.md) and [acceptance](EXPANSION_ACCEPTANCE.md).
+
 ## Authority
 
 - Rust derives actor/role from local session.
