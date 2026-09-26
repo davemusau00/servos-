@@ -75,6 +75,7 @@ test('native checkout provides customer and business receipt copies', async ({ p
   await expect(receipt.getByText('Built By Davemusau.co.ke', {exact:true})).toHaveCount(2);
   await expect(receipt.getByText(/eTIMS|ETR/)).toHaveCount(0);
   expect(await receipt.evaluate(el=>el.scrollWidth<=el.clientWidth)).toBe(true);
+  await page.screenshot({path:test.info().outputPath('receipt-preview.png')});
   await page.emulateMedia({media:'print'});
   await expect(page.locator('#servos-receipt-print')).toBeVisible();
   await expect(page.locator('#servos-receipt-print .native-receipt-copy')).toHaveCount(2);

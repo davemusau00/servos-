@@ -40,3 +40,5 @@ Stock is altered only through explicit movement-producing business commands. Fin
 # Expansion data model
 
 Planned v2 records, uniqueness, money/time representation and migration compatibility are specified in [Expansion contracts](EXPANSION_CONTRACTS.md). Existing structures below remain current until implementation and cutover evidence is recorded.
+
+Implemented receipt additions: `receiptDocuments` in the native records table; immutable UPDATE/DELETE triggers in SQLite migration 003; source command/order/device IDs, device-local receipt sequence, captured header/items/totals/payments, integer minor units. Payments add nullable `cashTenderedMinor` and `changeMinor`; null means unknown/not cash. Original payments without captured receipts are not reconstructed with current identity data. New receipt records join the same audit/outbox transaction as their payments.

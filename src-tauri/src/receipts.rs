@@ -16,7 +16,7 @@ pub fn capture(tx: &Transaction, user: &Session, order_id: &str, command_id: &st
     let items: Vec<Value> = order["items"].as_array().ok_or("Invalid receipt items")?.iter().filter(|i|i["state"]!="VOIDED").map(|i|json!({
         "id":i["id"],"description":i["productName"],"quantity":i["quantity"],
         "unitPriceMinor":(i["unitPrice"].as_f64().unwrap_or(0.0)*100.0).round() as i64,
-        "amountMinor":(i["lineTotal"].as_f64().unwrap_or(0.0)*100.0).round() as i64,
+        "amountMinor":(i["lineTotal"].as_f64().unwrap_or(0.0)*100.0).round() as i64+i["discountMinor"].as_i64().unwrap_or(0),
         "portion":i["portionSnapshot"]["name"],
         "modifiers":i["modifiers"].as_array().map(|mods|mods.iter().filter_map(|m|m["name"].as_str()).collect::<Vec<_>>()).unwrap_or_default()
     })).collect();
@@ -81,7 +81,7 @@ pub fn lines(doc:&Value,business_copy:bool,columns:usize,reprint:bool)->Vec<Stri
     lines.push("-".repeat(width));
     for(label,key)in[("Subtotal","subtotalMinor"),("Discount","discountMinor"),("Net (after discount)","netMinor"),("VAT included","taxMinor"),("Levy included","levyMinor"),("TOTAL","totalMinor")]{
         if ["discountMinor","taxMinor","levyMinor"].contains(&key)&&doc[key].as_i64().unwrap_or(0)==0{continue;}
-        lines.push(pair(label,&format!("{} {}",doc["currency"].as_str().unwrap_or("KES"),amount(&doc[key])),width));
+        lines.push(pair(label,&format!("{} {}{}",doc["currency"].as_str().unwrap_or("KES"),if key=="discountMinor"{"-"}else{""},amount(&doc[key])),width));
     }
     for payment in doc["payments"].as_array().into_iter().flatten(){
         lines.push(pair(payment["tenderType"].as_str().unwrap_or("Payment"),&amount(&payment["amountMinor"]),width));

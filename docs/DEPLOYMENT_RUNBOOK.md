@@ -88,6 +88,10 @@ The scripts require Node/npm, Rust/Cargo and platform Tauri prerequisites. Andro
 
 ## Vercel expansion preparation (planned, not deployed)
 
+Source now includes `vercel.json`. Production browser builds open authenticated Remote Manager; `VITE_ENABLE_DEMO=true` explicitly enables sample UI (browser tests set it only for their own build). `VITE_ENABLE_WEB_OFFLINE=true` opts into shell caching, not offline business finalization. Default is false. Never publish the browser-test demo build as production.
+
+Staged protocol SQL is under `supabase/expansion`, deliberately excluded from normal legacy migrations. `node scripts/test-supabase.mjs --expansion` applies it only to a disposable Docker PostgreSQL instance. Protocol activation remains false and operational sales/rooms/assets adapters are not implemented. Do not run these staged files against the business project as a deployment shortcut.
+
 Host the Vite frontend on Vercel: install `npm ci`, build `npm run build`, output `dist`. Keep preview and production projects/environment values separate; preview must use disposable non-production Supabase data. Only `VITE_SUPABASE_URL` and publishable frontend keys are public. Never place service-role keys, database credentials or device secrets in VITE variables.
 
 Before release: configure Supabase Auth site/redirect URLs for the exact HTTPS app domain; verify login/logout/session expiry, security headers, deep links, shell-cache version and unsupported-client behavior. Production must open authenticated operations; samples require explicit demo configuration. Browser printing uses OS/PDF; direct RAW USB/LAN printing stays desktop or explicitly assigned registered agent.

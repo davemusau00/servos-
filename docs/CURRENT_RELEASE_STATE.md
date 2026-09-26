@@ -6,6 +6,8 @@ Updated: 2026-09-25. **Bar-first source implementation substantially expanded. P
 
 The accepted target now includes shared desktop/Vercel operations with allocated offline rights, Rooms, Assets and integration of existing staff-facing modules. [Documentation package](EXPANSION_PLAN.md) written before application changes. Existing single-terminal source remains active until a verified protocol cutover. No multi-writer, Vercel deployment, Rooms or Assets completion is claimed.
 
+Receipt documents now capture atomically with payments, preserve cash/change/header snapshots, reject mutation, and support history/reprint with full 80mm previews and fixed attribution. Native identity/tax/payment/printer settings editors are present. The staged cloud master-command/allocation foundation and browser IndexedDB queue have isolated tests; they are not connected as a production multi-writer application. Service-worker shell caching is opt-in and does not enable offline sales. See [current expansion ledger](COMPLETION_LEDGER.md).
+
 ## Implemented in source
 
 - Native installation state machine from intake through Go Live.
