@@ -17,3 +17,7 @@ test-results/
 playwright-report/
 
 .playwright-tmp/
+.servos-patch-backup-*/
+.servos-followup-backup-*/
+.servos-hardening-backup-*/
+fix-servos-*.ps1

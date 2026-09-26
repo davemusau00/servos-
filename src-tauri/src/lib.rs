@@ -83,6 +83,13 @@ fn runtime_intake_complete(state: State<Runtime>, profile: Value) -> store::Resu
     store::set_meta(&db,"intake_profile",&profile.to_string())?; store::set_meta(&db,"installation_stage","READY_FOR_ENROLLMENT")?; Ok(profile)
 }
 #[tauri::command]
+fn runtime_intake_reopen(state: State<Runtime>) -> store::Result<()> {
+    let db=state.db.lock().map_err(|e|e.to_string())?;
+    if store::meta(&db,"terminal_id")?.is_some(){return Err("Intake cannot be reopened after enrollment".into());}
+    if store::meta(&db,"intake_profile")?.is_none(){return Err("No saved Intake profile is available".into());}
+    store::set_meta(&db,"installation_stage","INTAKE_IN_PROGRESS")
+}
+#[tauri::command]
 fn runtime_intake_clear(state: State<Runtime>) -> store::Result<()> {
     let db=state.db.lock().map_err(|e|e.to_string())?;
     if store::meta(&db,"terminal_id")?.is_some(){return Err("Intake cannot be cleared after enrollment".into());}
@@ -550,6 +557,7 @@ pub fn run() {
             runtime_status,
             runtime_intake_save,
             runtime_intake_complete,
+            runtime_intake_reopen,
             runtime_intake_clear,
             runtime_login,
             runtime_lock,

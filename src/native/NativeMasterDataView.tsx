@@ -5,7 +5,7 @@ import { ActionDialog } from './ActionDialog';
 import { buttonClass, fieldClass, primaryButtonClass, recordOf, recordsOf } from './records';
 
 type CollectionKey = 'customers' | 'suppliers' | 'outlets' | 'stockLocations';
-type Field = { key:string; label:string; type?:'text'|'email'|'textarea'|'select'; required?:boolean; optionsFrom?:'stockLocations' };
+type Field = { key:string; label:string; type?:'text'|'email'|'textarea'|'select'|'number'; required?:boolean; optionsFrom?:'stockLocations' };
 
 const DEFINITIONS: Array<{
   collection: CollectionKey;
@@ -19,8 +19,9 @@ const DEFINITIONS: Array<{
   { collection:'customers', label:'Customers', permission:'catalog.manage', description:'Reusable customer identities for tabs and service history.', archivable:true, defaults:{name:'',phone:'',email:'',notes:''}, fields:[
     {key:'name',label:'Customer name',required:true},{key:'phone',label:'Phone'},{key:'email',label:'Email',type:'email'},{key:'notes',label:'Notes',type:'textarea'}
   ]},
-  { collection:'suppliers', label:'Suppliers', permission:'procurement.manage', description:'Suppliers used by purchase orders, goods receipts and accounts payable.', archivable:true, defaults:{name:'',code:'',phone:'',email:'',paymentTerms:''}, fields:[
-    {key:'name',label:'Supplier name',required:true},{key:'code',label:'Supplier code',required:true},{key:'phone',label:'Phone'},{key:'email',label:'Email',type:'email'},{key:'paymentTerms',label:'Payment terms',type:'textarea'}
+  { collection:'suppliers', label:'Suppliers', permission:'procurement.manage', description:'Suppliers used by purchase orders, goods receipts and accounts payable.', archivable:true, defaults:{name:'',code:'',phone:'',email:'',contactPerson:'',kraPin:'',paymentTermsDays:0,paymentTerms:''}, fields:[
+    {key:'name',label:'Supplier name',required:true},{key:'code',label:'Supplier code',required:true},{key:'phone',label:'Phone'},{key:'email',label:'Email',type:'email'},
+    {key:'contactPerson',label:'Contact person'},{key:'kraPin',label:'KRA PIN'},{key:'paymentTermsDays',label:'Payment terms (days)',type:'number'},{key:'paymentTerms',label:'Payment terms / notes',type:'textarea'}
   ]},
   { collection:'outlets', label:'Service Areas', permission:'business.configure', description:'Operational service areas. Generic archive is disabled.', archivable:false, defaults:{name:'',code:'',description:'',defaultStockLocationId:''}, fields:[
     {key:'name',label:'Service area name',required:true},{key:'code',label:'Code'},{key:'defaultStockLocationId',label:'Default stock location',type:'select',required:true,optionsFrom:'stockLocations'},{key:'description',label:'Description',type:'textarea'}
@@ -96,7 +97,7 @@ function MasterEditor({definition,value,stockLocations,onSave,onClose}:{definiti
       {definition.fields.map(field=><label key={field.key} className="block text-sm">{field.label}
         {field.type==='textarea'?<textarea className={fieldClass+' mt-1'} value={v[field.key]||''} onChange={e=>setV({...v,[field.key]:e.target.value})}/>:
         field.type==='select'&&field.optionsFrom==='stockLocations'?<select className={fieldClass+' mt-1'} value={v[field.key]||''} onChange={e=>setV({...v,[field.key]:e.target.value})}><option value="">Choose stock location</option>{stockLocations.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select>:
-        <input type={field.type==='email'?'email':'text'} className={fieldClass+' mt-1'} value={v[field.key]||''} onChange={e=>setV({...v,[field.key]:e.target.value})}/>}
+        <input type={field.type==='email'?'email':field.type==='number'?'number':'text'} min={field.type==='number'?0:undefined} className={fieldClass+' mt-1'} value={v[field.key]??''} onChange={e=>setV({...v,[field.key]:field.type==='number'?Number(e.target.value):e.target.value})}/>}
       </label>)}
       <button disabled={missing} className={primaryButtonClass} onClick={()=>void onSave(v)}>Save</button>
     </div>

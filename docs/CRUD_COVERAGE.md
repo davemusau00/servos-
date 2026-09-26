@@ -27,3 +27,11 @@ A generic editor must never rewrite committed financial, stock, audit or synchro
 ## Concurrency and deletion
 
 Master data uses optimistic record versions. Updates/archive fail with `CONFLICT` when stale. Where removal is appropriate, ServOS archives instead of physically deleting.
+
+
+## Operational relationships
+
+- Customers are reusable master records and may be linked to named POS tabs through `orders.customerId`.
+- Stock items cannot be archived while non-zero stock remains or while an active product, recipe or modifier depends on the stock item.
+- Supplier payment terms use numeric `paymentTermsDays`; Procurement uses that value to calculate invoice due dates.
+- Supplier stock receipts are entered through Procurement. The installed Inventory surface does not expose the legacy direct `inventory.receive` path because purchased stock must preserve PO → GRN → payable → journal integrity.

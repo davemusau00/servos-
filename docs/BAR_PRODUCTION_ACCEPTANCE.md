@@ -10,13 +10,15 @@ Record commit, OS/device, operator, date and evidence for every run.
 - Business Setup resumes after restart.
 - Tax, payments, service areas, stock locations, real catalog, opening stock, staff access and till policy complete.
 - Go Live refuses incomplete configuration and succeeds only after required evidence exists.
+- Complete the required local-backup setup gate before Go Live.
+- Confirm every service area has a valid default stock location before Go Live.
 
 ## Full shift
 
 1. Unlock as operator and open the till.
-2. Create counter quick tab, table order and named tab.
+2. Create a counter quick tab, a customer-linked named tab and a table order.
 3. Sell bottle/unit product, spirit single/double and cocktail with modifier.
-4. Change pre-fire quantity, duplicate a line and repeat a round.
+4. Change pre-fire quantity, duplicate a line, fire the round and use Repeat last round.
 5. Fire and advance items through PREPARING → READY → SERVED.
 6. Transfer and merge a table order with manager approval where required.
 7. Declare waste and transfer stock between locations.

@@ -45,3 +45,14 @@ The confirmed Intake carries business identity, owner identity and the intended 
 Enrollment authenticates the owner online, then the native backend rereads the confirmed Intake from SQLite and creates the initial local `Admin` from that profile. The PIN is validated and Argon2-hashed only during enrollment.
 
 Owner and initial Administrator may be different people. Commissioning evidence is stored as `installationProfile/initial`.
+
+
+### Reopen Intake before enrollment
+
+A saved or previously confirmed Intake may be reopened before terminal enrollment. Reopening moves the installation back to `INTAKE_IN_PROGRESS` without deleting the saved non-secret profile. Intake remains immutable after enrollment.
+
+### First-Go-Live backup gate
+
+`BACKUP_SYNC` is a required setup step. The native backend refuses completion of that step and refuses Go Live until at least one successful consistent SQLite backup has been created on the enrolled terminal.
+
+Service areas may exist without a default stock location while setup is still in progress because stock locations are configured in the following step. Go Live revalidates every active service area and requires a valid default stock location.

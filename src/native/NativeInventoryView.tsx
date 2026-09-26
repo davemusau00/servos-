@@ -11,7 +11,6 @@ export function NativeInventoryView() {
   const snapshot = runtime.snapshot!;
   const stocks = recordsOf(snapshot, 'stockItems');
   const locations = recordsOf(snapshot, 'stockLocations');
-  const suppliers = recordsOf(snapshot, 'suppliers');
   const movements = recordsOf(snapshot, 'stockMovements').slice().reverse().slice(0, 100);
   const [modal, setModal] = useState<string | null>(null);
   const [approval, setApproval] = useState<{ permission: Permission; run: (token: string) => Promise<void> } | null>(null);
@@ -19,8 +18,7 @@ export function NativeInventoryView() {
   const permissions = snapshot.actor.permissions;
   const [form, setForm] = useState({
     stockItemId: stocks[0]?.id || '', locationId: locations[0]?.id || '', toLocationId: locations[1]?.id || '',
-    quantity: 1, countedQty: 0, unitCost: 0, reason: '', supplierId: suppliers[0]?.id || '',
-    deliveryNote: '', invoiceReference: '', scanBarcode: '',
+    quantity: 1, countedQty: 0, reason: '', scanBarcode: '',
   });
 
   const act = async (operation: string, payload: Record<string, unknown>, permission: Permission) => {
@@ -60,9 +58,8 @@ export function NativeInventoryView() {
 
   return <div className="h-full overflow-auto bg-slate-950 p-5 text-white">
     <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-      <div><h1 className="text-2xl font-bold">Inventory</h1><p className="text-sm text-slate-400">Location-driven stock ledger. Every mutation creates an auditable movement.</p></div>
+      <div><h1 className="text-2xl font-bold">Inventory</h1><p className="text-sm text-slate-400">Location-driven stock ledger. Supplier receipts are posted through Procurement so stock, GRN, payable and journal remain one atomic chain.</p></div>
       <div className="flex flex-wrap gap-2">
-        {permissions.includes('inventory.receive') && <button className={primaryButtonClass} onClick={() => setModal('RECEIVE')}>Receive</button>}
         <button className={buttonClass} onClick={() => { setNotice(''); setForm(previous => ({ ...previous, countedQty: 0, scanBarcode: '' })); setModal('COUNT'); }}>Count</button>
         <button className={buttonClass} onClick={() => setModal('TRANSFER')}>Transfer</button>
         <button className={buttonClass} onClick={() => setModal('WASTE')}>Waste</button>
@@ -78,9 +75,8 @@ export function NativeInventoryView() {
     <h2 className="mb-2 mt-6 font-bold">Recent movements</h2>
     <div className="space-y-2">{movements.map((movement: any) => <div key={movement.id} className="grid grid-cols-[1fr_auto] gap-3 rounded-xl border border-slate-800 bg-slate-900 p-3 text-sm"><div><b>{movement.stockItemName}</b> · {movement.locationName}<div className="text-xs text-slate-500">{movement.movementType} · {movement.reasonCode} · {movement.actorName}</div></div><span className={Number(movement.quantityDelta) >= 0 ? 'text-emerald-300' : 'text-rose-300'}>{Number(movement.quantityDelta) > 0 ? '+' : ''}{movement.quantityDelta} {movement.baseUnit}</span></div>)}</div>
 
-    {modal && <ActionDialog title={{ RECEIVE: 'Receive stock', COUNT: 'Physical count', TRANSFER: 'Transfer stock', WASTE: 'Declare waste' }[modal] || modal} onClose={() => setModal(null)}>
-      <InventoryForm modal={modal} form={form} setForm={setForm} stocks={stocks} locations={locations} suppliers={suppliers} onResolveBarcode={resolveBarcode} onSubmit={async () => {
-        if (modal === 'RECEIVE') await act('inventory.receive', { stockItemId: form.stockItemId, locationId: form.locationId, quantity: form.quantity, unitCost: form.unitCost, supplierId: form.supplierId || undefined, deliveryNote: form.deliveryNote, invoiceReference: form.invoiceReference, reason: form.reason || 'Stock receipt' }, 'inventory.receive');
+    {modal && <ActionDialog title={{ COUNT: 'Physical count', TRANSFER: 'Transfer stock', WASTE: 'Declare waste' }[modal] || modal} onClose={() => setModal(null)}>
+      <InventoryForm modal={modal} form={form} setForm={setForm} stocks={stocks} locations={locations} onResolveBarcode={resolveBarcode} onSubmit={async () => {
         if (modal === 'COUNT') await act('inventory.adjust', { stockItemId: form.stockItemId, locationId: form.locationId, countedQty: form.countedQty, reason: form.reason || 'Physical stock count' }, 'inventory.count');
         if (modal === 'WASTE') await act('inventory.waste', { stockItemId: form.stockItemId, locationId: form.locationId, quantity: form.quantity, reason: form.reason || 'Declared waste' }, 'inventory.waste');
         if (modal === 'TRANSFER') await act('inventory.transfer', { stockItemId: form.stockItemId, locationId: form.locationId, toLocationId: form.toLocationId, quantity: form.quantity, reason: form.reason || 'Internal transfer' }, 'inventory.transfer');
@@ -90,8 +86,8 @@ export function NativeInventoryView() {
   </div>;
 }
 
-const InventoryForm = ({ modal, form, setForm, stocks, locations, suppliers, onResolveBarcode, onSubmit }: {
-  modal: string; form: any; setForm: (next: any) => void; stocks: any[]; locations: any[]; suppliers: any[];
+const InventoryForm = ({ modal, form, setForm, stocks, locations, onResolveBarcode, onSubmit }: {
+  modal: string; form: any; setForm: (next: any) => void; stocks: any[]; locations: any[];
   onResolveBarcode: (code: string) => void; onSubmit: () => Promise<void>;
 }) => <div className="space-y-3">
   <label>Stock item<select className={fieldClass} value={form.stockItemId} onChange={event => setForm({ ...form, stockItemId: event.target.value })}>{stocks.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
@@ -101,7 +97,6 @@ const InventoryForm = ({ modal, form, setForm, stocks, locations, suppliers, onR
     <label>Counted quantity in {stocks.find(item => item.id === form.stockItemId)?.baseUnit || 'base units'}<input className={fieldClass} type="number" min="0" step="0.001" value={form.countedQty} onChange={event => setForm({ ...form, countedQty: Number(event.target.value) })} /></label>
     <div className="rounded-xl border border-slate-700 p-3"><label className="block text-sm">Scan stock barcode or SKU<input data-barcode-capture="true" className={fieldClass + ' mt-1 font-mono'} placeholder="Scan or type exact stock code" value={form.scanBarcode} onChange={event => setForm({ ...form, scanBarcode: event.target.value })} /></label><button className={buttonClass + ' mt-2'} disabled={!form.scanBarcode.trim()} onClick={() => onResolveBarcode(form.scanBarcode)}>Apply typed barcode</button><p className="mt-2 text-xs text-slate-500">Each scan adds the item's configured scan quantity in its base unit. No stock changes until you commit.</p></div>
   </> : <label>Quantity<input className={fieldClass} type="number" min="0.001" step="0.001" value={form.quantity} onChange={event => setForm({ ...form, quantity: Number(event.target.value) })} /></label>}
-  {modal === 'RECEIVE' && <><label>Unit cost<input className={fieldClass} type="number" min="0" step="0.01" value={form.unitCost} onChange={event => setForm({ ...form, unitCost: Number(event.target.value) })} /></label><label>Supplier<select className={fieldClass} value={form.supplierId} onChange={event => setForm({ ...form, supplierId: event.target.value })}><option value="">None</option>{suppliers.map(supplier => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}</select></label><input className={fieldClass} placeholder="Delivery note" value={form.deliveryNote} onChange={event => setForm({ ...form, deliveryNote: event.target.value })} /><input className={fieldClass} placeholder="Invoice reference" value={form.invoiceReference} onChange={event => setForm({ ...form, invoiceReference: event.target.value })} /></>}
   {modal !== 'COUNT' && <label>Reason / note<textarea className={fieldClass} value={form.reason} onChange={event => setForm({ ...form, reason: event.target.value })} /></label>}
   <button className={primaryButtonClass} disabled={modal === 'COUNT' && (!form.stockItemId || Number(form.countedQty) < 0)} onClick={() => void onSubmit()}>Commit movement</button>
 </div>;

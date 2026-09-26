@@ -152,7 +152,7 @@ pub fn installation_stage(db: &Connection) -> Result<String> {
 fn live_required(tx: &Transaction, operation: &str) -> Result<()> {
     const TRADING: &[&str] = &[
         "till.open","till.cashMovement","till.close","order.create","order.addItem","order.updateItem",
-        "order.removeItem","order.fire","order.kds","order.transfer","order.merge","order.void","order.discount",
+        "order.removeItem","order.fire","order.kds","order.repeatRound","order.transfer","order.merge","order.void","order.discount",
         "order.compItem","payment.record","payment.split","payment.refund","payment.reverse","mpesa.reconcile","mpesa.discrepancy","mpesa.discrepancy.resolve",
         "inventory.receive","inventory.adjust","inventory.waste","inventory.transfer","purchaseOrder.create","purchaseOrder.receive","supplierPayable.matchInvoice","supplierPayable.pay","table.ready","closeDay.generate"
     ];
@@ -476,7 +476,7 @@ fn build_order_item(tx: &Connection, product_id: &str, payload: &Value, item_id:
         "baseUnitPrice":base_price as f64/100.0,"unitPrice":unit_minor as f64/100.0,"lineTotal":line_minor as f64/100.0,"totalPrice":line_minor as f64/100.0,
         "netMinor":net,"vatMinor":vat,"levyMinor":levy,"taxAmount":vat as f64/100.0,"cateringLevy":levy as f64/100.0,
         "taxPolicySnapshot":policy,"priceRuleSnapshot":rule_snapshot,"portionSnapshot":selected_portion,"modifiers":modifiers,"ingredientSnapshot":ingredients,
-        "state":"OPEN","courseStatus":"HELD","courseName":payload.get("courseName").cloned().unwrap_or(json!("Bar")),"seatLabel":payload.get("seatLabel"),"note":payload.get("note"),
+        "state":"OPEN","courseStatus":"HELD","roundNo":payload.get("roundNo").and_then(Value::as_i64).unwrap_or(1),"courseName":payload.get("courseName").cloned().unwrap_or(json!("Bar")),"seatLabel":payload.get("seatLabel"),"note":payload.get("note"),
         "productSnapshot":product,"productVersion":version,"stockFired":false,"comped":false,"discountMinor":0
     }))
 }
@@ -675,6 +675,17 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
                 {
                     return Err("Resolve remaining stock before archiving".into());
                 }
+                if collection == "stockItems" {
+                    let referenced=list(&tx,"products")?.iter().any(|record|{
+                        let product=&record["data"];
+                        if product["stockItemId"].as_str()==Some(record_id){return true;}
+                        if product["recipeIngredients"].as_array().is_some_and(|items|items.iter().any(|item|item["stockItemId"].as_str()==Some(record_id))){return true;}
+                        product["modifiers"].as_array().is_some_and(|mods|mods.iter().any(|modifier|
+                            modifier["ingredientAdjustments"].as_array().is_some_and(|items|items.iter().any(|item|item["stockItemId"].as_str()==Some(record_id)))
+                        ))
+                    });
+                    if referenced { return Err("This stock item is still referenced by an active product, recipe or modifier".into()); }
+                }
                 tx.execute(
                     "UPDATE records SET archived=1,version=version+1 WHERE collection=? AND id=?",
                     params![collection, record_id],
@@ -712,8 +723,12 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
                     }
                 }
                 if collection == "outlets" {
-                    let location=text(&data,"defaultStockLocationId")?;
-                    get(&tx,"stockLocations",location)?;
+                    let location=data["defaultStockLocationId"].as_str().map(str::trim).filter(|value|!value.is_empty());
+                    if let Some(location)=location {
+                        get(&tx,"stockLocations",location)?;
+                    } else if installation_stage(&tx)=="LIVE" {
+                        return Err("Live service areas require a default stock location".into());
+                    }
                 }
                 if collection == "products" {
                     money(&data, "price")?;
@@ -789,6 +804,9 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
                 "CATALOG" => { if list(&tx,"products")?.is_empty(){return Err("Create at least one sellable product".into());} },
                 "STAFF_ACCESS" => { let admins:i64=tx.query_row("SELECT count(*) FROM staff WHERE active=1 AND role='Admin'",[],|r|r.get(0)).map_err(error)?; if admins<1{return Err("At least one active Admin is required".into());} },
                 "TILL" => { get(&tx,"tillPolicy","main")?; },
+                "BACKUP_SYNC" => {
+                    if meta(&tx,"last_backup")?.is_none(){return Err("Create a successful local backup before completing Backup & synchronization".into());}
+                },
                 _ => {}
             }
             let (_,mut progress)=get(&tx,"businessSetup","business")?;
@@ -797,7 +815,7 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
             progress["completedSteps"]=json!(done.clone());
             progress["currentStep"]=p.get("nextStep").cloned().unwrap_or(json!(step));
             progress["updatedAt"]=json!(now());
-            let required=["BUSINESS_IDENTITY","TAX","PAYMENTS","SERVICE_AREAS","STOCK_LOCATIONS","CATALOG","OPENING_INVENTORY","STAFF_ACCESS","TILL"];
+            let required=["BUSINESS_IDENTITY","TAX","PAYMENTS","SERVICE_AREAS","STOCK_LOCATIONS","CATALOG","OPENING_INVENTORY","STAFF_ACCESS","TILL","BACKUP_SYNC"];
             if required.iter().all(|required_step|done.iter().any(|v|v==*required_step)){set_meta(&tx,"installation_stage","READY_FOR_GO_LIVE")?;}
             put(&tx,"businessSetup","business",progress,&mut changes)?;
         }
@@ -805,16 +823,22 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
             if user.role!="Admin" { return Err("Owner permission required".into()); }
             let (_,property)=get(&tx,"property","property")?;
             if property["taxConfigured"]!=true { return Err("Tax configuration is missing".into()); }
-            if list(&tx,"outlets")?.is_empty(){return Err("No active service area configured".into());}
+            let outlets=list(&tx,"outlets")?;
+            if outlets.is_empty(){return Err("No active service area configured".into());}
             if list(&tx,"stockLocations")?.is_empty(){return Err("No stock location configured".into());}
+            for outlet in &outlets {
+                let location=outlet["data"]["defaultStockLocationId"].as_str().map(str::trim).filter(|value|!value.is_empty()).ok_or("Every service area requires a default stock location before Go Live")?;
+                get(&tx,"stockLocations",location)?;
+            }
             if list(&tx,"products")?.is_empty(){return Err("No products configured".into());}
+            if meta(&tx,"last_backup")?.is_none(){return Err("Create and verify a local backup before Go Live".into());}
             get(&tx,"paymentConfig","main")?;
             get(&tx,"tillPolicy","main")?;
             let admins:i64=tx.query_row("SELECT count(*) FROM staff WHERE active=1 AND role='Admin'",[],|r|r.get(0)).map_err(error)?;
             if admins<1{return Err("No active Admin configured".into());}
             let (_,mut progress)=get(&tx,"businessSetup","business")?;
             let done=progress["completedSteps"].as_array().cloned().unwrap_or_default();
-            let required=["BUSINESS_IDENTITY","TAX","PAYMENTS","SERVICE_AREAS","STOCK_LOCATIONS","CATALOG","OPENING_INVENTORY","STAFF_ACCESS","TILL"];
+            let required=["BUSINESS_IDENTITY","TAX","PAYMENTS","SERVICE_AREAS","STOCK_LOCATIONS","CATALOG","OPENING_INVENTORY","STAFF_ACCESS","TILL","BACKUP_SYNC"];
             let missing:Vec<&str>=required.iter().copied().filter(|s|!done.iter().any(|v|v==*s)).collect();
             if !missing.is_empty(){return Err(format!("Complete required setup steps: {}",missing.join(", ")));}
             progress["completedAt"]=json!(now()); progress["goLiveApprovedAt"]=json!(now()); progress["goLiveApprovedBy"]=json!(user.staff_id); progress["updatedAt"]=json!(now());
@@ -1319,6 +1343,8 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
             let order_id=id();
             let outlet_id=text(p,"outletId")?;
             get(&tx,"outlets",outlet_id)?;
+            let customer_id=p.get("customerId").and_then(Value::as_str).map(str::trim).filter(|value|!value.is_empty());
+            let customer=if let Some(customer_id)=customer_id { Some(get(&tx,"customers",customer_id)?.1) } else { None };
             let table_id=p.get("tableId").and_then(Value::as_str);
             let mut table=None;
             if let Some(t)=table_id {
@@ -1328,18 +1354,49 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
                 if value["outletId"]!=outlet_id{return Err("Select a table in the current outlet".into());}
                 value["currentOrderId"]=json!(order_id); value["state"]=json!("ORDERING"); table=Some((t.to_string(),value));
             }
-            put(&tx,"orders",&order_id,json!({"id":order_id,"orderNumber":format!("ORD-{}",&order_id[..8]),"propertyId":"property","outletId":outlet_id,"tableId":table_id,"tableName":table.as_ref().and_then(|(_,v)|v.get("label")),"items":[],"state":"OPEN","subtotal":0,"discountTotal":0,"taxTotal":0,"cateringLevyTotal":0,"grandTotal":0,"amountPaid":0,"createdAt":now(),"serverEmployeeId":user.staff_id,"serverName":user.name,"terminalId":meta(&tx,"terminal_id")?,"tabName":p.get("name").and_then(Value::as_str).unwrap_or("Walk-in")}),&mut changes)?;
+            let requested_name=p.get("name").and_then(Value::as_str).map(str::trim).filter(|value|!value.is_empty());
+            let tab_name=requested_name.or_else(||customer.as_ref().and_then(|value|value["name"].as_str())).unwrap_or("Walk-in");
+            put(&tx,"orders",&order_id,json!({
+                "id":order_id,"orderNumber":format!("ORD-{}",&order_id[..8]),"propertyId":"property","outletId":outlet_id,
+                "tableId":table_id,"tableName":table.as_ref().and_then(|(_,v)|v.get("label")),"customerId":customer_id,
+                "customerName":customer.as_ref().and_then(|value|value["name"].as_str()),"tabName":tab_name,
+                "items":[],"currentRoundNo":1,"state":"OPEN","subtotal":0,"discountTotal":0,"taxTotal":0,"cateringLevyTotal":0,
+                "grandTotal":0,"amountPaid":0,"createdAt":now(),"serverEmployeeId":user.staff_id,"serverName":user.name,
+                "terminalId":meta(&tx,"terminal_id")?
+            }),&mut changes)?;
             if let Some((key,value))=table{put(&tx,"tables",&key,value,&mut changes)?;}
         }
-        "order.addItem" | "order.updateItem" | "order.removeItem" | "order.fire" | "order.kds" | "order.discount" | "order.compItem" => {
+        "order.addItem" | "order.updateItem" | "order.removeItem" | "order.fire" | "order.kds" | "order.repeatRound" | "order.discount" | "order.compItem" => {
             let order_id=text(p,"orderId")?;
             let (_,mut order)=get(&tx,"orders",order_id)?;
             if ["COMPLETED","VOIDED"].contains(&order["state"].as_str().unwrap_or("")){return Err("Order is closed".into());}
-            if order["amountPaid"].as_f64().unwrap_or(0.0)>0.0 && ["order.addItem","order.updateItem","order.removeItem","order.discount","order.compItem"].contains(&cmd.operation.as_str()){return Err("Partially paid orders cannot be edited".into());}
+            if order["amountPaid"].as_f64().unwrap_or(0.0)>0.0 && ["order.addItem","order.updateItem","order.removeItem","order.repeatRound","order.discount","order.compItem"].contains(&cmd.operation.as_str()){return Err("Partially paid orders cannot be edited".into());}
             if cmd.operation=="order.addItem" {
                 let product_id=text(p,"productId")?;
-                let item=build_order_item(&tx,product_id,p,None)?;
+                let mut input=p.clone();
+                if input.get("roundNo").is_none(){input["roundNo"]=order["currentRoundNo"].clone();}
+                let item=build_order_item(&tx,product_id,&input,None)?;
                 order["items"].as_array_mut().ok_or("Invalid order items")?.push(item);
+            } else if cmd.operation=="order.repeatRound" {
+                if !permissions(&user.role).contains(&"pos.sell"){return Err("POS permission required".into());}
+                let current_round=order["currentRoundNo"].as_i64().unwrap_or(1).max(1);
+                let last_round=(current_round-1).max(1);
+                let source_items=order["items"].as_array().ok_or("Invalid order items")?.iter()
+                    .filter(|item|item["roundNo"].as_i64().unwrap_or(1)==last_round && item["stockFired"]==true && item["state"]!="VOIDED")
+                    .cloned().collect::<Vec<_>>();
+                if source_items.is_empty(){return Err("No fired round is available to repeat".into());}
+                let mut copies=Vec::new();
+                for source in source_items {
+                    let product_id=text(&source,"productId")?.to_string();
+                    let mut input=json!({
+                        "quantity":source["quantity"],"roundNo":current_round,"courseName":source["courseName"],
+                        "seatLabel":source["seatLabel"],"note":source["note"],
+                        "modifierIds":source["modifiers"].as_array().cloned().unwrap_or_default().iter().filter_map(|modifier|modifier["id"].as_str()).collect::<Vec<_>>()
+                    });
+                    if let Some(portion)=source["portionSnapshot"]["id"].as_str(){input["portionId"]=json!(portion);}
+                    copies.push(build_order_item(&tx,&product_id,&input,None)?);
+                }
+                order["items"].as_array_mut().ok_or("Invalid order items")?.extend(copies);
             } else if cmd.operation=="order.updateItem" {
                 let item_id=text(p,"itemId")?;
                 let items=order["items"].as_array_mut().ok_or("Invalid order items")?;
@@ -1351,6 +1408,7 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
                 if merged.get("courseName").is_none(){merged["courseName"]=items[index]["courseName"].clone();}
                 if merged.get("note").is_none(){merged["note"]=items[index]["note"].clone();}
                 if merged.get("quantity").is_none(){merged["quantity"]=items[index]["quantity"].clone();}
+                if merged.get("roundNo").is_none(){merged["roundNo"]=items[index]["roundNo"].clone();}
                 if merged.get("portionId").is_none(){if let Some(id)=items[index]["portionSnapshot"]["id"].as_str(){merged["portionId"]=json!(id);}}
                 if merged.get("modifierIds").is_none(){merged["modifierIds"]=json!(items[index]["modifiers"].as_array().cloned().unwrap_or_default().iter().filter_map(|m|m["id"].as_str()).collect::<Vec<_>>());}
                 let item=build_order_item(&tx,&product_id,&merged,Some(item_id))?;
@@ -1363,6 +1421,7 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
                 if !permissions(&user.role).contains(&"order.fire"){return Err("Order firing permission required".into());}
                 let outlet_id=order["outletId"].as_str().ok_or("Order outlet missing")?.to_string();
                 let (_,outlet)=get(&tx,"outlets",&outlet_id)?; let location=outlet["defaultStockLocationId"].as_str().ok_or("Outlet has no default stock location")?.to_string();
+                let mut fired_any=false;
                 for item in order["items"].as_array_mut().ok_or("Invalid order items")?.iter_mut(){
                     if item["stockFired"]==true{continue;}
                     if let Some(course)=p.get("courseName").and_then(Value::as_str){if item["courseName"]!=course{continue;}}
@@ -1373,8 +1432,9 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
                         if !consumed.is_finite()||consumed<0.0{return Err("Invalid recipe quantity".into());}
                         if consumed>0.0{stock_delta(&tx,user,stock_id,&location,-consumed,"SALE_CONSUMPTION",order_id,"Order fired",&mut changes)?;}
                     }
-                    item["stockFired"]=json!(true); item["state"]=json!("FIRED"); item["courseStatus"]=json!("FIRED"); item["firedAt"]=json!(now());
+                    item["stockFired"]=json!(true); item["state"]=json!("FIRED"); item["courseStatus"]=json!("FIRED"); item["firedAt"]=json!(now()); fired_any=true;
                 }
+                if fired_any && p.get("courseName").is_none(){order["currentRoundNo"]=json!(order["currentRoundNo"].as_i64().unwrap_or(1)+1);}
                 order["state"]=json!("SENT");
             } else if cmd.operation=="order.kds" {
                 let status=text(p,"status")?; if !["PREPARING","READY","SERVED"].contains(&status){return Err("Invalid preparation state".into());}
@@ -1575,6 +1635,7 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
         "closeDay.generate" => {
             if !permissions(&user.role).contains(&"reports.view"){return Err("Reports permission required".into());}
             let till_id=text(p,"tillId")?; let (_,till)=get(&tx,"tillSessions",till_id)?; if till["status"]!="CLOSED"{return Err("Close the till before generating the close-day report".into());}
+            if list(&tx,"closeDayReports")?.iter().any(|record|record["data"]["tillSessionId"].as_str()==Some(till_id)){return Err("A close-day report already exists for this till. Historical close reports are immutable in this release".into());}
             let opened=text(&till,"openedAt")?.to_string(); let closed=text(&till,"closedAt")?.to_string();
             let payments:Vec<Value>=list(&tx,"payments")?.into_iter().map(|r|r["data"].clone()).filter(|v|v["tillSessionId"]==till_id).collect();
             let mut cash=0i64;let mut mpesa=0i64;let mut card=0i64;let mut order_ids=std::collections::HashSet::new();

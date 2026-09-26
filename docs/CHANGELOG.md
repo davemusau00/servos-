@@ -1,3 +1,16 @@
+## 2026-09-26 - Bar production hardening 01
+
+- Fixed the fresh-setup service-area/stock-location sequencing regression by allowing unresolved outlet stock location only before Go Live and enforcing the relation at Go Live.
+- Made the local backup step a required first-Go-Live gate.
+- Added pre-enrollment Intake reopening for legacy or incomplete commissioning profiles.
+- Connected reusable customers to named POS tabs and added Repeat last round.
+- Prevented active product/recipe/modifier dependencies from being broken by stock-master archival.
+- Routed supplier receiving through Procurement in the installed UI so PO, GRN, AP and journal controls are not bypassed.
+- Added numeric supplier payment terms used by AP due-date calculation.
+- Prevented ambiguous same-method two-leg split tenders.
+- Prevented duplicate close-day report generation for the same till.
+- Normalized Enrollment UI UTF-8 text and removed committed patch-backup artifacts from the repository working tree.
+
 ## 2026-09-26 - Intake/Admin and safe CRUD hardening
 
 - Moved business, owner and initial System Administrator configuration into pre-enrollment Intake without persisting credentials.

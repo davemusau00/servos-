@@ -14,6 +14,7 @@ interface RuntimeContextValue {
   reloadStatus: () => Promise<void>;
   saveIntake: (profile: IntakeProfile) => Promise<void>;
   completeIntake: (profile: IntakeProfile) => Promise<void>;
+  reopenIntake: () => Promise<void>;
   enroll: (input: { email: string; password: string; pin: string }) => Promise<void>;
   login: (staffId: string, pin: string) => Promise<void>;
   lock: () => Promise<void>;
@@ -77,6 +78,11 @@ export const RuntimeProvider = ({ children }: { children: React.ReactNode }) => 
   const completeIntake = async (profile: IntakeProfile) => {
     setBusy(true); setError('');
     try { await invoke('runtime_intake_complete', { profile }); await reloadStatus(); }
+    catch (e) { report(e); throw e; } finally { setBusy(false); }
+  };
+  const reopenIntake = async () => {
+    setBusy(true); setError('');
+    try { await invoke('runtime_intake_reopen'); await reloadStatus(); }
     catch (e) { report(e); throw e; } finally { setBusy(false); }
   };
   const enroll = async ({ email, password, pin }: { email: string; password: string; pin: string }) => {
@@ -155,5 +161,5 @@ export const RuntimeProvider = ({ children }: { children: React.ReactNode }) => 
     return () => { clearInterval(timer); window.removeEventListener('pointerdown', active); window.removeEventListener('keydown', active); window.removeEventListener('online', resume); document.removeEventListener('visibilitychange', resume); };
   }, [session, sync, lock]);
 
-  return <RuntimeContext.Provider value={{ status, session, snapshot, error, syncing, busy, reloadStatus, saveIntake, completeIntake, enroll, login, lock, refresh, command, approve, sync, backup, printReceipt, testPrinter, retryPrinterJob, printerJobs, clearError: () => setError('') }}>{children}</RuntimeContext.Provider>;
+  return <RuntimeContext.Provider value={{ status, session, snapshot, error, syncing, busy, reloadStatus, saveIntake, completeIntake, reopenIntake, enroll, login, lock, refresh, command, approve, sync, backup, printReceipt, testPrinter, retryPrinterJob, printerJobs, clearError: () => setError('') }}>{children}</RuntimeContext.Provider>;
 };
