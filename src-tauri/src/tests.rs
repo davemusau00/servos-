@@ -116,6 +116,17 @@ fn failed_split_captures_no_receipt_or_payment() {
     let result=execute(&mut db,&s.token,cmd("payment.split",json!({"orderId":oid,"payments":[{"method":"CASH","amount":50,"cashTendered":50},{"method":"CARD","amount":50,"cardAuthCode":""}]})));
     assert!(result.is_err());assert!(list(&db,"payments").unwrap().is_empty());assert!(list(&db,"receiptDocuments").unwrap().is_empty());
 }
+
+#[test]
+fn business_identity_is_atomic_versioned_and_printer_policy_is_validated() {
+    let (_dir,mut db,s)=setup();let (ov,_)=get(&db,"organization","business").unwrap();let(pv,_)=get(&db,"property","property").unwrap();
+    let update=cmd("business.identity",json!({"organizationVersion":ov,"propertyVersion":pv,"data":{"name":"Updated","legalName":"Updated Ltd","registrationNumber":"REG","address":"Nairobi","phone":"0700000000","email":"hello@example.test"}}));
+    execute(&mut db,&s.token,update).unwrap();assert_eq!(get(&db,"organization","business").unwrap().1["name"],"Updated");assert_eq!(get(&db,"property","property").unwrap().1["phone"],"0700000000");
+    assert!(execute(&mut db,&s.token,cmd("business.identity",json!({"organizationVersion":ov,"propertyVersion":pv,"data":{"name":"Stale"}}))).is_err());
+    let(version,mut policy)=get(&db,"tillPolicy","main").unwrap();policy["receiptPaperColumns"]=json!(5);
+    let mut invalid=cmd("record.save",json!({"collection":"tillPolicy","id":"main","data":policy}));invalid.target_version=Some(version);
+    assert!(execute(&mut db,&s.token,invalid).is_err());assert_eq!(get(&db,"tillPolicy","main").unwrap().0,version);
+}
 #[test]
 fn invalid_split_rolls_back_every_effect() {
     let (_, mut db, s) = setup();

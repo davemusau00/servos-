@@ -631,6 +631,21 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
     let p = &cmd.payload;
     live_required(&tx, &cmd.operation)?;
     match cmd.operation.as_str() {
+        "business.identity" => {
+            authorize(&tx,user,"business.configure",p,None)?;
+            let (organization_version,mut organization)=get(&tx,"organization","business")?;
+            let (property_version,mut property)=get(&tx,"property","property")?;
+            if p["organizationVersion"].as_i64()!=Some(organization_version)||p["propertyVersion"].as_i64()!=Some(property_version){return Err("CONFLICT: Business identity changed; reopen settings".into());}
+            let data=&p["data"];text(data,"name")?;
+            for key in ["name","legalName","registrationNumber","address","phone","email"] {
+                let value=data[key].as_str().ok_or("Business identity fields must be text")?.trim();
+                if value.len()>500{return Err("Business identity field is too long".into());}
+                organization[key]=json!(value);
+                if ["name","address","phone","email"].contains(&key){property[key]=json!(value);}
+            }
+            put(&tx,"organization","business",organization,&mut changes)?;
+            put(&tx,"property","property",property,&mut changes)?;
+        }
         "record.save" | "record.archive" => {
             let collection = text(p, "collection")?;
             if !MASTER.contains(&collection) {
@@ -717,6 +732,14 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
                     text(&data, "label")?;
                 } else {
                     text(&data, "name")?;
+                }
+                if collection == "tillPolicy" {
+                    crate::printer::PrinterProfile::from_policy(&data)?;
+                    for key in ["defaultOpeningFloat","varianceThreshold"] { if !data[key].is_null(){money(&data,key)?;} }
+                }
+                if collection == "property" {
+                    if data["currency"].as_str().is_some_and(|v|v!="KES")||data["timezone"].as_str().is_some_and(|v|v!="Africa/Nairobi") {return Err("This installation uses KES and Africa/Nairobi".into());}
+                    if data["receiptFooter"].as_str().is_some_and(|v|v.len()>300){return Err("Receipt thank-you message cannot exceed 300 characters".into());}
                 }
                 if collection == "property" && data["taxConfigured"] == true {
                     if quantity(&data, "vatRatePct")? > 100.0

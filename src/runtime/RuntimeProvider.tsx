@@ -121,6 +121,7 @@ export const RuntimeProvider = ({ children }: { children: React.ReactNode }) => 
     try { await refresh(); if (operation.startsWith('staff.')) await reloadStatus(); setError(''); }
     catch (e) { setError(`Saved locally, but refresh failed. Reload before making another change. ${String(e)}`); }
     nextSync.current = 0;
+    window.dispatchEvent(new Event('servos:local-commit'));
     return result;
   }, [session, refresh, report]);
   const approve = async (approverId: string, pin: string, permission: Permission, target?: string) => {
@@ -172,10 +173,10 @@ export const RuntimeProvider = ({ children }: { children: React.ReactNode }) => 
     const resume = () => { if (document.visibilityState === 'visible' && navigator.onLine) void sync().catch(() => undefined); };
     const timer = window.setInterval(() => {
       if (Date.now() - lastActivity.current >= 900_000) { void lock(); return; }
-      if (Date.now() >= nextSync.current && navigator.onLine) void sync().catch(() => undefined);
+      if (Date.now() >= nextSync.current && navigator.onLine && document.visibilityState === 'visible') void sync().catch(() => undefined);
     }, 15_000);
-    window.addEventListener('pointerdown', active); window.addEventListener('keydown', active); window.addEventListener('online', resume); document.addEventListener('visibilitychange', resume);
-    return () => { clearInterval(timer); window.removeEventListener('pointerdown', active); window.removeEventListener('keydown', active); window.removeEventListener('online', resume); document.removeEventListener('visibilitychange', resume); };
+    window.addEventListener('pointerdown', active); window.addEventListener('keydown', active); window.addEventListener('online', resume); window.addEventListener('servos:local-commit', resume); document.addEventListener('visibilitychange', resume);
+    return () => { clearInterval(timer); window.removeEventListener('pointerdown', active); window.removeEventListener('keydown', active); window.removeEventListener('online', resume); window.removeEventListener('servos:local-commit', resume); document.removeEventListener('visibilitychange', resume); };
   }, [session, sync, lock]);
 
   return <RuntimeContext.Provider value={{ status, session, snapshot, error, syncing, busy, reloadStatus, saveIntake, completeIntake, reopenIntake, enroll, login, lock, refresh, command, approve, sync, backup, receipt, receiptHistory, printReceipt, testPrinter, retryPrinterJob, printerJobs, clearError: () => setError('') }}>{children}</RuntimeContext.Provider>;

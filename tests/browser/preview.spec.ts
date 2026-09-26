@@ -53,6 +53,7 @@ test('native checkout provides customer and business receipt copies', async ({ p
         if (command === 'runtime_snapshot') return snapshot;
         if (command === 'runtime_command') return {commandId:'cmd-test',recordIds:[],auditReference:'audit-test',sequence:1};
         if (command === 'runtime_printer_jobs') return [];
+        if (command === 'runtime_sync') return {};
         if (command === 'runtime_receipt') return {document:{id:'receipt-1',schemaVersion:1,orderId:'order-1',sourceCommandId:'command-1',deviceId:'device-1',number:'D1-1001',orderNumber:'SO-1001',issuedAt:'2026-09-26T10:00:00Z',currency:'KES',timezone:'Africa/Nairobi',business:{name:'Test Bar',address:'Nairobi',phone:'0700000000'},cashier:'Test Owner',outlet:'Main Bar',items:[{id:'item-1',description:'Test Lager',quantity:1,unitPriceMinor:10000,amountMinor:10000,modifiers:[]}],subtotalMinor:10000,discountMinor:0,netMinor:10000,taxMinor:0,levyMinor:0,totalMinor:10000,paidMinor:10000,balanceMinor:0,payments:[{id:'payment-1',tenderType:'CASH',amountMinor:10000,cashTenderedMinor:10000,changeMinor:0,currentPayment:true}]},customerLines:['CUSTOMER COPY'],businessLines:['BUSINESS RECORD COPY']};
         if (command === 'runtime_print_receipt') return {jobId:'print-test-1',orderId:'order-1',state:'QUEUED',message:'Printer offline; job retained.'};
         if (command === 'runtime_printer_retry') return {jobId:'print-test-1',orderId:'order-1',state:'SENT',message:'Test spooler accepted receipt.'};
