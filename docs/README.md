@@ -8,6 +8,7 @@ ServOS currently runs one installed authoritative terminal. The accepted expansi
 - [Domain workflows](EXPANSION_WORKFLOWS.md)
 - [Receipt specification](RECEIPT_SPEC.md)
 - [Expansion acceptance matrix](EXPANSION_ACCEPTANCE.md)
+- [Implementation handoff and remaining boundaries](EXPANSION_HANDOFF.md)
 
 - [Current release state](CURRENT_RELEASE_STATE.md)
 - [Feature coverage](FEATURE_COVERAGE_MATRIX.md)

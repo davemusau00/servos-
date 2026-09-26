@@ -123,7 +123,7 @@ export const RuntimeProvider = ({ children }: { children: React.ReactNode }) => 
     nextSync.current = 0;
     window.dispatchEvent(new Event('servos:local-commit'));
     return result;
-  }, [session, refresh, report]);
+  }, [session, refresh, report, reloadStatus]);
   const approve = async (approverId: string, pin: string, permission: Permission, target?: string) => {
     if (!session) throw new Error('Unlock the terminal first');
     try { return await invoke<ManagerApproval>('runtime_manager_approve', { token: session.token, approverId, pin, permission, target: target || null }); }

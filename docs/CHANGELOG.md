@@ -37,3 +37,12 @@
 - added native bar production shell and offline generated Help Center;
 - added CI, source verification and Windows/Linux/Android deployment scripts;
 - updated documentation around bar-first acceptance and Definition of Done.
+## 2026-09-26 - Desktop/Vercel expansion foundation
+
+- Wrote the accepted implementation, architecture, domain, sync, receipt, migration and acceptance documentation before application changes.
+- Captured immutable receipt documents with payments; saved cash/change and header snapshots; added 80mm customer/business previews, print isolation, history/reprint and fixed attribution; removed receipt fiscal disclaimer wording.
+- Added live identity, tax/message, payment and printer/till editors with atomic identity and backend printer validation.
+- Separated successful local command commit from refresh failure; sync wakes after commits, reconnect/resume and active periodic intervals.
+- Prepared Vercel configuration, authenticated production entry and explicit demo/offline-shell flags.
+- Added staged v2 master-command protocol, legacy-writer fencing, private allocation primitives, IndexedDB queue/change-feed processing and build-versioned shell cache. These are not production multi-writer activation.
+- Added native receipt/settings, browser IndexedDB/print and disposable PostgreSQL protocol/allocation tests. Rooms, Assets and full domain/web integration remain pending.

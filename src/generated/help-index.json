@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-09-26T20:02:32.119Z",
+  "generatedAt": "2026-09-26T20:04:55.068Z",
   "source": "docs/user-guide",
-  "count": 32,
+  "count": 33,
   "articles": [
     {
       "id": "01-getting-started",
@@ -661,6 +661,23 @@
       "screen": "Catalog & Pricing",
       "summary": "Import catalog records with validated SKU and barcode relationships.",
       "body": "# CSV product and inventory import\n\nServOS can import product and stock master data from a CSV in **Catalog & Pricing â†’ Import CSV**.\n\nSection: Catalog\nRoles: Admin, Manager\nPermission: catalog.manage\nScreen: Catalog & Pricing\n\n## Overview\n\nImport catalog records with validated SKU and barcode relationships.\n\n## Procedure\n\nRequired columns:\n\n- `sku`\n- `name`\n\nSupported columns:\n\n- `barcode`\n- `category`\n- `sale_price`\n- `cost_price`\n- `quantity`\n- `base_unit`\n- `scan_unit_quantity`\n- `route_to`\n- `tax_class_id`\n- `create_product`\n- `portion_volume`\n- `notes`\n\nExisting records are matched case-insensitively by SKU/code. Duplicate product and stock barcodes remain blocked by the native backend.\n\n## Import modes\n\n**Products / stock master only** updates master data and ignores the quantity column.\n\nBefore Go Live, **opening balance** mode records the CSV quantity through the existing auditable `inventory.openingBalance` operation.\n\nAfter Go Live, **receive stock** mode records the CSV quantity through `inventory.receive`, requires a receipt or invoice reference, and updates weighted-average inventory cost.\n\nUse `create_product=FALSE` for stock that should not yet appear as a POS sellable, for example a keg before its serving yield is configured or an item whose retail price is still unknown.\n\n## Barcode scanning at POS\n\nThe POS scanner path treats a normal USB scanner as a keyboard-wedge device. It now accepts both Enter and Tab scan suffixes and allows a slightly wider inter-key timing window for older scanners and Windows POS hardware.\n\nA physical EAN/UPC belongs in the CSV `barcode` column. Supplier SKU remains in `sku`; POS can match either barcode or SKU/code.",
+      "keywords": []
+    },
+    {
+      "id": "33-receipts-settings",
+      "title": "Receipts and ongoing business settings",
+      "section": "Administration",
+      "roles": [
+        "Admin",
+        "Manager",
+        "Server"
+      ],
+      "permissions": [
+        "pos.sell"
+      ],
+      "screen": "Bar POS / Business Admin",
+      "summary": "New payments capture their receipt from saved transaction data. Both 80mm copies show the fixed developer attribution. Print failures do not reverse payments. Business Admin settings require the separate business.configure capability (Admin).",
+      "body": "Section: Administration\nRoles: Admin, Manager, Server\nPermission: pos.sell\nScreen: Bar POS / Business Admin\n\n## Overview\n\nNew payments capture their receipt from saved transaction data. Both 80mm copies show the fixed developer attribution. Print failures do not reverse payments. Business Admin settings require the separate business.configure capability (Admin).\n\n## Procedure\n\n1. Record a payment. Review both saved copies, then print or copy the text.\n2. For an offline printer, retry the retained job. If delivery is uncertain, inspect the paper before confirming a duplicate-risk reprint.\n3. Use Receipt history in POS to reopen one of the latest 100 captured receipts. Reprints are labelled. Earlier payments without captured documents are not fabricated from current settings.\n4. In Business Admin, open Business identity, Tax and receipt message, Payment methods, or Till and printer. Save changes; stale settings require reopening the editor.\n5. Test the saved direct printer configuration and check actual paper output. The system dialog and spooler acknowledgement are not proof of physical printing.\n\nExisting transactions and receipt documents retain their original identity/tax/payment snapshots. Business thank-you text is configurable; the attribution footer is fixed. KES, Africa/Nairobi and tax-inclusive pricing remain the supported installed policy.",
       "keywords": []
     }
   ]

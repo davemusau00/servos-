@@ -28,7 +28,7 @@ When a target-machine check passes, add the commit, OS/device, exact command, da
 | Cloud v2 protocol | staged master-command foundation | disposable PostgreSQL tests passed; supports customers/suppliers/room types/asset categories only; production disabled |
 | Allocations | private stock/interval/custody primitives | disposable tests passed; signed grants, issuance/handover UI and domain command integration pending |
 | Browser storage/sync | staged IndexedDB queue, pull cursor/tombstones, retry and automatic worker | browser reload/rollback/lost-response tests passed; not wired to live transactional UI |
-| Offline shell | build-generated service worker, opt-in registration | shell only; does not confer transactional offline rights; queue-aware cache retirement pending |
+| Offline shell | build-generated service worker, opt-in registration | browser offline reload/private-response exclusion tests passed; shell only, not transactional offline rights; queue-aware cache retirement pending |
 | Rooms, Assets and existing-module expansion | specification only | operational commands/UI/end-to-end acceptance pending |
 | Multi-device cutover/recovery | not performed | live migration, real two-device trading and replacement-device rehearsal pending |
 

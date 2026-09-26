@@ -2,6 +2,10 @@
 
 Status vocabulary: **prototype** = preview/local-only behavior; **source implemented** = code exists but acceptance evidence is incomplete; **locally verified** = named checks executed; **sync verified** = live replay/recovery accepted; **deployment verified** = packaged-device business rehearsal passed.
 
+## Expansion source update — 2026-09-26
+
+Receipts: persisted documents, cash/change, full 80mm preview, attribution and history/reprint locally tested. Settings: native identity/tax/payments/printer editors with backend validation. Vercel: configuration and authenticated entry prepared, no deployment. Cloud v2/allocation primitives and browser queue have isolated acceptance tests but are not connected for live trading. Rooms/Assets and other domain integration remain planned. See [expansion ledger](COMPLETION_LEDGER.md) for current evidence; older table entries below retain release-history context.
+
 | Module | Current status | Remaining acceptance |
 |---|---|---|
 | Installation/runtime | source implemented | packaged fresh install, restart and recovery |

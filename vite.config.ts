@@ -2,7 +2,7 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import {defineConfig} from 'vite';
-import {webShellPlugin} from './scripts/web-shell-plugin';
+import {webShellPlugin} from './scripts/web-shell-plugin.ts';
 
 export default defineConfig(() => {
   return {
