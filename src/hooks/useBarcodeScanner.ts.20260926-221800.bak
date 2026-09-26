@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 
 export interface BarcodeScannerOptions {
   enabled?: boolean;
@@ -28,9 +28,9 @@ const editableTarget = (target: EventTarget | null) => {
 export const useBarcodeScanner = ({
   enabled = true,
   minLength = 4,
-  maxInterKeyDelayMs = 150,
+  maxInterKeyDelayMs = 90,
   maxLength = 128,
-  allowTabTerminator = true,
+  allowTabTerminator = false,
   onScan,
 }: BarcodeScannerOptions) => {
   const onScanRef = useRef(onScan);
@@ -98,5 +98,3 @@ export const useBarcodeScanner = ({
     };
   }, [enabled, minLength, maxInterKeyDelayMs, maxLength, allowTabTerminator]);
 };
-
-
