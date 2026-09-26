@@ -6,6 +6,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use uuid::Uuid;
 
+#[path = "receipts.rs"]
+pub mod receipts;
+
 pub type Result<T> = std::result::Result<T, String>;
 fn error(e: impl std::fmt::Display) -> String {
     e.to_string()
@@ -85,7 +88,7 @@ pub fn open(path: &std::path::Path) -> Result<Connection> {
     let version: i64 = db
         .query_row("PRAGMA user_version", [], |r| r.get(0))
         .map_err(error)?;
-    if version > 2 {
+    if version > 3 {
         return Err("Database requires a newer ServOS version".into());
     }
     if version < 1 {
@@ -94,6 +97,9 @@ pub fn open(path: &std::path::Path) -> Result<Connection> {
     let version: i64 = db.query_row("PRAGMA user_version", [], |r| r.get(0)).map_err(error)?;
     if version < 2 {
         db.execute_batch(include_str!("../migrations/002_bar_v2.sql")).map_err(error)?;
+    }
+    if version < 3 {
+        db.execute_batch(include_str!("../migrations/003_receipts.sql")).map_err(error)?;
     }
     Ok(db)
 }
@@ -1660,6 +1666,9 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
             ))
         }
     }
+    if ["payment.record", "payment.split"].contains(&cmd.operation.as_str()) {
+        receipts::capture(&tx, user, text(p, "orderId")?, &cmd.id, &mut changes)?;
+    }
     let result = finish(&tx, &cmd, &user.staff_id, changes)?;
     tx.commit().map_err(error)?;
     Ok(result)
@@ -1771,7 +1780,9 @@ fn payment(tx: &Transaction, user: &Session, p: &Value, changes: &mut Vec<Value>
         tx,
         "payments",
         &payment_id,
-        json!({"id":payment_id,"orderId":order_id,"propertyId":"property","tillSessionId":active["id"],"tenderType":method,"amount":amount as f64/100.0,"amountMinor":amount,"currency":"KES","status":"PAID","referenceNumber":reference,"mpesaReceiptId":receipt_id,"occurredAt":stamp,"cashierId":user.staff_id,"cashierName":user.name,"confirmation":"MANUAL"}),
+        json!({"id":payment_id,"orderId":order_id,"propertyId":"property","tillSessionId":active["id"],"tenderType":method,"amount":amount as f64/100.0,"amountMinor":amount,"currency":"KES","status":"PAID","referenceNumber":reference,"mpesaReceiptId":receipt_id,"occurredAt":stamp,"cashierId":user.staff_id,"cashierName":user.name,"confirmation":"MANUAL",
+            "cashTenderedMinor":if method=="CASH"{Some(money(p,"cashTendered")?)}else{None},
+            "changeMinor":if method=="CASH"{Some(money(p,"cashTendered")?-amount)}else{None}}),
         changes,
     )?;
     // Cumulative allocation prevents tax rounding drift across partial payments.

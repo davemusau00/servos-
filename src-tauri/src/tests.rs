@@ -74,6 +74,48 @@ fn duplicate_payment_is_idempotent_and_survives_restart() {
     let reopened = open(&dir.path().join("test.sqlite")).unwrap();
     assert_eq!(list(&reopened, "payments").unwrap().len(), 1);
 }
+
+#[test]
+fn receipt_is_atomic_immutable_and_keeps_cash_header_and_partial_history() {
+    let (dir,mut db,s)=setup();
+    run(&mut db,&s,"till.open",json!({"floatAmount":200}));
+    let oid=order(&mut db,&s);
+    let first=cmd("payment.record",json!({"orderId":oid,"method":"CASH","amount":40,"cashTendered":50}));
+    execute(&mut db,&s.token,first.clone()).unwrap();
+    execute(&mut db,&s.token,first).unwrap();
+    let original=receipts::load(&db,&s.token,&oid,None).unwrap();
+    assert_eq!(original["balanceMinor"],6000);
+    assert_eq!(original["payments"][0]["cashTenderedMinor"],5000);
+    assert_eq!(original["payments"][0]["changeMinor"],1000);
+    assert_eq!(list(&db,"receiptDocuments").unwrap().len(),1);
+    let (version,mut business)=get(&db,"organization","business").unwrap();
+    business["name"]=json!("Changed business");
+    let mut update=cmd("record.save",json!({"collection":"organization","id":"business","data":business}));update.target_version=Some(version);
+    execute(&mut db,&s.token,update).unwrap();
+    run(&mut db,&s,"payment.split",json!({"orderId":oid,"payments":[{"method":"CASH","amount":20,"cashTendered":20},{"method":"CARD","amount":40,"cardAuthCode":"APPROVED-1"}]}));
+    let latest=receipts::load(&db,&s.token,&oid,None).unwrap();
+    assert_eq!(latest["balanceMinor"],0);
+    assert_eq!(latest["payments"].as_array().unwrap().len(),3);
+    assert_eq!(latest["business"]["name"],"Changed business");
+    let original_id=original["id"].as_str().unwrap();
+    assert_eq!(receipts::load(&db,&s.token,&oid,Some(original_id)).unwrap(),original);
+    assert!(db.execute("UPDATE records SET data='{}' WHERE collection='receiptDocuments'",[]).is_err());
+    assert!(db.execute("DELETE FROM records WHERE collection='receiptDocuments'",[]).is_err());
+    assert!(receipts::load(&db,&s.token,"other-order",Some(original_id)).is_err());
+    let lines=receipts::lines(&latest,false,48,true).join("\n");
+    for footer in receipts::FOOTER{assert!(lines.contains(footer));}
+    assert!(lines.contains("REPRINT"));assert!(!lines.contains("eTIMS"));
+    drop(db);
+    let reopened=open(&dir.path().join("test.sqlite")).unwrap();
+    assert_eq!(get(&reopened,"receiptDocuments",original_id).unwrap().1,original);
+}
+
+#[test]
+fn failed_split_captures_no_receipt_or_payment() {
+    let (_dir,mut db,s)=setup();run(&mut db,&s,"till.open",json!({"floatAmount":0}));let oid=order(&mut db,&s);
+    let result=execute(&mut db,&s.token,cmd("payment.split",json!({"orderId":oid,"payments":[{"method":"CASH","amount":50,"cashTendered":50},{"method":"CARD","amount":50,"cardAuthCode":""}]})));
+    assert!(result.is_err());assert!(list(&db,"payments").unwrap().is_empty());assert!(list(&db,"receiptDocuments").unwrap().is_empty());
+}
 #[test]
 fn invalid_split_rolls_back_every_effect() {
     let (_, mut db, s) = setup();

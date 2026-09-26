@@ -103,6 +103,9 @@ fn append_copy(bytes: &mut Vec<u8>, lines: &[String], profile: &PrinterProfile) 
     if lines.is_empty() { return; }
     bytes.extend_from_slice(&[0x1b, b'a', 0]);
     for line in lines {
+        let footer = ["Built By Davemusau.co.ke", "info@davemusau.co.ke", "0746157440"].contains(&line.trim());
+        let bold = line.trim_start().starts_with("TOTAL") || line.trim()=="CUSTOMER COPY" || line.trim()=="BUSINESS RECORD COPY";
+        bytes.extend_from_slice(&[0x1b, b'M', if footer {1} else {0}, 0x1b, b'E', if bold {1} else {0}]);
         let printable: String = line
             .chars()
             .map(|c| if c.is_ascii() && !c.is_control() { c } else { '?' })
@@ -112,7 +115,9 @@ fn append_copy(bytes: &mut Vec<u8>, lines: &[String], profile: &PrinterProfile) 
             bytes.push(b'\n');
         }
     }
+    bytes.extend_from_slice(&[0x1b,b'M',0,0x1b,b'E',0]);
     if profile.auto_cut {
+        bytes.extend_from_slice(b"\n\n\n");
         // ESC/POS GS V 0 selects a full cut on compatible auto-cutter models.
         bytes.extend_from_slice(&[0x1d, b'V', 0]);
     } else {

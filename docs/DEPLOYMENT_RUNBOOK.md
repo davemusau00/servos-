@@ -86,6 +86,16 @@ Android:
 
 The scripts require Node/npm, Rust/Cargo and platform Tauri prerequisites. Android additionally requires SDK/NDK configuration.
 
+## Vercel expansion preparation (planned, not deployed)
+
+Host the Vite frontend on Vercel: install `npm ci`, build `npm run build`, output `dist`. Keep preview and production projects/environment values separate; preview must use disposable non-production Supabase data. Only `VITE_SUPABASE_URL` and publishable frontend keys are public. Never place service-role keys, database credentials or device secrets in VITE variables.
+
+Before release: configure Supabase Auth site/redirect URLs for the exact HTTPS app domain; verify login/logout/session expiry, security headers, deep links, shell-cache version and unsupported-client behavior. Production must open authenticated operations; samples require explicit demo configuration. Browser printing uses OS/PDF; direct RAW USB/LAN printing stays desktop or explicitly assigned registered agent.
+
+Do not enable web operational writes against current `servos_upload`. First implement/rehearse v2 command APIs and grants, back up both stores, drain legacy outbox, checkpoint/import stable history and balances, register devices, issue allocations, disable legacy upload and then enable compatible writers. Reconcile counts/balances/audit before trading. After v2 writes, rollback cannot re-enable an old snapshot-upload client; use forward repair or coordinated restore/replay.
+
+Service-worker and IndexedDB upgrades must preserve pending commands. Lost browser storage requires outstanding-allocation quarantine and manager reconciliation. A disconnected or replaced device cannot silently have its resources reassigned. Actual Vercel publication and live migration are separate release actions; documentation/configuration is not deployment evidence.
+
 ## Release gate
 
 Run `npm run verify`, then complete [BAR_PRODUCTION_ACCEPTANCE.md](BAR_PRODUCTION_ACCEPTANCE.md) on each supported packaged target. A browser preview or successful frontend build is not native acceptance.

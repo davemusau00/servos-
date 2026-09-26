@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import type { Order } from '../../types/servos';
 import { useServOS } from '../../context/ServOSContext';
 import { isNative } from '../../runtime/RuntimeProvider';
+import { RECEIPT_FOOTER } from '../../types/receipt';
 
 interface Props {
   isOpen: boolean;
@@ -26,7 +27,7 @@ export const ThermalReceiptModal = ({ isOpen, onClose, order, paymentDetails, is
   const title = isProForma ? 'Pro-forma bill' : 'Receipt';
   const money = (amount?: number) => `KES ${(amount || 0).toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   const occurredAt = new Date(order.completedAt || order.createdAt).toLocaleString('en-KE', { timeZone: 'Africa/Nairobi' });
-  const paid = paymentDetails?.cashTendered ?? order.amountPaid;
+  const paid = order.amountPaid;
   const lines = order.items.map(item => `${item.quantity} x ${item.productName}: ${money(item.totalPrice)}`);
   const copyText = (label: string, internal: boolean) => [
     currentProperty.name,
@@ -40,8 +41,8 @@ export const ThermalReceiptModal = ({ isOpen, onClose, order, paymentDetails, is
     paymentDetails ? `Tender: ${paymentDetails.tenderType}` : `Paid: ${money(paid)}`,
     paymentDetails?.receiptRef ? `Reference: ${paymentDetails.receiptRef}` : '',
     paymentDetails?.changeDue ? `Change: ${money(paymentDetails.changeDue)}` : '',
-    'This document is not evidence of eTIMS submission.',
-    'Thank you.'
+    'Thank you.',
+    ...RECEIPT_FOOTER
   ].filter(Boolean).join('\n');
   const customerText = copyText(isProForma ? 'PRO-FORMA BILL' : 'CUSTOMER COPY', false);
   const businessText = copyText('BUSINESS RECORD COPY - RETAIN FOR RECONCILIATION', true);
@@ -97,6 +98,6 @@ const ReceiptCopy = ({ className, business, outlet, label, orderNumber, orderId,
   <p className="border-t pt-2 font-bold">Total: {money(total)}</p>
   {paymentDetails && <><p>Recorded tender: {paymentDetails.tenderType}</p>{paymentDetails.receiptRef&&<p>Reference: {paymentDetails.receiptRef}</p>}{paymentDetails.guestName&&<p>Guest: {paymentDetails.guestName}</p>}{paymentDetails.roomNumber&&<p>Room: {paymentDetails.roomNumber}</p>}{paymentDetails.changeDue? <p>Change: {money(paymentDetails.changeDue)}</p>:null}{paymentDetails.tenderType==='MPESA'&&<p>Manually confirmed; reconciliation is recorded separately.</p>}</>}
   {!paymentDetails&&<p>Paid: {money(paid)}</p>}
-  <p>This document is not evidence of eTIMS submission.</p>
   <p className="text-center">Thank you.</p>
+  <footer className="mt-3 text-center text-[9px]">{RECEIPT_FOOTER.map(line=><div key={line}>{line}</div>)}</footer>
 </article>;

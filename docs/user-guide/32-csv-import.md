@@ -2,6 +2,17 @@
 
 ServOS can import product and stock master data from a CSV in **Catalog & Pricing â†’ Import CSV**.
 
+Section: Catalog
+Roles: Admin, Manager
+Permission: catalog.manage
+Screen: Catalog & Pricing
+
+## Overview
+
+Import catalog records with validated SKU and barcode relationships.
+
+## Procedure
+
 Required columns:
 
 - `sku`

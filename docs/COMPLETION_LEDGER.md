@@ -17,3 +17,6 @@ This ledger distinguishes source implementation from executed verification.
 | CI/deploy scripts | source implemented | n/a | runbook | syntax/source checks required | source implemented |
 
 When a target-machine check passes, add the commit, OS/device, exact command, date and result to [TEST_EVIDENCE.md](TEST_EVIDENCE.md).
+# Expansion ledger — 2026-09-26
+
+Documentation package: written; source audit and target contracts distinguish existing single-writer implementation from accepted multi-writer target. Baseline TypeScript/19 Node tests passed during planning. Receipt implementation pending. Cloud v2, browser offline, settings expansion, Rooms, Assets and other module integration pending. Live cloud/physical-device acceptance pending. See [phase gates](EXPANSION_PLAN.md).

@@ -37,3 +37,6 @@ Stock is altered only through explicit movement-producing business commands. Fin
 ## Commissioning evidence
 
 `installationProfile`: commissioning snapshot containing confirmed non-secret Intake, terminal ID, owner identity and initial Administrator ID. It is not part of generic CRUD.
+# Expansion data model
+
+Planned v2 records, uniqueness, money/time representation and migration compatibility are specified in [Expansion contracts](EXPANSION_CONTRACTS.md). Existing structures below remain current until implementation and cutover evidence is recorded.

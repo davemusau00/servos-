@@ -476,11 +476,11 @@ fn queue_printer_job(state: &Runtime, job_id: String, order_id: String, policy: 
 }
 
 #[tauri::command]
-fn runtime_print_receipt(state: State<Runtime>, token: String, job_id: String, order_id: String, customer_lines: Vec<String>, business_lines: Vec<String>) -> store::Result<Value> {
-    let policy = {
+fn runtime_print_receipt(state: State<Runtime>, token: String, job_id: String, order_id: String, receipt_id: String, reprint: bool) -> store::Result<Value> {
+    let (policy, document) = {
         let db = state.db.lock().map_err(|e| e.to_string())?;
         require_printer_permission(&db, &token, "pos.sell")?;
-        printer_policy(&db)
+        (printer_policy(&db), store::receipts::load(&db, &token, &order_id, Some(&receipt_id))?)
     };
     let profile = printer::PrinterProfile::from_policy(&policy)?;
     match profile.mode.as_str() {
@@ -488,7 +488,31 @@ fn runtime_print_receipt(state: State<Runtime>, token: String, job_id: String, o
         "MANUAL" => return Ok(json!({"state":"MANUAL","mode":profile.mode})),
         _ => {}
     }
+    let customer_lines=store::receipts::lines(&document,false,profile.columns,reprint);
+    let business_lines=store::receipts::lines(&document,true,profile.columns,reprint);
     queue_printer_job(&state, job_id, order_id, policy, customer_lines, business_lines)
+}
+
+#[tauri::command]
+fn runtime_receipt(state: State<Runtime>, token: String, order_id: String, receipt_id: Option<String>) -> store::Result<Value> {
+    let db=state.db.lock().map_err(|e|e.to_string())?;
+    let document=store::receipts::load(&db,&token,&order_id,receipt_id.as_deref())?;
+    let profile=printer::PrinterProfile::from_policy(&printer_policy(&db))?;
+    Ok(json!({"document":document,"customerLines":store::receipts::lines(&document,false,profile.columns,false),"businessLines":store::receipts::lines(&document,true,profile.columns,false)}))
+}
+
+#[tauri::command]
+fn runtime_receipt_history(state: State<Runtime>, token: String) -> store::Result<Value> {
+    let db=state.db.lock().map_err(|e|e.to_string())?;
+    require_printer_permission(&db,&token,"pos.sell")?;
+    let mut query=db.prepare("SELECT data FROM records WHERE collection='receiptDocuments' AND archived=0 ORDER BY rowid DESC LIMIT 100").map_err(|e|e.to_string())?;
+    let rows=query.query_map([],|row|row.get::<_,String>(0)).map_err(|e|e.to_string())?;
+    let mut result=vec![];
+    for row in rows {
+        let doc:Value=serde_json::from_str(&row.map_err(|e|e.to_string())?).map_err(|e|e.to_string())?;
+        result.push(json!({"id":doc["id"],"orderId":doc["orderId"],"orderNumber":doc["orderNumber"],"issuedAt":doc["issuedAt"],"totalMinor":doc["totalMinor"]}));
+    }
+    Ok(json!(result))
 }
 
 #[tauri::command]
@@ -568,6 +592,8 @@ pub fn run() {
             runtime_sync,
             runtime_backup,
             runtime_print_receipt,
+            runtime_receipt,
+            runtime_receipt_history,
             runtime_printer_test,
             runtime_printer_retry,
             runtime_printer_jobs

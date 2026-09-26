@@ -1,5 +1,7 @@
 # Gap analysis and roadmap
 
+> The bar-only expansion restriction below is historical. The user accepted [desktop/Vercel expansion](EXPANSION_PLAN.md), documented before code. Existing acceptance gaps still apply; new modules do not become complete through planning.
+
 ## Current priority: prove the bar vertical slice
 
 The codebase now contains the required bar-first source path. Development should avoid expanding hotel, HR, events or guest-ordering domains until the bar passes packaged-device acceptance.

@@ -53,3 +53,6 @@ Rules:
 ## Acceptance
 
 Every protected native command requires a positive role/capability test and a denied test. Manager approval tests must cover expiry, single use, wrong target, wrong initiator and insufficient approver authority.
+# Expansion permissions
+
+The [workflow contracts](EXPANSION_WORKFLOWS.md) identify planned domain capabilities and offline restrictions. They do not yet extend the current Rust registry. Cloud memberships, device/operator grants and field-filtered queries must be implemented before enabling browser operational writes.

@@ -6,6 +6,7 @@ import { recordsOf, money, fieldClass, buttonClass, primaryButtonClass } from '.
 import { ManagerApprovalDialog } from './ManagerApprovalDialog';
 import { ActionDialog } from './ActionDialog';
 import { NativeReceiptDialog } from './NativeReceiptDialog';
+import { NativeReceiptHistory } from './NativeReceiptHistory';
 import { barcodeEquals, useBarcodeScanner } from '../hooks/useBarcodeScanner';
 
 export function NativePOSView(){
@@ -41,8 +42,8 @@ export function NativePOSView(){
     if(!active)return;
     const order={...active,amountPaid:Number(active.amountPaid||0)+Number(p.amount||0),completedAt:new Date().toISOString()};
     try{
-      await runtime.command('payment.record',{orderId:active.id,...p});
-      setModal({kind:'RECEIPT',data:{order,payment:{tenderType:p.method,amount:p.amount,receiptRef:p.mpesa?.code||p.cardAuthCode,cashTendered:p.cashTendered,changeDue:p.method==='CASH'?Math.max(0,Number(p.cashTendered||0)-Number(p.amount||0)):0}}});
+      const result=await runtime.command('payment.record',{orderId:active.id,...p});
+      setModal({kind:'RECEIPT',data:{order,receiptId:result.recordIds.find(id=>id.startsWith('receipt-')),payment:{tenderType:p.method,amount:p.amount}}});
     }catch(e){setNotice(String(e))}
   };
   const finishSplit=async(payments:any[])=>{
@@ -50,13 +51,14 @@ export function NativePOSView(){
     const amount=payments.reduce((sum,p)=>sum+Number(p.amount||0),0);
     const order={...active,amountPaid:Number(active.amountPaid||0)+amount,completedAt:new Date().toISOString()};
     try{
-      await runtime.command('payment.split',{orderId:active.id,payments});
-      setModal({kind:'RECEIPT',data:{order,payment:{tenderType:payments.map(p=>p.method).join(' + '),amount,receiptRef:payments.map(p=>p.mpesa?.code||p.cardAuthCode).filter(Boolean).join(', ')||undefined,cashTendered:payments.filter(p=>p.method==='CASH').reduce((sum,p)=>sum+Number(p.cashTendered||0),0)||undefined}}});
+      const result=await runtime.command('payment.split',{orderId:active.id,payments});
+      setModal({kind:'RECEIPT',data:{order,receiptId:result.recordIds.find(id=>id.startsWith('receipt-')),payment:{tenderType:payments.map(p=>p.method).join(' + '),amount}}});
     }catch(e){setNotice(String(e))}
   };
 
   return <div className="grid h-full min-h-0 grid-cols-1 xl:grid-cols-[1fr_430px] bg-slate-950 text-white">
     <section className="min-h-0 overflow-auto p-4">
+      <div className="mb-2"><NativeReceiptHistory/></div>
       <div className="mb-2 flex flex-wrap items-center gap-2"><select className={fieldClass+' max-w-xs'} value={outletId} onChange={e=>setOutletId(e.target.value)}>{outlets.map(o=><option key={o.id} value={o.id}>{o.name}</option>)}</select><button className={primaryButtonClass} onClick={()=>void createTab()}>Quick tab</button><button className={buttonClass} onClick={()=>setModal({kind:'NEW_TAB'})}>Named tab</button><div className="relative min-w-[220px] flex-1"><Search className="absolute left-3 top-3 h-4 w-4 text-slate-500"/><input data-barcode-capture="true" className={fieldClass+' pl-9'} placeholder="Search or scan barcode" value={query} onChange={e=>setQuery(e.target.value)}/></div><button className={buttonClass} onClick={()=>{setLastTestScan('');setScannerTest(true);setNotice('Scan any barcode now. This test will not change a sale or stock count.')}}>{scannerTest?'Waiting for scanâ€¦':'Test scanner'}</button></div>
       <p className="mb-4 text-xs text-slate-500">USB keyboard-wedge scanner ready when connected. Enter and Tab suffixes are supported. {lastTestScan&&<>Last test: <span className="font-mono text-emerald-300">{lastTestScan}</span></>}</p>
       <div className="mb-5 flex gap-2 overflow-x-auto pb-2">{tables.filter(t=>t.outletId===outletId).map(t=><button key={t.id} disabled={t.state!=='AVAILABLE'&&t.state!=='CLEANING'} onClick={()=>t.state==='CLEANING'?void run('table.ready',{tableId:t.id},recordVersion(snapshot,'tables',t.id)):void createTableOrder(t)} className={`min-w-24 rounded-xl border p-3 text-left ${t.state==='AVAILABLE'?'border-emerald-700 bg-emerald-950/40':t.state==='CLEANING'?'border-amber-700 bg-amber-950/40':'border-slate-800 bg-slate-900 opacity-50'}`}><b className="block">{t.label}</b><span className="text-xs text-slate-400">{t.state}</span></button>)}</div>
@@ -76,7 +78,7 @@ export function NativePOSView(){
     {modal?.kind==='CONFIG'&&active&&<ConfigDialog value={modal.data} onClose={()=>setModal(null)} onSave={async v=>{await run('order.addItem',{orderId:active.id,productId:v.product.id,quantity:v.quantity,portionId:v.portionId||undefined,modifierIds:v.modifierIds});setModal(null);}}/>}
     {modal?.kind==='PAY'&&active&&<PaymentDialog balance={balance} snapshot={snapshot} onClose={()=>setModal(null)} onPay={finishPayment}/>}
     {modal?.kind==='SPLIT'&&active&&<SplitDialog balance={balance} snapshot={snapshot} onClose={()=>setModal(null)} onPay={finishSplit}/>}
-    {modal?.kind==='RECEIPT'&&<NativeReceiptDialog order={modal.data.order} payment={modal.data.payment} businessName={recordsOf(snapshot,'organization')[0]?.name||'Business'} outletName={outlets.find(o=>o.id===modal.data.order.outletId)?.name||'Outlet'} cashierName={snapshot.actor.name} onJobsChanged={()=>void refreshPrinterJobs()} onClose={()=>setModal(null)}/>}
+    {modal?.kind==='RECEIPT'&&<NativeReceiptDialog order={modal.data.order} receiptId={modal.data.receiptId} onJobsChanged={()=>void refreshPrinterJobs()} onClose={()=>setModal(null)}/>}
     {modal?.kind==='DISCOUNT'&&active&&<ReasonDialog title="Discount order" extra="percent" onClose={()=>setModal(null)} onSubmit={async v=>protectedRun('order.discount',active.id,async token=>{await run('order.discount',{orderId:active.id,percent:v.percent,reason:v.reason,approvalToken:token});setModal(null);})}/>} 
     {modal?.kind==='COMP'&&active&&<ReasonDialog title={`Comp ${modal.data.productName}`} onClose={()=>setModal(null)} onSubmit={async v=>protectedRun('order.comp',modal.data.id,async token=>{await run('order.compItem',{orderId:active.id,itemId:modal.data.id,reason:v.reason,approvalToken:token});setModal(null);})}/>} 
     {modal?.kind==='VOID'&&active&&<VoidDialog onClose={()=>setModal(null)} onSubmit={async v=>protectedRun('order.void',active.id,async token=>{await run('order.void',{orderId:active.id,...v,approvalToken:token});setModal(null);})}/>} 

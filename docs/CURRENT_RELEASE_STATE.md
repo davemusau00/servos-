@@ -2,6 +2,10 @@
 
 Updated: 2026-09-25. **Bar-first source implementation substantially expanded. Production acceptance is still required on a supported target device.**
 
+## Expansion update — 2026-09-26
+
+The accepted target now includes shared desktop/Vercel operations with allocated offline rights, Rooms, Assets and integration of existing staff-facing modules. [Documentation package](EXPANSION_PLAN.md) written before application changes. Existing single-terminal source remains active until a verified protocol cutover. No multi-writer, Vercel deployment, Rooms or Assets completion is claimed.
+
 ## Implemented in source
 
 - Native installation state machine from intake through Go Live.

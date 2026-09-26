@@ -1,6 +1,13 @@
 # ServOS documentation
 
-ServOS targets one business and one installed terminal.
+ServOS currently runs one installed authoritative terminal. The accepted expansion targets shared desktop/Vercel operations for one business; it is not yet enabled.
+
+- [Accepted expansion and phase gates](EXPANSION_PLAN.md)
+- [Source audit](EXPANSION_AUDIT.md)
+- [Synchronization, identity and data contracts](EXPANSION_CONTRACTS.md)
+- [Domain workflows](EXPANSION_WORKFLOWS.md)
+- [Receipt specification](RECEIPT_SPEC.md)
+- [Expansion acceptance matrix](EXPANSION_ACCEPTANCE.md)
 
 - [Current release state](CURRENT_RELEASE_STATE.md)
 - [Feature coverage](FEATURE_COVERAGE_MATRIX.md)
