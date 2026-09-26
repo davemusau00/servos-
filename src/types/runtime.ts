@@ -22,7 +22,8 @@ export type Permission =
   | 'floorplan.view' | 'floorplan.manage'
   | 'kds.view' | 'kds.update'
   | 'accounting.view' | 'reports.view' | 'audit.view'
-  | 'backup.create' | 'backup.restore' | 'sync.manual' | 'system.configure' | 'help.view';
+  | 'backup.create' | 'backup.restore' | 'sync.manual' | 'system.configure' | 'help.view'
+  | 'data.import.view' | 'data.import.stage' | 'data.import.execute';
 
 export interface BusinessCommand {
   id: string;
@@ -63,6 +64,48 @@ export interface ProductionHealthAudit {
   records: { total: number; active: number; archived: number; collections: ProductionHealthCollection[]; manifest: ProductionHealthRecordVersion[] };
   warnings: string[];
 }
+// SERVOS_PATCH_02A_RECONCILIATION
+export type ReconciliationClassification = 'MATCHED' | 'LOCAL_AHEAD' | 'CLOUD_MISSING' | 'CLOUD_AHEAD' | 'DIVERGED';
+export interface ReconciliationRecordResult {
+  collection: string;
+  id: string;
+  classification: ReconciliationClassification;
+  localVersion: number | null;
+  cloudVersion: number | null;
+  localArchived: boolean | null;
+  cloudArchived: boolean | null;
+  reason: string;
+}
+export interface ReconciliationReport {
+  mode: 'READ_ONLY_RECONCILIATION';
+  generatedAt: string;
+  local: {
+    terminalId: string;
+    schemaVersion: number;
+    quickCheck: string;
+    lastOutboxSequence: number;
+    pendingOutbox: number;
+  };
+  cloud: {
+    terminalId: string;
+    lastSequence: number;
+    lastSeen: string | null;
+    operationCount: number;
+  };
+  summary: {
+    total: number;
+    matched: number;
+    localAhead: number;
+    cloudMissing: number;
+    cloudAhead: number;
+    diverged: number;
+  };
+  cutoverReady: boolean;
+  blockers: string[];
+  warnings: string[];
+  records: ReconciliationRecordResult[];
+}
+
 export type PrinterJobState = 'SENT' | 'QUEUED' | 'DELIVERY_UNCERTAIN' | 'SENDING' | 'OS_DIALOG' | 'MANUAL';
 export interface PrinterJobResult { jobId?: string; orderId?: string; state: PrinterJobState; message?: string; createdAt?: string }
 export interface IntakeBusinessIdentity {

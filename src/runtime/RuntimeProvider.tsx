@@ -1,7 +1,8 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import type { ReceiptResponse, ReceiptSummary } from '../types/receipt';
-import type { BusinessCommand, CommandResult, IntakeProfile, ManagerApproval, Permission, PrinterJobResult, ProductionHealthAudit, RuntimeSession, RuntimeSnapshot, RuntimeStatus } from '../types/runtime';
+import type { ImportBatchDetail, ImportBatchSummary, StageImportInput } from '../types/imports';
+import type { BusinessCommand, CommandResult, IntakeProfile, ManagerApproval, Permission, PrinterJobResult, ProductionHealthAudit, ReconciliationReport, RuntimeSession, RuntimeSnapshot, RuntimeStatus } from '../types/runtime';
 
 export const isNative = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
 
@@ -25,6 +26,11 @@ interface RuntimeContextValue {
   sync: () => Promise<void>;
   backup: () => Promise<string>;
   healthAudit: () => Promise<ProductionHealthAudit>;
+  importBatches: () => Promise<ImportBatchSummary[]>;
+  importBatch: (id: string) => Promise<ImportBatchDetail>;
+  stageImport: (input: StageImportInput) => Promise<ImportBatchDetail>;
+  cancelImport: (id: string) => Promise<void>;
+  reconcile: () => Promise<ReconciliationReport>;
   receipt: (orderId: string, receiptId?: string) => Promise<ReceiptResponse>;
   receiptHistory: () => Promise<ReceiptSummary[]>;
   printReceipt: (input: { orderId: string; receiptId: string; reprint: boolean }) => Promise<PrinterJobResult>;
@@ -147,6 +153,29 @@ export const RuntimeProvider = ({ children }: { children: React.ReactNode }) => 
     try { return await invoke<ProductionHealthAudit>('runtime_health_audit', { token: session.token }); }
     catch (e) { report(e); throw e; }
   };
+  // SERVOS_PATCH_02A_RECONCILIATION
+  const reconcile = async () => {
+    if (!session) throw new Error('Unlock the terminal first');
+    try { return await invoke<ReconciliationReport>('runtime_reconciliation_compare', { token: session.token }); }
+    catch (e) { report(e); throw e; }
+  };
+  // SERVOS_PATCH_03_IMPORT_CENTER
+  const importBatches = async () => {
+    if (!session) throw new Error('Unlock the terminal first');
+    return invoke<ImportBatchSummary[]>('runtime_import_list', { token: session.token });
+  };
+  const importBatch = async (id: string) => {
+    if (!session) throw new Error('Unlock the terminal first');
+    return invoke<ImportBatchDetail>('runtime_import_detail', { token: session.token, batchId: id });
+  };
+  const stageImport = async (input: StageImportInput) => {
+    if (!session) throw new Error('Unlock the terminal first');
+    return invoke<ImportBatchDetail>('runtime_import_stage', { token: session.token, templateKey: input.templateKey, fileName: input.fileName, csvText: input.csvText });
+  };
+  const cancelImport = async (id: string) => {
+    if (!session) throw new Error('Unlock the terminal first');
+    await invoke('runtime_import_cancel', { token: session.token, batchId: id });
+  };
   const receipt = async (orderId: string, receiptId?: string) => {
     if (!session) throw new Error('Unlock the terminal first');
     return invoke<ReceiptResponse>('runtime_receipt', { token: session.token, orderId, receiptId: receiptId || null });
@@ -185,5 +214,5 @@ export const RuntimeProvider = ({ children }: { children: React.ReactNode }) => 
     return () => { clearInterval(timer); window.removeEventListener('pointerdown', active); window.removeEventListener('keydown', active); window.removeEventListener('online', resume); window.removeEventListener('servos:local-commit', resume); document.removeEventListener('visibilitychange', resume); };
   }, [session, sync, lock]);
 
-  return <RuntimeContext.Provider value={{ status, session, snapshot, error, syncing, busy, reloadStatus, saveIntake, completeIntake, reopenIntake, enroll, login, lock, refresh, command, approve, sync, backup, healthAudit, receipt, receiptHistory, printReceipt, testPrinter, retryPrinterJob, printerJobs, clearError: () => setError('') }}>{children}</RuntimeContext.Provider>;
+  return <RuntimeContext.Provider value={{ status, session, snapshot, error, syncing, busy, reloadStatus, saveIntake, completeIntake, reopenIntake, enroll, login, lock, refresh, command, approve, sync, backup, healthAudit, importBatches, importBatch, stageImport, cancelImport, reconcile, receipt, receiptHistory, printReceipt, testPrinter, retryPrinterJob, printerJobs, clearError: () => setError('') }}>{children}</RuntimeContext.Provider>;
 };

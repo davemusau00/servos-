@@ -399,6 +399,111 @@ fn runtime_health_audit(state: State<Runtime>, token: String) -> store::Result<V
     store::production_health_audit(&db, &token)
 }
 
+// SERVOS_PATCH_02A_RECONCILIATION
+#[tauri::command]
+async fn runtime_reconciliation_compare(state: State<'_, Runtime>, token: String) -> store::Result<Value> {
+    let (url, key, terminal, credential) = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        let actor = store::actor(&db, &token, false)?;
+        if !store::permissions(&actor.role).contains(&"audit.view") {
+            return Err("Audit permission required".into());
+        }
+        let url = validate_url(&store::meta(&db, "cloud_url")?.ok_or("Cloud synchronization is not configured")?)?;
+        let key = store::meta(&db, "cloud_key")?.ok_or("Cloud publishable key is missing")?;
+        let terminal = store::meta(&db, "terminal_id")?.ok_or("Terminal identity is missing")?;
+        let credential = store::meta(&db, "device_token")?.ok_or("Terminal device credential is missing")?;
+        (url, key, terminal, credential)
+    };
+
+    let mut all_records: Vec<Value> = vec![];
+    let mut after_collection: Option<String> = None;
+    let mut after_id: Option<String> = None;
+    let mut header: Option<Value> = None;
+    let mut completed = false;
+
+    for _ in 0..200 {
+        let page = rpc(
+            &url,
+            &key,
+            None,
+            "servos_reconciliation_manifest",
+            json!({
+                "terminal_id": terminal.clone(),
+                "device_token": credential.clone(),
+                "after_collection": after_collection.clone(),
+                "after_id": after_id.clone(),
+                "page_size": 500
+            }),
+        )
+        .await?;
+
+        if page.get("mode").and_then(Value::as_str) != Some("READ_ONLY_CLOUD_REPLICA") {
+            return Err("Unexpected cloud reconciliation response".into());
+        }
+        if header.is_none() {
+            header = Some(page.clone());
+        }
+        let records = page
+            .get("records")
+            .and_then(Value::as_array)
+            .ok_or("Cloud reconciliation response is missing records")?;
+        if all_records.len() + records.len() > 100_000 {
+            return Err("Cloud reconciliation exceeds the supported 100,000 record safety limit".into());
+        }
+        all_records.extend(records.iter().cloned());
+
+        if !page.get("hasMore").and_then(Value::as_bool).unwrap_or(false) {
+            completed = true;
+            break;
+        }
+        let cursor = page.get("nextCursor").ok_or("Cloud reconciliation response is missing a continuation cursor")?;
+        let next_collection = cursor.get("collection").and_then(Value::as_str).ok_or("Invalid cloud continuation collection")?.to_string();
+        let next_id = cursor.get("id").and_then(Value::as_str).ok_or("Invalid cloud continuation record ID")?.to_string();
+        if after_collection.as_deref() == Some(next_collection.as_str()) && after_id.as_deref() == Some(next_id.as_str()) {
+            return Err("Cloud reconciliation cursor did not advance".into());
+        }
+        after_collection = Some(next_collection);
+        after_id = Some(next_id);
+    }
+
+    if !completed {
+        return Err("Cloud reconciliation exceeded the pagination safety limit".into());
+    }
+    let first = header.ok_or("Cloud reconciliation returned no response")?;
+    let cloud = json!({
+        "mode": "READ_ONLY_CLOUD_REPLICA",
+        "generatedAt": first["generatedAt"].clone(),
+        "terminal": first["terminal"].clone(),
+        "operations": first["operations"].clone(),
+        "records": all_records,
+    });
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    store::reconciliation_compare(&db, &token, &cloud)
+}
+
+
+// SERVOS_PATCH_03_IMPORT_CENTER
+#[tauri::command]
+fn runtime_import_list(state: State<Runtime>, token: String) -> store::Result<Value> {
+    let db=state.db.lock().map_err(|e|e.to_string())?;
+    store::import_list(&db,&token)
+}
+#[tauri::command]
+fn runtime_import_detail(state: State<Runtime>, token: String, batch_id: String) -> store::Result<Value> {
+    let db=state.db.lock().map_err(|e|e.to_string())?;
+    store::import_detail(&db,&token,&batch_id)
+}
+#[tauri::command]
+fn runtime_import_stage(state: State<Runtime>, token: String, template_key: String, file_name: String, csv_text: String) -> store::Result<Value> {
+    let mut db=state.db.lock().map_err(|e|e.to_string())?;
+    store::import_stage(&mut db,&token,&template_key,&file_name,&csv_text)
+}
+#[tauri::command]
+fn runtime_import_cancel(state: State<Runtime>, token: String, batch_id: String) -> store::Result<()> {
+    let mut db=state.db.lock().map_err(|e|e.to_string())?;
+    store::import_cancel(&mut db,&token,&batch_id)
+}
+
 #[tauri::command]
 fn runtime_backup(state: State<Runtime>, token: String) -> store::Result<String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
@@ -599,6 +704,11 @@ pub fn run() {
             runtime_sync,
             runtime_backup,
             runtime_health_audit,
+            runtime_import_list,
+            runtime_import_detail,
+            runtime_import_stage,
+            runtime_import_cancel,
+            runtime_reconciliation_compare,
             runtime_print_receipt,
             runtime_receipt,
             runtime_receipt_history,

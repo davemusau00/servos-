@@ -286,6 +286,103 @@ fn production_health_audit_is_read_only_and_excludes_secrets() {
     assert_eq!(before, after);
 }
 
+// SERVOS_PATCH_02A_RECONCILIATION
+#[test]
+fn reconciliation_classifies_replica_drift_without_mutating_local_state() {
+    let (_, db, s) = setup();
+
+    let mut stmt = db.prepare("SELECT collection,id,version,data,archived FROM records ORDER BY collection,id").unwrap();
+    let rows = stmt.query_map([], |r| Ok(json!({
+        "collection": r.get::<_,String>(0)?,
+        "id": r.get::<_,String>(1)?,
+        "version": r.get::<_,i64>(2)?,
+        "data": serde_json::from_str::<Value>(&r.get::<_,String>(3)?).unwrap(),
+        "archived": r.get::<_,bool>(4)?,
+    }))).unwrap();
+    let mut cloud_records: Vec<Value> = rows.map(|r|r.unwrap()).collect();
+    drop(stmt);
+
+    db.execute("UPDATE records SET version=version+1 WHERE collection='products' AND id='setup-product'", []).unwrap();
+
+    let property = cloud_records.iter_mut().find(|r|r["collection"]=="property"&&r["id"]=="property").unwrap();
+    property["version"] = json!(property["version"].as_i64().unwrap()+1);
+
+    let organization = cloud_records.iter_mut().find(|r|r["collection"]=="organization"&&r["id"]=="business").unwrap();
+    organization["data"]["name"] = json!("Different cloud business");
+
+    cloud_records.retain(|r| !(r["collection"]=="paymentConfig"&&r["id"]=="main"));
+    cloud_records.push(json!({
+        "collection":"customers","id":"cloud-only","version":1,
+        "data":{"id":"cloud-only","name":"CLOUD SECRET CUSTOMER"},"archived":false
+    }));
+
+    let local_last: i64 = db.query_row("SELECT COALESCE(MAX(sequence),0) FROM outbox", [], |r|r.get(0)).unwrap();
+    let cloud = json!({
+        "mode":"READ_ONLY_CLOUD_REPLICA",
+        "generatedAt":"2026-09-27T00:00:00Z",
+        "terminal":{"id":"terminal-test","lastSequence":local_last,"lastSeen":"2026-09-27T00:00:00Z"},
+        "operations":{"count":local_last},
+        "records":cloud_records
+    });
+
+    let before: (i64,i64,i64,i64) = db.query_row(
+        "SELECT (SELECT COUNT(*) FROM records),(SELECT COUNT(*) FROM commands),(SELECT COUNT(*) FROM audit),(SELECT COUNT(*) FROM outbox)",
+        [], |r|Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?))
+    ).unwrap();
+    let report = reconciliation_compare(&db,&s.token,&cloud).unwrap();
+    let after: (i64,i64,i64,i64) = db.query_row(
+        "SELECT (SELECT COUNT(*) FROM records),(SELECT COUNT(*) FROM commands),(SELECT COUNT(*) FROM audit),(SELECT COUNT(*) FROM outbox)",
+        [], |r|Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?))
+    ).unwrap();
+
+    assert_eq!(before,after);
+    assert_eq!(report["mode"],"READ_ONLY_RECONCILIATION");
+    assert!(report["summary"]["matched"].as_i64().unwrap()>0);
+    assert_eq!(report["summary"]["localAhead"],1);
+    assert_eq!(report["summary"]["cloudMissing"],1);
+    assert_eq!(report["summary"]["cloudAhead"],2);
+    assert_eq!(report["summary"]["diverged"],1);
+    assert_eq!(report["cutoverReady"],false);
+    assert!(!report.to_string().contains("CLOUD SECRET CUSTOMER"));
+}
+
+// SERVOS_PATCH_03_IMPORT_CENTER
+#[test]
+fn import_center_stages_valid_csv_without_mutating_business_history() {
+    let (_, mut db, s)=setup();
+    let before:(i64,i64,i64,i64)=db.query_row(
+        "SELECT (SELECT COUNT(*) FROM records),(SELECT COUNT(*) FROM commands),(SELECT COUNT(*) FROM audit),(SELECT COUNT(*) FROM outbox)",
+        [],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?))
+    ).unwrap();
+    let csv="external_id,code,name,category,barcode,selling_price,taxable,route_to,outlet_external_ids,active\nproduct-import-1,IMP1,Imported Soda,Soft Drinks,616110000099,150.00,true,BAR,outlet-main,true\n";
+    let batch=import_stage(&mut db,&s.token,"products","products.csv",csv).unwrap();
+    assert_eq!(batch["status"],"READY");
+    assert_eq!(batch["rowCount"],1);
+    assert_eq!(batch["validCount"],1);
+    assert_eq!(batch["invalidCount"],0);
+    assert_eq!(batch["rows"][0]["normalized"]["selling_price"],150.0);
+    assert_eq!(batch["rows"][0]["normalized"]["taxable"],true);
+    let after:(i64,i64,i64,i64)=db.query_row(
+        "SELECT (SELECT COUNT(*) FROM records),(SELECT COUNT(*) FROM commands),(SELECT COUNT(*) FROM audit),(SELECT COUNT(*) FROM outbox)",
+        [],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?))
+    ).unwrap();
+    assert_eq!(before,after);
+    assert_eq!(db.query_row::<i64,_,_>("SELECT COUNT(*) FROM import_batches",[],|r|r.get(0)).unwrap(),1);
+    assert_eq!(db.query_row::<i64,_,_>("SELECT COUNT(*) FROM import_events",[],|r|r.get(0)).unwrap(),1);
+}
+#[test]
+fn import_center_preserves_invalid_rows_and_rejects_credentials() {
+    let (_, mut db, s)=setup();
+    let csv="external_id,code,name,selling_price,taxable\nproduct-import-1,IMP1,Bad Price,-5,maybe\nproduct-import-1,IMP2,Duplicate,10,true\n";
+    let batch=import_stage(&mut db,&s.token,"products","products.csv",csv).unwrap();
+    assert_eq!(batch["status"],"NEEDS_REVIEW");
+    assert_eq!(batch["invalidCount"],2);
+    assert!(batch["rows"][0]["errors"].as_array().unwrap().len()>=2);
+    assert!(batch["rows"][1]["errors"].as_array().unwrap().iter().any(|v|v.as_str().unwrap().contains("external_id")));
+    let secret="external_id,full_name,job_title,role,pin\nemployee-1,Jane,Duty Manager,MANAGER,1234\n";
+    assert!(import_stage(&mut db,&s.token,"employees","employees.csv",secret).is_err());
+}
+
 #[test]
 fn audit_cannot_be_modified() {
     let (_, db, _) = setup();

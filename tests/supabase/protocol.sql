@@ -20,6 +20,82 @@ select public.servos_upload('00000000-0000-4000-8000-000000000010',repeat('a',64
 select public.servos_upload('00000000-0000-4000-8000-000000000010',repeat('a',64),'[{"sequence":1,"commandId":"00000000-0000-4000-8000-000000000020","changes":[{"collection":"products","id":"p1","version":1,"data":{"name":"Coffee"},"archived":false}]}]');
 select pg_temp.check_that(pg_temp.rejects($q$select public.servos_upload('00000000-0000-4000-8000-000000000010',repeat('a',64),'[{"sequence":1,"commandId":"00000000-0000-4000-8000-000000000020","changes":[]}]')$q$),'changed replay denied');
 select pg_temp.check_that(pg_temp.rejects($q$select public.servos_upload('00000000-0000-4000-8000-000000000010',repeat('a',64),'[{"sequence":2,"commandId":"00000000-0000-4000-8000-000000000021","changes":[]},{"sequence":4,"commandId":"00000000-0000-4000-8000-000000000022","changes":[]}]')$q$),'sequence gap denied');
+-- SERVOS_PATCH_02A_RECONCILIATION
+select pg_temp.check_that(
+  pg_temp.rejects($q$select public.servos_reconciliation_manifest('00000000-0000-4000-8000-000000000010','wrong',null,null,100)$q$),
+  'reconciliation manifest rejects invalid terminal credentials'
+);
+select pg_temp.check_that(
+  (public.servos_reconciliation_manifest(
+    '00000000-0000-4000-8000-000000000010',
+    repeat('a',64),
+    null,
+    null,
+    100
+  )->>'mode')='READ_ONLY_CLOUD_REPLICA',
+  'reconciliation manifest identifies read-only cloud replica mode'
+);
+select pg_temp.check_that(
+  jsonb_array_length(
+    public.servos_reconciliation_manifest(
+      '00000000-0000-4000-8000-000000000010',
+      repeat('a',64),
+      null,
+      null,
+      100
+    )->'records'
+  )=1,
+  'reconciliation manifest returns the replicated business record'
+);
+select pg_temp.check_that(
+  (
+    public.servos_reconciliation_manifest(
+      '00000000-0000-4000-8000-000000000010',
+      repeat('a',64),
+      null,
+      null,
+      100
+    )->'records'->0->>'collection'
+  )='products',
+  'reconciliation manifest preserves collection identity'
+);
+select pg_temp.check_that(
+  (
+    public.servos_reconciliation_manifest(
+      '00000000-0000-4000-8000-000000000010',
+      repeat('a',64),
+      null,
+      null,
+      100
+    )->'records'->0->>'id'
+  )='p1',
+  'reconciliation manifest preserves record identity'
+);
+select pg_temp.check_that(
+  (
+    public.servos_reconciliation_manifest(
+      '00000000-0000-4000-8000-000000000010',
+      repeat('a',64),
+      null,
+      null,
+      100
+    )->'terminal'->>'lastSequence'
+  )::bigint=1,
+  'reconciliation manifest reports cloud operation sequence'
+);
+select pg_temp.check_that(
+  jsonb_array_length(
+    public.servos_reconciliation_manifest(
+      '00000000-0000-4000-8000-000000000010',
+      repeat('a',64),
+      null,
+      null,
+      100
+    )->'records'
+  )=1,
+  'reconciliation manifest remains read-only and returns the same replica row'
+);
+
 reset role;
 select pg_temp.check_that((select last_sequence=1 from servos_private.terminal),'entire failed batch rolled back');
 select pg_temp.check_that((select count(*)=1 from servos_private.operations),'replay did not duplicate operations');

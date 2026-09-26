@@ -4,6 +4,7 @@ use rand_core::OsRng;
 use rusqlite::{params, Connection, OptionalExtension, Transaction};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
+use sha2::{Digest, Sha256};
 use uuid::Uuid;
 
 #[path = "receipts.rs"]
@@ -88,7 +89,7 @@ pub fn open(path: &std::path::Path) -> Result<Connection> {
     let version: i64 = db
         .query_row("PRAGMA user_version", [], |r| r.get(0))
         .map_err(error)?;
-    if version > 3 {
+    if version > 4 {
         return Err("Database requires a newer ServOS version".into());
     }
     if version < 1 {
@@ -100,6 +101,9 @@ pub fn open(path: &std::path::Path) -> Result<Connection> {
     }
     if version < 3 {
         db.execute_batch(include_str!("../migrations/003_receipts.sql")).map_err(error)?;
+    }
+    if version < 4 {
+        db.execute_batch(include_str!("../migrations/004_import_center.sql")).map_err(error)?;
     }
     Ok(db)
 }
@@ -131,14 +135,14 @@ pub const ALL_PERMISSIONS: &[&str] = &[
     "inventory.view","inventory.receive","inventory.transfer","inventory.waste","inventory.count","inventory.adjust",
     "procurement.view","procurement.manage","procurement.receive","procurement.over_receive","procurement.pay",
     "floorplan.view","floorplan.manage","kds.view","kds.update",
-    "accounting.view","reports.view","audit.view","backup.create","backup.restore","sync.manual","system.configure","help.view"
+    "accounting.view","reports.view","audit.view","data.import.view","data.import.stage","data.import.execute","backup.create","backup.restore","sync.manual","system.configure","help.view"
 ];
 
 pub fn permissions(role: &str) -> Vec<&'static str> {
     match role {
         "Admin" => ALL_PERMISSIONS.to_vec(),
         "Manager" => ALL_PERMISSIONS.iter().copied().filter(|p| ![
-            "business.configure","business.tax.configure","staff.change_role","backup.restore","system.configure"
+            "business.configure","business.tax.configure","staff.change_role","data.import.execute","backup.restore","system.configure"
         ].contains(p)).collect(),
         _ => vec![
             "business.view","staff.view","pos.sell","pos.open_tab","pos.manage_table","order.fire",
@@ -1984,6 +1988,546 @@ pub fn production_health_audit(db: &Connection, token: &str) -> Result<Value> {
         "records": {"total": record_total, "active": record_active, "archived": record_archived, "collections": collections, "manifest": manifest},
         "warnings": warnings,
     }))
+}
+
+// SERVOS_PATCH_02A_RECONCILIATION
+pub fn reconciliation_compare(db: &Connection, token: &str, cloud: &Value) -> Result<Value> {
+    let user = actor(db, token, false)?;
+    if !permissions(&user.role).contains(&"audit.view") {
+        return Err("Audit permission required".into());
+    }
+    if cloud.get("mode").and_then(Value::as_str) != Some("READ_ONLY_CLOUD_REPLICA") {
+        return Err("Unexpected cloud reconciliation payload".into());
+    }
+
+    let local_terminal = meta(db, "terminal_id")?.ok_or("Terminal identity is missing")?;
+    let cloud_terminal = cloud
+        .get("terminal")
+        .and_then(|v| v.get("id"))
+        .and_then(Value::as_str)
+        .ok_or("Cloud reconciliation payload is missing terminal identity")?;
+    if cloud_terminal != local_terminal {
+        return Err("Cloud reconciliation payload belongs to a different terminal".into());
+    }
+
+    let cloud_records = cloud
+        .get("records")
+        .and_then(Value::as_array)
+        .ok_or("Cloud reconciliation payload is missing records")?;
+    if cloud_records.len() > 100_000 {
+        return Err("Cloud reconciliation payload is too large".into());
+    }
+
+    let mut local_map: std::collections::BTreeMap<String, (String, String, i64, bool, Value)> =
+        std::collections::BTreeMap::new();
+    {
+        let mut stmt = db
+            .prepare("SELECT collection,id,version,archived,data FROM records ORDER BY collection,id")
+            .map_err(error)?;
+        let rows = stmt
+            .query_map([], |r| {
+                Ok((
+                    r.get::<_, String>(0)?,
+                    r.get::<_, String>(1)?,
+                    r.get::<_, i64>(2)?,
+                    r.get::<_, bool>(3)?,
+                    r.get::<_, String>(4)?,
+                ))
+            })
+            .map_err(error)?;
+        for row in rows {
+            let (collection, record_id, version, archived, raw) = row.map_err(error)?;
+            let data = serde_json::from_str::<Value>(&raw).map_err(error)?;
+            let key = format!("{}\u{0}{}", collection, record_id);
+            local_map.insert(key, (collection, record_id, version, archived, data));
+        }
+    }
+
+    let mut cloud_map: std::collections::BTreeMap<String, (String, String, i64, bool, Value)> =
+        std::collections::BTreeMap::new();
+    for record in cloud_records {
+        let collection = text(record, "collection")?.to_string();
+        let record_id = text(record, "id")?.to_string();
+        let version = record
+            .get("version")
+            .and_then(Value::as_i64)
+            .filter(|v| *v > 0)
+            .ok_or("Cloud record version must be a positive integer")?;
+        let archived = record
+            .get("archived")
+            .and_then(Value::as_bool)
+            .ok_or("Cloud record archived state is required")?;
+        let data = record
+            .get("data")
+            .filter(|v| v.is_object())
+            .cloned()
+            .ok_or("Cloud record data must be an object")?;
+        let key = format!("{}\u{0}{}", collection, record_id);
+        if cloud_map
+            .insert(key, (collection, record_id, version, archived, data))
+            .is_some()
+        {
+            return Err("Cloud reconciliation payload contains a duplicate record identity".into());
+        }
+    }
+
+    let keys: std::collections::BTreeSet<String> =
+        local_map.keys().chain(cloud_map.keys()).cloned().collect();
+    let mut results: Vec<Value> = vec![];
+    let mut matched = 0i64;
+    let mut local_ahead = 0i64;
+    let mut cloud_missing = 0i64;
+    let mut cloud_ahead = 0i64;
+    let mut diverged = 0i64;
+
+    for key in keys {
+        let local = local_map.get(&key);
+        let remote = cloud_map.get(&key);
+        let (collection, record_id) = match (local, remote) {
+            (Some(v), _) => (v.0.clone(), v.1.clone()),
+            (None, Some(v)) => (v.0.clone(), v.1.clone()),
+            (None, None) => continue,
+        };
+
+        let (classification, reason) = match (local, remote) {
+            (Some(_), None) => {
+                cloud_missing += 1;
+                ("CLOUD_MISSING", "Record exists locally but is absent from the cloud replica")
+            }
+            (None, Some(_)) => {
+                cloud_ahead += 1;
+                ("CLOUD_AHEAD", "Record exists in the cloud replica but not in local SQLite")
+            }
+            (Some(l), Some(r)) if l.2 == r.2 && l.3 == r.3 && l.4 == r.4 => {
+                matched += 1;
+                ("MATCHED", "Version, archive state and record data match")
+            }
+            (Some(l), Some(r)) if l.2 > r.2 => {
+                local_ahead += 1;
+                ("LOCAL_AHEAD", "Local record version is newer than the cloud replica")
+            }
+            (Some(l), Some(r)) if r.2 > l.2 => {
+                cloud_ahead += 1;
+                ("CLOUD_AHEAD", "Cloud record version is newer than local SQLite")
+            }
+            (Some(_), Some(_)) => {
+                diverged += 1;
+                ("DIVERGED", "Same record version has different archive state or record data")
+            }
+            (None, None) => continue,
+        };
+
+        results.push(json!({
+            "collection": collection,
+            "id": record_id,
+            "classification": classification,
+            "localVersion": local.map(|v| v.2),
+            "cloudVersion": remote.map(|v| v.2),
+            "localArchived": local.map(|v| v.3),
+            "cloudArchived": remote.map(|v| v.3),
+            "reason": reason,
+        }));
+    }
+
+    let schema_version: i64 = db
+        .query_row("PRAGMA user_version", [], |r| r.get(0))
+        .map_err(error)?;
+    let quick_check: String = db
+        .query_row("PRAGMA quick_check", [], |r| r.get(0))
+        .map_err(error)?;
+    let (last_outbox, pending_outbox): (i64, i64) = db
+        .query_row(
+            "SELECT COALESCE(MAX(sequence),0),COALESCE(SUM(CASE WHEN acknowledged_at IS NULL THEN 1 ELSE 0 END),0) FROM outbox",
+            [],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .map_err(error)?;
+    let cloud_last_sequence = cloud
+        .get("terminal")
+        .and_then(|v| v.get("lastSequence"))
+        .and_then(Value::as_i64)
+        .unwrap_or(0);
+    let cloud_last_seen = cloud
+        .get("terminal")
+        .and_then(|v| v.get("lastSeen"))
+        .cloned()
+        .unwrap_or(Value::Null);
+    let cloud_operation_count = cloud
+        .get("operations")
+        .and_then(|v| v.get("count"))
+        .and_then(Value::as_i64)
+        .unwrap_or(0);
+
+    let mut blockers: Vec<String> = vec![];
+    let mut warnings: Vec<String> = vec![
+        "This comparison is read-only. No local or cloud business record was repaired or overwritten.".into()
+    ];
+    if quick_check != "ok" {
+        blockers.push(format!("SQLite quick_check returned: {quick_check}"));
+    }
+    if pending_outbox > 0 {
+        blockers.push(format!("{pending_outbox} local operation(s) are still awaiting cloud acknowledgement"));
+    }
+    if local_ahead > 0 {
+        blockers.push(format!("{local_ahead} record(s) are newer locally than in the cloud replica"));
+    }
+    if cloud_missing > 0 {
+        blockers.push(format!("{cloud_missing} local record(s) are missing from the cloud replica"));
+    }
+    if cloud_ahead > 0 {
+        blockers.push(format!("{cloud_ahead} record(s) are newer or exist only in the cloud replica"));
+    }
+    if diverged > 0 {
+        blockers.push(format!("{diverged} record(s) have the same version but different content or archive state"));
+    }
+    if cloud_last_sequence != last_outbox {
+        blockers.push(format!(
+            "Cloud operation sequence {cloud_last_sequence} does not equal local outbox sequence {last_outbox}"
+        ));
+    }
+    if cloud_operation_count != cloud_last_sequence {
+        warnings.push(format!(
+            "Cloud stores {cloud_operation_count} operation envelope(s) while its terminal sequence is {cloud_last_sequence}; investigate gaps or retained history before cutover"
+        ));
+    }
+
+    let total = results.len() as i64;
+    let cutover_ready = blockers.is_empty() && matched == total;
+
+    Ok(json!({
+        "mode": "READ_ONLY_RECONCILIATION",
+        "generatedAt": now(),
+        "local": {
+            "terminalId": local_terminal,
+            "schemaVersion": schema_version,
+            "quickCheck": quick_check,
+            "lastOutboxSequence": last_outbox,
+            "pendingOutbox": pending_outbox,
+        },
+        "cloud": {
+            "terminalId": cloud_terminal,
+            "lastSequence": cloud_last_sequence,
+            "lastSeen": cloud_last_seen,
+            "operationCount": cloud_operation_count,
+        },
+        "summary": {
+            "total": total,
+            "matched": matched,
+            "localAhead": local_ahead,
+            "cloudMissing": cloud_missing,
+            "cloudAhead": cloud_ahead,
+            "diverged": diverged,
+        },
+        "cutoverReady": cutover_ready,
+        "blockers": blockers,
+        "warnings": warnings,
+        "records": results,
+    }))
+}
+
+
+// SERVOS_PATCH_03_IMPORT_CENTER
+fn import_required_headers(key: &str) -> Result<&'static [&'static str]> {
+    match key {
+        "business" => Ok(&["external_id","trading_name","currency","timezone"]),
+        "outlets" => Ok(&["external_id","name","type"]),
+        "stock_locations" => Ok(&["external_id","name","kind"]),
+        "suppliers" => Ok(&["external_id","name"]),
+        "customers" => Ok(&["external_id","name"]),
+        "employees" => Ok(&["external_id","full_name","job_title","role"]),
+        "products" => Ok(&["external_id","code","name","selling_price"]),
+        "inventory" => Ok(&["external_id","stock_item_external_id","stock_item_name","base_unit","location_external_id","opening_quantity"]),
+        "room_types" => Ok(&["external_id","name","code","base_rate"]),
+        "rooms" => Ok(&["external_id","room_number","room_type_external_id","initial_status"]),
+        "rate_plans" => Ok(&["external_id","name","room_type_external_id","currency","nightly_rate"]),
+        "hotel_services" => Ok(&["external_id","code","name","unit_price"]),
+        "asset_categories" => Ok(&["external_id","name","code"]),
+        "assets" => Ok(&["external_id","asset_tag","name","category_external_id","status"]),
+        _ => Err("Unknown import template".into()),
+    }
+}
+fn import_numeric_headers(key: &str) -> &'static [&'static str] {
+    match key {
+        "suppliers" => &["payment_terms_days"],
+        "customers" => &["credit_limit"],
+        "products" => &["selling_price"],
+        "inventory" => &["opening_quantity","average_unit_cost","reorder_level"],
+        "room_types" => &["capacity_adults","capacity_children","base_rate"],
+        "rate_plans" => &["nightly_rate","min_nights","max_nights"],
+        "hotel_services" => &["unit_price"],
+        "asset_categories" => &["useful_life_months"],
+        "assets" => &["acquisition_cost"],
+        _ => &[],
+    }
+}
+fn import_boolean_headers(_key: &str) -> &'static [&'static str] {
+    &["active","taxable"]
+}
+fn import_enum_values(key: &str, header: &str) -> Option<&'static [&'static str]> {
+    match (key,header) {
+        ("employees","role") => Some(&["ADMIN","MANAGER","SERVER"]),
+        ("outlets","type") => Some(&["BAR","PUB","LOUNGE","CLUB","RESTAURANT","RETAIL","OTHER"]),
+        ("stock_locations","kind") => Some(&["MAIN","BAR","KITCHEN","COLD_STORE","ROOM","OTHER"]),
+        ("products","route_to") => Some(&["BAR","KITCHEN","SERVICE"]),
+        ("rooms","initial_status") => Some(&["READY","DIRTY","OUT_OF_ORDER"]),
+        ("rate_plans","meal_plan") => Some(&["ROOM_ONLY","BB","HB","FB"]),
+        ("asset_categories","depreciation_method") => Some(&["STRAIGHT_LINE","NONE"]),
+        ("assets","status") => Some(&["IN_SERVICE","IN_STORAGE","MAINTENANCE","LOST","RETIRED","DISPOSED"]),
+        _ => None,
+    }
+}
+fn normalize_import_header(raw: &str) -> String {
+    let raw=raw.trim().trim_start_matches('\u{feff}').to_ascii_lowercase();
+    let mut out=String::new();
+    let mut separator=false;
+    for ch in raw.chars() {
+        if ch.is_ascii_alphanumeric() {
+            out.push(ch);
+            separator=false;
+        } else if !separator && !out.is_empty() {
+            out.push('_');
+            separator=true;
+        }
+    }
+    while out.ends_with('_') { out.pop(); }
+    out
+}
+fn import_bool(raw: &str) -> Option<bool> {
+    match raw.trim().to_ascii_lowercase().as_str() {
+        "true"|"1"|"yes"|"y" => Some(true),
+        "false"|"0"|"no"|"n" => Some(false),
+        _ => None,
+    }
+}
+fn import_batch_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<Value> {
+    let headers_raw:String=row.get(11)?;
+    Ok(json!({
+        "id":row.get::<_,String>(0)?,
+        "templateKey":row.get::<_,String>(1)?,
+        "fileName":row.get::<_,String>(2)?,
+        "status":row.get::<_,String>(3)?,
+        "createdBy":row.get::<_,String>(4)?,
+        "createdAt":row.get::<_,String>(5)?,
+        "updatedAt":row.get::<_,String>(6)?,
+        "rowCount":row.get::<_,i64>(7)?,
+        "validCount":row.get::<_,i64>(8)?,
+        "invalidCount":row.get::<_,i64>(9)?,
+        "sourceHash":row.get::<_,String>(10)?,
+        "headers":serde_json::from_str::<Value>(&headers_raw).unwrap_or_else(|_|json!([])),
+        "notes":row.get::<_,String>(12)?,
+    }))
+}
+fn import_require(db: &Connection, token: &str, permission: &str, touch: bool) -> Result<Session> {
+    let user=actor(db,token,touch)?;
+    if !permissions(&user.role).contains(&permission) {
+        return Err(format!("Permission required: {permission}"));
+    }
+    Ok(user)
+}
+pub fn import_list(db: &Connection, token: &str) -> Result<Value> {
+    import_require(db,token,"data.import.view",false)?;
+    let mut stmt=db.prepare(
+        "SELECT id,template_key,file_name,status,created_by,created_at,updated_at,row_count,valid_count,invalid_count,source_hash,headers,notes FROM import_batches ORDER BY created_at DESC,id DESC LIMIT 100"
+    ).map_err(error)?;
+    let rows=stmt.query_map([],import_batch_row).map_err(error)?
+        .collect::<std::result::Result<Vec<_>,_>>().map_err(error)?;
+    Ok(Value::Array(rows))
+}
+pub fn import_detail(db: &Connection, token: &str, batch_id: &str) -> Result<Value> {
+    import_require(db,token,"data.import.view",false)?;
+    let mut batch=db.query_row(
+        "SELECT id,template_key,file_name,status,created_by,created_at,updated_at,row_count,valid_count,invalid_count,source_hash,headers,notes FROM import_batches WHERE id=?",
+        [batch_id],import_batch_row
+    ).optional().map_err(error)?.ok_or("Import batch not found")?;
+    let mut stmt=db.prepare(
+        "SELECT row_number,status,external_id,normalized_json,errors,warnings FROM import_rows WHERE batch_id=? ORDER BY row_number LIMIT 500"
+    ).map_err(error)?;
+    let rows=stmt.query_map([batch_id],|r|{
+        let normalized:String=r.get(3)?;
+        let errors:String=r.get(4)?;
+        let warnings:String=r.get(5)?;
+        Ok(json!({
+            "rowNumber":r.get::<_,i64>(0)?,
+            "status":r.get::<_,String>(1)?,
+            "externalId":r.get::<_,Option<String>>(2)?,
+            "normalized":serde_json::from_str::<Value>(&normalized).unwrap_or_else(|_|json!({})),
+            "errors":serde_json::from_str::<Value>(&errors).unwrap_or_else(|_|json!([])),
+            "warnings":serde_json::from_str::<Value>(&warnings).unwrap_or_else(|_|json!([])),
+        }))
+    }).map_err(error)?.collect::<std::result::Result<Vec<_>,_>>().map_err(error)?;
+    let total=batch["rowCount"].as_i64().unwrap_or(0);
+    batch["rows"]=Value::Array(rows);
+    batch["rowsTruncated"]=json!(total>500);
+    Ok(batch)
+}
+pub fn import_stage(db: &mut Connection, token: &str, template_key: &str, file_name: &str, csv_text: &str) -> Result<Value> {
+    let user=import_require(db,token,"data.import.stage",true)?;
+    let required=import_required_headers(template_key)?;
+    if file_name.trim().is_empty() || file_name.len()>240 || !file_name.to_ascii_lowercase().ends_with(".csv") {
+        return Err("Import file must have a .csv name no longer than 240 characters".into());
+    }
+    if csv_text.trim().is_empty() { return Err("CSV file is empty".into()); }
+    if csv_text.as_bytes().len()>5*1024*1024 { return Err("CSV file exceeds the 5 MB staging limit".into()); }
+
+    let source_hash={
+        let digest=Sha256::digest(csv_text.as_bytes());
+        digest.iter().map(|b|format!("{b:02x}")).collect::<String>()
+    };
+
+    let clean=csv_text.trim_start_matches('\u{feff}');
+    let mut reader=csv::ReaderBuilder::new()
+        .trim(csv::Trim::All)
+        .flexible(false)
+        .from_reader(clean.as_bytes());
+    let raw_headers=reader.headers().map_err(|e|format!("CSV header error: {e}"))?.clone();
+    if raw_headers.is_empty() { return Err("CSV requires a header row".into()); }
+    let headers:Vec<String>=raw_headers.iter().map(normalize_import_header).collect();
+    let mut header_seen=std::collections::BTreeSet::new();
+    let restricted=["pin","password","password_confirm","device_token","device_secret","access_token","publishable_key","cloud_key"];
+    for header in &headers {
+        if header.is_empty() { return Err("CSV contains an empty column name".into()); }
+        if !header_seen.insert(header.clone()) { return Err(format!("CSV contains duplicate column: {header}")); }
+        if restricted.contains(&header.as_str()) {
+            return Err(format!("Sensitive credential column '{header}' is not allowed in imports"));
+        }
+    }
+    let missing:Vec<&str>=required.iter().copied().filter(|h|!headers.iter().any(|x|x==h)).collect();
+    if !missing.is_empty() { return Err(format!("CSV is missing required column(s): {}",missing.join(", "))); }
+
+    let numeric=import_numeric_headers(template_key);
+    let booleans=import_boolean_headers(template_key);
+    let mut external_ids=std::collections::BTreeSet::new();
+    let mut parsed:Vec<(i64,Value,Value,String,Vec<String>,Vec<String>,Option<String>)>=vec![];
+    let mut valid_count=0i64;
+    let mut invalid_count=0i64;
+
+    for (index,result) in reader.records().enumerate() {
+        if index>=20_000 { return Err("CSV exceeds the 20,000 row staging limit".into()); }
+        let record=result.map_err(|e|format!("CSV row {} cannot be parsed: {e}",index+2))?;
+        let row_number=(index+2) as i64;
+        let mut raw=serde_json::Map::new();
+        let mut normalized=serde_json::Map::new();
+        let mut errors:Vec<String>=vec![];
+        let mut warnings:Vec<String>=vec![];
+
+        for (column,header) in headers.iter().enumerate() {
+            let value=record.get(column).unwrap_or("").trim();
+            raw.insert(header.clone(),json!(value));
+            if value.is_empty() {
+                normalized.insert(header.clone(),Value::Null);
+                continue;
+            }
+            if booleans.contains(&header.as_str()) {
+                match import_bool(value) {
+                    Some(v)=>{ normalized.insert(header.clone(),json!(v)); },
+                    None=>{
+                        errors.push(format!("{header} must be true/false, yes/no or 1/0"));
+                        normalized.insert(header.clone(),json!(value));
+                    }
+                }
+                continue;
+            }
+            if numeric.contains(&header.as_str()) {
+                match value.parse::<f64>() {
+                    Ok(v) if v.is_finite() && v>=0.0 && v<=1_000_000_000.0=>{
+                        normalized.insert(header.clone(),json!(v));
+                    }
+                    _=>{
+                        errors.push(format!("{header} must be a non-negative number"));
+                        normalized.insert(header.clone(),json!(value));
+                    }
+                }
+                continue;
+            }
+            if let Some(allowed)=import_enum_values(template_key,header) {
+                let upper=value.to_ascii_uppercase();
+                if !allowed.contains(&upper.as_str()) {
+                    errors.push(format!("{header} must be one of: {}",allowed.join(", ")));
+                }
+                normalized.insert(header.clone(),json!(upper));
+                continue;
+            }
+            if header.ends_with("_external_ids") {
+                let values:Vec<String>=value.split(';').map(str::trim).filter(|v|!v.is_empty()).map(str::to_string).collect();
+                normalized.insert(header.clone(),json!(values));
+                continue;
+            }
+            if header=="email" || header.ends_with("_email") {
+                if !value.contains('@') { errors.push(format!("{header} is not a valid email address")); }
+                normalized.insert(header.clone(),json!(value.to_ascii_lowercase()));
+                continue;
+            }
+            normalized.insert(header.clone(),json!(value));
+        }
+
+        for field in required {
+            let missing=match normalized.get(*field) {
+                None|Some(Value::Null)=>true,
+                Some(Value::String(v))=>v.trim().is_empty(),
+                Some(Value::Array(v))=>v.is_empty(),
+                _=>false,
+            };
+            if missing { errors.push(format!("{field} is required")); }
+        }
+        if template_key=="business" && index>0 {
+            errors.push("business.csv accepts exactly one business identity row".into());
+        }
+        let external_id=normalized.get("external_id").and_then(Value::as_str).map(str::to_string);
+        if let Some(ref external_id)=external_id {
+            if !external_ids.insert(external_id.to_ascii_lowercase()) {
+                errors.push("external_id must be unique within the CSV file".into());
+            }
+        }
+        if template_key=="employees" {
+            warnings.push("Employee imports never contain PINs. Access credentials must be created through ServOS staff security after import.".into());
+        }
+        let status=if errors.is_empty() {
+            valid_count+=1;
+            "VALID"
+        } else {
+            invalid_count+=1;
+            "INVALID"
+        };
+        parsed.push((row_number,Value::Object(raw),Value::Object(normalized),status.into(),errors,warnings,external_id));
+    }
+    if parsed.is_empty() { return Err("CSV has a header but no data rows".into()); }
+
+    let batch_id=id();
+    let created=now();
+    let batch_status=if invalid_count==0 {"READY"} else {"NEEDS_REVIEW"};
+    let tx=db.transaction().map_err(error)?;
+    tx.execute(
+        "INSERT INTO import_batches(id,template_key,file_name,status,created_by,created_at,updated_at,row_count,valid_count,invalid_count,source_hash,headers,notes) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        params![batch_id,template_key,file_name,batch_status,user.staff_id,created,created,parsed.len() as i64,valid_count,invalid_count,source_hash,serde_json::to_string(&headers).map_err(error)?,""]
+    ).map_err(error)?;
+    for (row_number,raw,normalized,status,errors,warnings,external_id) in parsed {
+        tx.execute(
+            "INSERT INTO import_rows(batch_id,row_number,raw_json,normalized_json,status,errors,warnings,external_id) VALUES(?,?,?,?,?,?,?,?)",
+            params![batch_id,row_number,raw.to_string(),normalized.to_string(),status,serde_json::to_string(&errors).map_err(error)?,serde_json::to_string(&warnings).map_err(error)?,external_id]
+        ).map_err(error)?;
+    }
+    tx.execute(
+        "INSERT INTO import_events(batch_id,event_type,actor_id,occurred_at,detail) VALUES(?,?,?,?,?)",
+        params![batch_id,"BATCH_STAGED",user.staff_id,created,json!({"templateKey":template_key,"fileName":file_name,"rowCount":valid_count+invalid_count,"validCount":valid_count,"invalidCount":invalid_count,"sourceHash":source_hash}).to_string()]
+    ).map_err(error)?;
+    tx.commit().map_err(error)?;
+    import_detail(db,token,&batch_id)
+}
+pub fn import_cancel(db: &mut Connection, token: &str, batch_id: &str) -> Result<()> {
+    let user=import_require(db,token,"data.import.stage",true)?;
+    let current:Option<String>=db.query_row("SELECT status FROM import_batches WHERE id=?",[batch_id],|r|r.get(0)).optional().map_err(error)?;
+    let current=current.ok_or("Import batch not found")?;
+    if current=="APPLIED" { return Err("Applied import batches cannot be cancelled".into()); }
+    if current=="CANCELLED" { return Ok(()); }
+    let stamp=now();
+    let tx=db.transaction().map_err(error)?;
+    tx.execute("UPDATE import_batches SET status='CANCELLED',updated_at=? WHERE id=?",params![stamp,batch_id]).map_err(error)?;
+    tx.execute(
+        "INSERT INTO import_events(batch_id,event_type,actor_id,occurred_at,detail) VALUES(?,?,?,?,?)",
+        params![batch_id,"BATCH_CANCELLED",user.staff_id,stamp,json!({"previousStatus":current}).to_string()]
+    ).map_err(error)?;
+    tx.commit().map_err(error)?;
+    Ok(())
 }
 
 pub fn snapshot(db: &Connection, token: &str) -> Result<Value> {
