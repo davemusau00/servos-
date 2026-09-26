@@ -18,8 +18,9 @@ fn setup() -> (tempfile::TempDir, rusqlite::Connection, Session) {
     run(&mut db,&session,"record.save",json!({"collection":"outlets","id":"main","data":{"name":"Main Bar","propertyId":"property","type":"BAR","active":true,"defaultStockLocationId":"main"}}));
     run(&mut db,&session,"record.save",json!({"collection":"paymentConfig","id":"main","data":{"name":"Payments","methods":["CASH","MPESA","CARD"],"mpesaAccounts":[{"label":"Primary","number":"123456"}]}}));
     run(&mut db,&session,"record.save",json!({"collection":"tillPolicy","id":"main","data":{"name":"Till policy","defaultOpeningFloat":0,"varianceThreshold":50}}));
+    set_meta(&db, "last_backup", "2026-09-26T00:00:00Z").unwrap();
     run(&mut db,&session,"record.save",json!({"collection":"products","id":"setup-product","data":{"name":"Setup Product","code":"SETUP","price":1,"routeTo":"SERVICE","category":"TEST","outletIds":["main"],"taxClassId":"A_STANDARD"}}));
-    for step in ["BUSINESS_IDENTITY","TAX","PAYMENTS","SERVICE_AREAS","STOCK_LOCATIONS","CATALOG","OPENING_INVENTORY","STAFF_ACCESS","TILL"] {
+    for step in ["BUSINESS_IDENTITY","TAX","PAYMENTS","SERVICE_AREAS","STOCK_LOCATIONS","CATALOG","OPENING_INVENTORY","STAFF_ACCESS","TILL","BACKUP_SYNC"] {
         run(&mut db,&session,"setup.completeStep",json!({"step":step}));
     }
     run(&mut db,&session,"setup.goLive",json!({}));
@@ -543,4 +544,82 @@ fn close_day_refuses_open_tabs_then_persists_report() {
     assert_eq!(reports.len(),1);
     assert_eq!(reports[0]["data"]["sales"]["gross"],100.0);
     assert_eq!(reports[0]["data"]["tenders"]["cash"],100.0);
+}
+
+
+#[test]
+fn repeat_round_rebuilds_the_last_fired_round() {
+    let (_, mut db, s) = setup();
+    run(&mut db, &s, "till.open", json!({"floatAmount":0}));
+    let order_id = run(
+        &mut db,
+        &s,
+        "order.create",
+        json!({"outletId":"main","name":"Round test"}),
+    )["recordIds"][0].as_str().unwrap().to_string();
+
+    run(
+        &mut db,
+        &s,
+        "order.addItem",
+        json!({"orderId":order_id,"productId":"setup-product"}),
+    );
+    run(&mut db, &s, "order.fire", json!({"orderId":order_id}));
+
+    let first = get(&db, "orders", &order_id).unwrap().1;
+    let first_id = first["items"][0]["id"].as_str().unwrap().to_string();
+    assert_eq!(first["items"][0]["roundNo"], 1);
+    assert_eq!(first["currentRoundNo"], 2);
+
+    run(&mut db, &s, "order.repeatRound", json!({"orderId":order_id}));
+    let repeated = get(&db, "orders", &order_id).unwrap().1;
+    assert_eq!(repeated["items"].as_array().unwrap().len(), 2);
+    assert_ne!(repeated["items"][1]["id"].as_str().unwrap(), first_id);
+    assert_eq!(repeated["items"][1]["roundNo"], 2);
+    assert_eq!(repeated["items"][1]["stockFired"], false);
+}
+
+#[test]
+fn named_customer_tab_persists_customer_identity() {
+    let (_, mut db, s) = setup();
+    run(
+        &mut db,
+        &s,
+        "record.save",
+        json!({"collection":"customers","id":"customer-1","data":{"name":"Kamau","phone":"0712345678","email":"","notes":""}}),
+    );
+    let result = run(
+        &mut db,
+        &s,
+        "order.create",
+        json!({"outletId":"main","customerId":"customer-1","name":"Kamau tab"}),
+    );
+    let order_id = result["recordIds"][0].as_str().unwrap();
+    let order = get(&db, "orders", order_id).unwrap().1;
+    assert_eq!(order["customerId"], "customer-1");
+    assert_eq!(order["customerName"], "Kamau");
+    assert_eq!(order["tabName"], "Kamau tab");
+}
+
+#[test]
+fn backup_sync_step_requires_backup_evidence() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut db = open(&dir.path().join("backup-gate.sqlite")).unwrap();
+    initialize(&mut db, "terminal-backup-gate", "Owner", "827193", "Backup gate").unwrap();
+    let user: String = db.query_row("SELECT id FROM staff", [], |r| r.get(0)).unwrap();
+    let session = login(&db, &user, "827193").unwrap();
+
+    let err = execute(
+        &mut db,
+        &session.token,
+        cmd("setup.completeStep", json!({"step":"BACKUP_SYNC"})),
+    ).unwrap_err();
+    assert!(err.contains("Create a successful local backup"));
+
+    set_meta(&db, "last_backup", "2026-09-26T00:00:00Z").unwrap();
+    execute(
+        &mut db,
+        &session.token,
+        cmd("setup.completeStep", json!({"step":"BACKUP_SYNC"})),
+    ).unwrap();
 }

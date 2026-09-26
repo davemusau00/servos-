@@ -726,7 +726,7 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
                     let location=data["defaultStockLocationId"].as_str().map(str::trim).filter(|value|!value.is_empty());
                     if let Some(location)=location {
                         get(&tx,"stockLocations",location)?;
-                    } else if installation_stage(&tx)?=="LIVE" {
+                    } else if installation_stage(&tx)=="LIVE" {
                         return Err("Live service areas require a default stock location".into());
                     }
                 }
