@@ -83,6 +83,12 @@ test.describe('transactional browser with PostgreSQL',()=>{
   await page.getByRole('button',{name:'POS',exact:true}).click();
   await page.getByLabel('Opening float in KES').fill('100');
   await page.getByRole('button',{name:'Open till',exact:true}).click();
+  await expect.poll(async()=>{
+   const result=sql("select coalesce((select case when result ? 'error' then result->'error'->>'message' else 'NO_ERROR' end from servos_v2.commands where request->>'operation'='till.open' order by created_at desc limit 1),'NO_COMMAND');").trim();
+   if(result==='NO_COMMAND')return `NO_COMMAND online=${await page.evaluate(()=>navigator.onLine)} status=${await page.getByRole('status').allTextContents()} alert=${await page.getByRole('alert').allTextContents()}`;
+   return result;
+  }).toBe('NO_ERROR');
+  await expect.poll(()=>sql("select count(*) from servos_v2.records where collection='tillSessions' and data->>'status'='OPEN';").trim()).toBe('1');
   await expect(page.getByText('No open till')).toHaveCount(0);
   await page.getByRole('button',{name:'Quick tab',exact:true}).click();
   await page.getByRole('button',{name:/Test Soda/}).click();
