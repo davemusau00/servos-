@@ -88,6 +88,8 @@ The scripts require Node/npm, Rust/Cargo and platform Tauri prerequisites. Andro
 
 ## Vercel expansion preparation (planned, not deployed)
 
+Production browser builds must set `VITE_ENABLE_WEB_V2=false` until coordinated v2 cutover acceptance. Transactional web mode requires both this frontend feature flag and the server-side `servos_v2.control.enabled` state. Use `VITE_ENABLE_WEB_V2=true` only on an isolated Vercel preview/staging deployment connected to an isolated non-production Supabase project. See [WEB_V2_STAGING_RUNBOOK.md](WEB_V2_STAGING_RUNBOOK.md).
+
 Source now includes `vercel.json`. Production browser builds open authenticated Remote Manager; `VITE_ENABLE_DEMO=true` explicitly enables sample UI (browser tests set it only for their own build). `VITE_ENABLE_WEB_OFFLINE=true` opts into shell caching, not offline business finalization. Default is false. Never publish the browser-test demo build as production.
 
 Staged protocol SQL is under `supabase/expansion`, deliberately excluded from normal legacy migrations. `node scripts/test-supabase.mjs --expansion` applies it only to a disposable Docker PostgreSQL instance. Protocol activation remains false and operational sales/rooms/assets adapters are not implemented. Do not run these staged files against the business project as a deployment shortcut.

@@ -71,6 +71,7 @@ const displayValue = (key: string, value: unknown) => {
 export const RemoteManagerApp = ({ onBack }: { onBack: () => void }) => {
   const url = import.meta.env.VITE_SUPABASE_URL;
   const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+  const webV2Enabled = import.meta.env.VITE_ENABLE_WEB_V2 === 'true';
   const [auth, setAuth] = useState<Auth | null>(null); const authRef = useRef<Auth | null>(null); const expires = useRef(0);
   const [cloudSession,setCloudSession]=useState<WebSession|null>(null);
   const [email, setEmail] = useState(''); const [password, setPassword] = useState(''); const [error, setError] = useState(''); const [busy, setBusy] = useState(false);
@@ -123,9 +124,11 @@ export const RemoteManagerApp = ({ onBack }: { onBack: () => void }) => {
       const res = await fetch(`${url}/auth/v1/token?grant_type=password`, { method: 'POST', headers: { apikey: key, 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
       if (!res.ok) throw new Error('Sign-in failed');
       const next: Auth = await res.json();
-      const sessionResponse=await fetch(`${url}/rest/v1/rpc/servos_v2_session`,{method:'POST',headers:{apikey:key,Authorization:`Bearer ${next.access_token}`,'Content-Type':'application/json'},body:'{}'});
-      if(sessionResponse.ok){const session:WebSession=await sessionResponse.json();if(session.enabled){setCloudSession(session);setPassword('');saveAuth(next);return}}
-      else if(sessionResponse.status!==404)throw new Error('Business membership could not be verified. Sign-in was not completed.');
+      if(webV2Enabled){
+        const sessionResponse=await fetch(`${url}/rest/v1/rpc/servos_v2_session`,{method:'POST',headers:{apikey:key,Authorization:`Bearer ${next.access_token}`,'Content-Type':'application/json'},body:'{}'});
+        if(sessionResponse.ok){const session:WebSession=await sessionResponse.json();if(session.enabled){setCloudSession(session);setPassword('');saveAuth(next);return}}
+        else if(sessionResponse.status!==404)throw new Error('Business membership could not be verified. Sign-in was not completed.');
+      }
       const check = await fetch(`${url}/rest/v1/rpc/servos_is_manager`, { method: 'POST', headers: { apikey: key, Authorization: `Bearer ${next.access_token}`, 'Content-Type': 'application/json' }, body: '{}' });
       if (!check.ok || await check.json() !== true) throw new Error('Manager access has not been assigned to this account.');
       setCloudSession(null);setPassword(''); saveAuth(next);
