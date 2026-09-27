@@ -29,3 +29,6 @@ fix-servos-*.ps1
 apply-servos-patch-*.mjs
 patch*_payload.json
 PATCH_*_README.md
+
+# Local release bundles
+release/
