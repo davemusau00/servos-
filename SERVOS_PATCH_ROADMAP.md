@@ -152,6 +152,8 @@ Includes:
 - accepted asset procurement creates commissioning shells, not inventory stock;
 - multi-quantity acquisition requires unique asset tags/serials.
 
+Implementation note: Patch 09 uses Asset Clearing for accepted ASSET lines and only creates the permanent asset during explicit commissioning. The legacy stock-only PO path remains backward compatible and is stored as STOCK treatment.
+
 ## Patch 10 - Physical Terminal Acceptance & Recovery Hardening
 
 Goal: finish ServOS 0.1 deployment evidence on the real terminal.

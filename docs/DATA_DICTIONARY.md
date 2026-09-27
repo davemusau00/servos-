@@ -58,6 +58,8 @@ Expansion migrations 003-007 retain the private `(collection,id)` record key and
 - `assetEvents`: immutable before/after evidence for every native asset operation.
 - `maintenanceOrders`: asset/room work order with priority and REPORTED / ASSIGNED / IN_PROGRESS / COMPLETED / CANCELLED lifecycle. Completion can consume stock parts and create supplier payables atomically.
 - `maintenanceEvents`: immutable work-order transition evidence.
+- `assetAcquisitions`: one accepted physical ASSET procurement unit awaiting or recording commissioning; links PO line, GRN, supplier, category and exact accepted unit cost.
+- Procurement `purchaseOrders.items` and `goodsReceipts.lines` carry an exclusive `treatment`: STOCK, EXPENSE or ASSET. STOCK changes inventory, EXPENSE posts directly to a controlled expense account, and ASSET posts to Asset Clearing until commissioning.
 
 Cloud `journalEntries`, `folioEntries`, `assetEvents`, `stayEvents`, `stayExtensions`, `stockMovements`, `receiptDocuments` and `payments` cannot be updated or deleted. The change feed filters collections by explicit permission while retaining empty sequence slots for safe cursor advancement. Unknown collections default to deny for non-admin members. Permission changes and local cache eviction still require adapter integration.
 

@@ -772,6 +772,99 @@ fn asset_csv_imports_apply_categories_then_assets_through_native_commands() {
     assert_eq!(asset["locationId"],"main");assert_eq!(asset["purchaseCostMinor"],4_500_000);assert_eq!(asset["status"],"ACTIVE");
 }
 
+// SERVOS_PATCH_09_ASSET_REGISTER
+#[test]
+fn classified_procurement_splits_stock_expense_asset_without_double_inventory() {
+    let (_dir,mut db,s)=setup();
+    run(&mut db,&s,"record.save",json!({"collection":"stockItems","id":"linen","data":{"name":"Bed Linen","code":"LINEN","baseUnit":"unit","averageUnitCost":0}}));
+    run(&mut db,&s,"record.save",json!({"collection":"suppliers","id":"mixed-supplier","data":{"name":"Mixed Supplier","code":"MIXED","active":true}}));
+    run(&mut db,&s,"assetCategory.save",json!({"id":"tv-category","data":{"name":"Televisions","code":"TV","depreciationMethod":"STRAIGHT_LINE","usefulLifeMonths":60}}));
+
+    run(&mut db,&s,"purchaseOrder.create",json!({
+        "supplierId":"mixed-supplier",
+        "items":[
+            {"lineId":"line-stock","treatment":"STOCK","stockItemId":"linen","quantityOrdered":5,"unitPrice":1000},
+            {"lineId":"line-expense","treatment":"EXPENSE","description":"Laundry chemicals","expenseCategory":"GENERAL","quantityOrdered":2,"unitPrice":500},
+            {"lineId":"line-asset","treatment":"ASSET","assetName":"Guest Room Smart TV","assetCategoryId":"tv-category","quantityOrdered":2,"unitPrice":45000}
+        ]
+    }));
+    let order=list(&db,"purchaseOrders").unwrap().into_iter().find(|r|r["data"]["supplierId"]=="mixed-supplier").unwrap();
+    let order_id=order["id"].as_str().unwrap().to_string();
+    let (version,_)=get(&db,"purchaseOrders",&order_id).unwrap();
+    let mut receive=cmd("purchaseOrder.receive",json!({
+        "purchaseOrderId":order_id,"locationId":"main","supplierInvoiceNumber":"INV-MIXED-1",
+        "lines":[
+            {"lineId":"line-stock","quantityDelivered":5,"quantityAccepted":5,"quantityRejected":0},
+            {"lineId":"line-expense","quantityDelivered":2,"quantityAccepted":2,"quantityRejected":0},
+            {"lineId":"line-asset","quantityDelivered":2,"quantityAccepted":2,"quantityRejected":0}
+        ]
+    }));
+    receive.target_version=Some(version);execute(&mut db,&s.token,receive).unwrap();
+
+    assert_eq!(get(&db,"stockItems","linen").unwrap().1["currentStock"]["main"],5.0);
+    let acquisitions:Vec<Value>=list(&db,"assetAcquisitions").unwrap().into_iter().filter(|r|r["data"]["purchaseOrderId"]==order_id).collect();
+    assert_eq!(acquisitions.len(),2);
+    assert!(acquisitions.iter().all(|r|r["data"]["status"]=="PENDING_COMMISSION"));
+    assert_eq!(list(&db,"assets").unwrap().len(),0);
+    let receipt=list(&db,"goodsReceipts").unwrap().into_iter().find(|r|r["data"]["purchaseOrderId"]==order_id).unwrap()["data"].clone();
+    assert_eq!(receipt["treatmentTotals"]["stockMinor"],500_000);
+    assert_eq!(receipt["treatmentTotals"]["expenseMinor"],100_000);
+    assert_eq!(receipt["treatmentTotals"]["assetMinor"],9_000_000);
+    let journal=list(&db,"journalEntries").unwrap().into_iter().find(|r|r["data"]["sourceType"]=="SUPPLIER_RECEIPT"&&r["data"]["sourceId"]==receipt["id"]).unwrap()["data"].clone();
+    assert!(journal["lines"].as_array().unwrap().iter().any(|l|l["accountId"]=="INVENTORY"&&l["debitMinor"]==500_000));
+    assert!(journal["lines"].as_array().unwrap().iter().any(|l|l["accountId"]=="OPERATING_EXPENSE"&&l["debitMinor"]==100_000));
+    assert!(journal["lines"].as_array().unwrap().iter().any(|l|l["accountId"]=="ASSET_CLEARING"&&l["debitMinor"]==9_000_000));
+    assert!(journal["lines"].as_array().unwrap().iter().any(|l|l["accountId"]=="ACCOUNTS_PAYABLE"&&l["creditMinor"]==9_600_000));
+
+    let payable=list(&db,"supplierPayables").unwrap().into_iter().find(|r|r["data"]["purchaseOrderId"]==order_id).unwrap();
+    let payable_id=payable["id"].as_str().unwrap().to_string();let (pv,_)=get(&db,"supplierPayables",&payable_id).unwrap();
+    let receipt_lines=receipt["lines"].as_array().unwrap();
+    let invoice_lines:Vec<Value>=receipt_lines.iter().map(|line|json!({"lineId":line["lineId"],"quantityBilled":line["quantityAccepted"],"unitPrice":line["unitCost"]})).collect();
+    let mut matched=cmd("supplierPayable.matchInvoice",json!({"payableId":payable_id,"invoiceNumber":"INV-MIXED-1","invoiceDate":"2026-09-27","dueDate":"2026-10-27","invoiceAmount":96000.0,"lines":invoice_lines}));
+    matched.target_version=Some(pv);execute(&mut db,&s.token,matched).unwrap();
+    assert_eq!(get(&db,"supplierPayables",&payable_id).unwrap().1["status"],"MATCHED_UNPAID");
+}
+
+#[test]
+fn asset_commission_reclassifies_clearing_and_never_creates_stock() {
+    let (_dir,mut db,s)=setup();
+    run(&mut db,&s,"record.save",json!({"collection":"suppliers","id":"asset-supplier","data":{"name":"Asset Supplier","code":"ASSET-SUP","active":true}}));
+    run(&mut db,&s,"assetCategory.save",json!({"id":"generator-category","data":{"name":"Generators","code":"GEN","depreciationMethod":"STRAIGHT_LINE","usefulLifeMonths":120}}));
+    run(&mut db,&s,"purchaseOrder.create",json!({"supplierId":"asset-supplier","items":[{"lineId":"generator-line","treatment":"ASSET","assetName":"Backup Generator","assetCategoryId":"generator-category","quantityOrdered":1,"unitPrice":250000}]}));
+    let order=list(&db,"purchaseOrders").unwrap().into_iter().find(|r|r["data"]["supplierId"]=="asset-supplier").unwrap();let order_id=order["id"].as_str().unwrap().to_string();
+    let (ov,_)=get(&db,"purchaseOrders",&order_id).unwrap();let mut receipt=cmd("purchaseOrder.receive",json!({"purchaseOrderId":order_id,"lines":[{"lineId":"generator-line","quantityDelivered":1,"quantityAccepted":1,"quantityRejected":0}]}));receipt.target_version=Some(ov);execute(&mut db,&s.token,receipt).unwrap();
+    let acquisition=list(&db,"assetAcquisitions").unwrap().into_iter().find(|r|r["data"]["purchaseOrderId"]==order_id).unwrap();let acquisition_id=acquisition["id"].as_str().unwrap().to_string();
+    let before_stock=list(&db,"stockMovements").unwrap().len();
+    let (av,_)=get(&db,"assetAcquisitions",&acquisition_id).unwrap();
+    let mut commission=cmd("asset.commission",json!({"acquisitionId":acquisition_id,"tag":"GEN-001","locationId":"main","serialNumber":"SER-GEN-001","warrantyUntil":"2028-09-27","notes":"Commissioned from PO"}));commission.target_version=Some(av);
+    execute(&mut db,&s.token,commission).unwrap();
+    let asset=list(&db,"assets").unwrap().into_iter().find(|r|r["data"]["tag"]=="GEN-001").unwrap()["data"].clone();
+    assert_eq!(asset["purchaseCostMinor"],25_000_000);assert_eq!(asset["acquisitionId"],acquisition_id);assert_eq!(asset["locationId"],"main");
+    assert_eq!(get(&db,"assetAcquisitions",&acquisition_id).unwrap().1["status"],"COMMISSIONED");
+    assert_eq!(list(&db,"stockMovements").unwrap().len(),before_stock);
+    let journal=list(&db,"journalEntries").unwrap().into_iter().find(|r|r["data"]["sourceType"]=="ASSET_COMMISSIONING").unwrap()["data"].clone();
+    assert!(journal["lines"].as_array().unwrap().iter().any(|l|l["accountId"]=="FIXED_ASSETS"&&l["debitMinor"]==25_000_000));
+    assert!(journal["lines"].as_array().unwrap().iter().any(|l|l["accountId"]=="ASSET_CLEARING"&&l["creditMinor"]==25_000_000));
+
+    let (av,_)=get(&db,"assetAcquisitions",&acquisition_id).unwrap();let mut again=cmd("asset.commission",json!({"acquisitionId":acquisition_id,"tag":"GEN-002","locationId":"main"}));again.target_version=Some(av);
+    assert!(execute(&mut db,&s.token,again).unwrap_err().contains("already commissioned"));
+}
+
+#[test]
+fn classified_asset_quantity_requires_whole_units_and_commissioning_is_live_only() {
+    let (_dir,mut db,s)=setup();
+    run(&mut db,&s,"record.save",json!({"collection":"suppliers","id":"whole-supplier","data":{"name":"Whole Supplier","code":"WHOLE","active":true}}));
+    run(&mut db,&s,"assetCategory.save",json!({"id":"whole-category","data":{"name":"Equipment","code":"WHOLECAT","depreciationMethod":"STRAIGHT_LINE","usefulLifeMonths":60}}));
+    let bad=execute(&mut db,&s.token,cmd("purchaseOrder.create",json!({"supplierId":"whole-supplier","items":[{"treatment":"ASSET","assetName":"Machine","assetCategoryId":"whole-category","quantityOrdered":1.5,"unitPrice":1000}]})));
+    assert!(bad.unwrap_err().contains("whole number"));
+
+    let dir=tempfile::tempdir().unwrap();let mut pre=open(&dir.path().join("commission-prelive.sqlite")).unwrap();
+    initialize(&mut pre,"terminal-commission-prelive","Owner","928174","Prelive commission").unwrap();
+    let uid:String=pre.query_row("SELECT id FROM staff",[],|r|r.get(0)).unwrap();let session=login(&pre,&uid,"928174").unwrap();
+    let blocked=execute(&mut pre,&session.token,cmd("asset.commission",json!({"acquisitionId":"missing","tag":"X","locationId":"main"}))).unwrap_err();
+    assert!(blocked.contains("Complete business setup"));
+}
+
 #[test]
 fn audit_cannot_be_modified() {
     let (_, db, _) = setup();
