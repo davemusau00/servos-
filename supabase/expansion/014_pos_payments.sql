@@ -16,7 +16,7 @@ returns jsonb language plpgsql set search_path='' as $$
 declare
  op text:=command->>'operation';p jsonb:=command->'payload';who uuid:=auth.uid();
  order_key text:=p->>'orderId';order_data jsonb;table_data jsonb;account jsonb;till jsonb;
- till_key text;method text;reference text;payment_id text;journal_id text;receipt_id text;
+ till_key text;table_key text;method text;reference text;payment_id text;journal_id text;receipt_id text;
  amount bigint;received bigint;tender bigint;paid bigint;total bigint;vat bigint;levy bigint;net bigint;
  tax_piece bigint;levy_piece bigint;leg jsonb;line_no integer:=0;legs integer:=0;sum_amount bigint:=0;
  changed jsonb:='[]';journal_lines jsonb;payment_ids jsonb:='[]';order_items jsonb;
