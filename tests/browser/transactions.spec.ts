@@ -37,6 +37,7 @@ test.describe('transactional browser with PostgreSQL',()=>{
    const actor=request.headers().authorization?.includes('second-test-token')?'00000000-0000-4000-8000-000000000002':'00000000-0000-4000-8000-000000000001';
    const encoded=Buffer.from(JSON.stringify(payload)).toString('hex');const body=`convert_from(decode('${encoded}','hex'),'UTF8')::jsonb`;
    const calls:Record<string,string>={
+    servos_is_manager:'to_jsonb(public.servos_is_manager())',
     servos_v2_session:'public.servos_v2_session()',
     servos_v2_register_device:`public.servos_v2_register_device((p->>'device_id')::uuid,p->>'label',p->>'kind')`,
     servos_v2_snapshot:`public.servos_v2_snapshot(p->>'after_collection',p->>'after_id',(p->>'expected_cursor')::bigint,p->>'expected_policy',(p->>'page_size')::integer)`,
@@ -46,7 +47,7 @@ test.describe('transactional browser with PostgreSQL',()=>{
    const name=path.split('/').pop()||'';if(!calls[name])return route.fulfill({status:404,json:{message:'Unsupported test route'}});
    try{
     const output=sql(`begin;select set_config('request.jwt.claim.sub','${actor}',true);set local role authenticated;select ${calls[name]} from (select ${body} p) input;commit;`);
-    const result=JSON.parse(output.split(/\r?\n/).find(line=>line.startsWith('{'))!);
+    const result=JSON.parse(output.split(/\r?\n/).find(line=>line==='true'||line==='false'||line.startsWith('{'))!);
     if(name==='servos_v2_execute'&&loseResponse){loseResponse=false;return route.abort('connectionreset')}
     return route.fulfill({json:result});
    }catch(error){return route.fulfill({status:String(error).includes('PERMISSION_DENIED')?403:400,json:{message:String(error)}})}
