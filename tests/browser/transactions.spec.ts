@@ -16,6 +16,7 @@ test.describe('transactional browser with PostgreSQL',()=>{
   const files=['tests/supabase/bootstrap.sql',...['supabase/migrations','supabase/expansion'].flatMap(dir=>readdirSync(dir).filter(f=>f.endsWith('.sql')).sort().map(f=>`${dir}/${f}`))];
   sql(files.map(f=>readFileSync(f,'utf8')).join('\n'));
   sql(`
+   insert into servos_private.managers(user_id,role) values('00000000-0000-4000-8000-000000000001','owner'),('00000000-0000-4000-8000-000000000002','manager') on conflict(user_id) do update set role=excluded.role;
    insert into servos_v2.members values('00000000-0000-4000-8000-000000000001',true,array['*']),('00000000-0000-4000-8000-000000000002',true,array['*']) on conflict(user_id) do update set active=true,permissions=array['*'];
    select servos_v2.put_record('organization','business','{"name":"Browser Test Business"}');
    select servos_v2.put_record('property','property','{"address":"Test Street","phone":"0700000000","currency":"KES","timezone":"Africa/Nairobi","receiptFooter":"Thank you"}');
