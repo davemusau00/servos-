@@ -137,7 +137,7 @@ pub const ALL_PERMISSIONS: &[&str] = &[
     "catalog.view","catalog.manage","pricing.manage",
     "inventory.view","inventory.receive","inventory.transfer","inventory.waste","inventory.count","inventory.adjust",
     "procurement.view","procurement.manage","procurement.receive","procurement.over_receive","procurement.pay",
-    "floorplan.view","floorplan.manage","kds.view","kds.update",
+    "floorplan.view","floorplan.manage","rooms.view","rooms.manage","rooms.operate","rooms.guests.view","kds.view","kds.update",
     "accounting.view","reports.view","audit.view","data.import.view","data.import.stage","data.import.execute","backup.create","backup.restore","sync.manual","system.configure","help.view"
 ];
 
@@ -576,7 +576,6 @@ const MASTER: &[&str] = &[
     "property",
     "customers",
     "suppliers",
-    "rooms",
     "priceRules",
     "recipes",
     "events",
@@ -592,7 +591,7 @@ const MASTER: &[&str] = &[
 fn master_permission(collection: &str) -> Option<&'static str> {
     match collection {
         "organization" | "property" | "paymentConfig" | "tillPolicy" | "outlets"
-        | "rooms" | "events" | "promoters" | "reservations" | "waitlist" | "housekeeping" | "maintenance"
+        | "events" | "promoters" | "reservations" | "waitlist" | "housekeeping" | "maintenance"
             => Some("business.configure"),
         "stockItems" | "stockLocations" => Some("inventory.adjust"),
         "tables" => Some("floorplan.manage"),
@@ -602,6 +601,384 @@ fn master_permission(collection: &str) -> Option<&'static str> {
         _ => None,
     }
 }
+// SERVOS_PATCH_05_ROOMS_ENGINE
+fn room_parse_time(raw:&str)->Result<chrono::DateTime<Utc>>{
+    chrono::DateTime::parse_from_rfc3339(raw)
+        .map(|v|v.with_timezone(&Utc))
+        .map_err(|_|"VALIDATION_FAILED: room timestamps must be RFC3339".to_string())
+}
+fn room_overlap(a_start:chrono::DateTime<Utc>,a_end:chrono::DateTime<Utc>,b_start:chrono::DateTime<Utc>,b_end:chrono::DateTime<Utc>)->bool{
+    a_start<b_end && b_start<a_end
+}
+fn room_any(tx:&Transaction,collection:&str,key:&str)->Result<Option<(i64,Value,bool)>>{
+    tx.query_row(
+        "SELECT version,data,archived FROM records WHERE collection=? AND id=?",
+        params![collection,key],
+        |r|{
+            let raw:String=r.get(1)?;
+            Ok((r.get(0)?,serde_json::from_str::<Value>(&raw).unwrap_or_else(|_|json!({})),r.get(2)?))
+        }
+    ).optional().map_err(error)
+}
+fn room_expect_version(current:Option<&(i64,Value,bool)>,expected:Option<i64>)->Result<()>{
+    if current.map(|v|v.0)!=expected{return Err("CONFLICT: Room record changed; reload before saving".into());}
+    Ok(())
+}
+fn room_put_archived(tx:&Transaction,collection:&str,key:&str,archived:bool,changes:&mut Vec<Value>)->Result<()>{
+    let (version,data,_)=room_any(tx,collection,key)?.ok_or("Room master record not found")?;
+    tx.execute(
+        "UPDATE records SET archived=?,version=version+1 WHERE collection=? AND id=?",
+        params![archived,collection,key]
+    ).map_err(error)?;
+    changes.push(json!({"collection":collection,"id":key,"version":version+1,"data":data,"archived":archived}));
+    Ok(())
+}
+fn room_unique_text(tx:&Transaction,collection:&str,field:&str,key:&str,value:&str)->Result<()>{
+    for record in list(tx,collection)?{
+        if record["id"].as_str()==Some(key){continue;}
+        if record["data"][field].as_str().is_some_and(|v|v.trim().eq_ignore_ascii_case(value.trim())){
+            return Err(format!("DUPLICATE_REFERENCE: {field} already exists"));
+        }
+    }
+    Ok(())
+}
+fn room_active_reference(tx:&Transaction,collection:&str,field:&str,key:&str,statuses:&[&str])->Result<bool>{
+    Ok(list(tx,collection)?.iter().any(|r|
+        r["data"][field].as_str()==Some(key) &&
+        (statuses.is_empty() || statuses.contains(&r["data"]["status"].as_str().unwrap_or("")))
+    ))
+}
+fn room_available(tx:&Transaction,room_id:&str,start:chrono::DateTime<Utc>,end:chrono::DateTime<Utc>,excluding:Option<&str>)->Result<()>{
+    if end<=start{return Err("VALIDATION_FAILED: room interval".into());}
+    let (_,room)=get(tx,"rooms",room_id)?;
+    if room["maintenanceState"].as_str().unwrap_or("AVAILABLE")!="AVAILABLE"{
+        return Err("ROOM_UNAVAILABLE: room is out of order".into());
+    }
+    for record in list(tx,"roomReservations")?{
+        if excluding.is_some_and(|id|record["id"].as_str()==Some(id)){continue;}
+        let data=&record["data"];
+        if data["roomId"].as_str()!=Some(room_id){continue;}
+        if !["RESERVED","CHECKED_IN"].contains(&data["status"].as_str().unwrap_or("")){continue;}
+        let existing_start=room_parse_time(data["occupancyStartsAt"].as_str().or_else(||data["startsAt"].as_str()).ok_or("Invalid reservation start")?)?;
+        let existing_end=room_parse_time(data["blockedUntil"].as_str().ok_or("Invalid reservation turnaround interval")?)?;
+        if room_overlap(start,end,existing_start,existing_end){return Err("ROOM_UNAVAILABLE: reservation overlap".into());}
+    }
+    for record in list(tx,"roomBlocks")?{
+        let data=&record["data"];
+        if data["roomId"].as_str()!=Some(room_id)||data["status"].as_str()!=Some("ACTIVE"){continue;}
+        let block_start=room_parse_time(data["startsAt"].as_str().ok_or("Invalid room block start")?)?;
+        let block_end=room_parse_time(data["endsAt"].as_str().ok_or("Invalid room block end")?)?;
+        if room_overlap(start,end,block_start,block_end){return Err("ROOM_UNAVAILABLE: availability block".into());}
+    }
+    Ok(())
+}
+fn room_nightly_units(start:chrono::DateTime<Utc>,end:chrono::DateTime<Utc>)->i64{
+    let local_start=(start+Duration::hours(3)).date_naive();
+    let local_end=(end+Duration::hours(3)).date_naive();
+    (local_end-local_start).num_days()
+}
+fn room_validate_interval(start:chrono::DateTime<Utc>,end:chrono::DateTime<Utc>)->Result<()>{
+    if end<=start{return Err("VALIDATION_FAILED: stay interval".into());}
+    if end-start>Duration::days(366){return Err("VALIDATION_FAILED: stay cannot exceed 366 days".into());}
+    Ok(())
+}
+fn room_execute(tx:&Transaction,user:&Session,cmd:&BusinessCommand,changes:&mut Vec<Value>)->Result<bool>{
+    let op=cmd.operation.as_str();
+    if !(op.starts_with("roomType.")||op.starts_with("room.")||op.starts_with("ratePlan.")||op.starts_with("roomReservation.")){return Ok(false);}
+    let p=&cmd.payload;
+
+    if op.starts_with("roomReservation."){
+        if !permissions(&user.role).contains(&"rooms.operate"){return Err("Permission required: rooms.operate".into());}
+        let key=text(p,"id")?.to_string();
+        let current=room_any(tx,"roomReservations",&key)?;
+        match op {
+            "roomReservation.create"|"roomReservation.update"=>{
+                if op=="roomReservation.create" && current.is_some(){return Err("DUPLICATE_REFERENCE: reservation".into());}
+                if op=="roomReservation.update"{
+                    let (_,data,archived)=current.as_ref().ok_or("Reservation not found")?;
+                    if *archived||data["status"].as_str()!=Some("RESERVED"){return Err("INVALID_STATE: only reserved bookings can be edited".into());}
+                }
+                room_expect_version(current.as_ref(),cmd.target_version)?;
+                let room_id=text(p,"roomId")?.to_string();
+                let rate_id=text(p,"ratePlanId")?.to_string();
+                let customer_id=text(p,"customerId")?.to_string();
+                let (_,room)=get(tx,"rooms",&room_id)?;
+                let (_,rate)=get(tx,"ratePlans",&rate_id)?;
+                get(tx,"customers",&customer_id)?;
+                if rate["roomTypeId"]!=room["roomTypeId"]{return Err("VALIDATION_FAILED: rate plan does not match room type".into());}
+                let guests=p["guests"].as_i64().ok_or("VALIDATION_FAILED: guests must be an integer")?;
+                let capacity=room["capacity"].as_i64().unwrap_or(0);
+                if guests<1||guests>capacity{return Err("VALIDATION_FAILED: guest capacity".into());}
+                let start=room_parse_time(text(p,"startsAt")?)?;
+                let end=room_parse_time(text(p,"endsAt")?)?;
+                room_validate_interval(start,end)?;
+                let mode=rate["mode"].as_str().unwrap_or("NIGHTLY");
+                let units=if mode=="DAY_USE"{
+                    let duration=rate["durationMinutes"].as_i64().unwrap_or(0);
+                    if duration<1||duration>1440||(end-start).num_minutes()!=duration{return Err("VALIDATION_FAILED: day-use duration must match rate".into());}
+                    1
+                }else{
+                    let units=room_nightly_units(start,end);
+                    if units<1||units>366{return Err("VALIDATION_FAILED: nightly arrival/departure dates".into());}
+                    let minimum=rate["minNights"].as_i64().unwrap_or(1);
+                    let maximum=rate["maxNights"].as_i64().unwrap_or(366);
+                    if units<minimum||units>maximum{return Err("VALIDATION_FAILED: stay length is outside the selected rate plan".into());}
+                    units
+                };
+                let turnaround=room["turnaroundMinutes"].as_i64().unwrap_or(0);
+                if !(0..=1440).contains(&turnaround){return Err("VALIDATION_FAILED: room turnaround".into());}
+                let blocked_until=end+Duration::minutes(turnaround);
+                room_available(tx,&room_id,start,blocked_until,Some(&key))?;
+                if op=="roomReservation.update" && current.as_ref().is_some_and(|(_,d,_)|d["customerId"].as_str()!=Some(customer_id.as_str())) && get(tx,"folios",&key).is_ok(){
+                    return Err("INVALID_STATE: an opened folio customer cannot be replaced".into());
+                }
+                let price=rate["priceMinor"].as_i64().ok_or("VALIDATION_FAILED: rate price")?;
+                let stamp=now();
+                let created=current.as_ref().and_then(|(_,d,_)|d["createdAt"].as_str()).unwrap_or(&stamp).to_string();
+                put(tx,"roomReservations",&key,json!({
+                    "id":key,"roomId":room_id,"ratePlanId":rate_id,"customerId":customer_id,"guests":guests,
+                    "startsAt":start.to_rfc3339(),"occupancyStartsAt":start.to_rfc3339(),"endsAt":end.to_rfc3339(),
+                    "blockedUntil":blocked_until.to_rfc3339(),"turnaroundMinutes":turnaround,
+                    "status":"RESERVED","rateSnapshot":rate,"units":units,"quotedAmountMinor":price*units,
+                    "taxInclusive":true,"createdAt":created,"updatedAt":stamp,"actorId":user.staff_id
+                }),changes)?;
+            }
+            "roomReservation.cancel"|"roomReservation.noShow"=>{
+                let (version,mut data,archived)=current.ok_or("Reservation not found")?;
+                if archived||data["status"].as_str()!=Some("RESERVED"){return Err("INVALID_STATE: reservation is not reserved".into());}
+                if cmd.target_version!=Some(version){return Err("CONFLICT: Reservation changed; reload before closing".into());}
+                let reason=text(p,"reason")?;
+                if let Ok((_,folio))=get(tx,"folios",&key){
+                    if folio["balanceMinor"].as_i64().unwrap_or(0)!=0||folio["depositMinor"].as_i64().unwrap_or(0)!=0{
+                        return Err("SETTLEMENT_REQUIRED: resolve reservation folio funds first".into());
+                    }
+                }
+                if op=="roomReservation.noShow"{
+                    let arrival=room_parse_time(data["startsAt"].as_str().ok_or("Invalid reservation arrival")?)?;
+                    if Utc::now()<arrival{return Err("INVALID_STATE: arrival time has not passed".into());}
+                }
+                data["status"]=json!(if op=="roomReservation.cancel"{"CANCELLED"}else{"NO_SHOW"});
+                data["reason"]=json!(reason);data["closedAt"]=json!(now());data["closedBy"]=json!(user.staff_id);
+                put(tx,"roomReservations",&key,data,changes)?;
+            }
+            _=>return Err("PROTOCOL_UNSUPPORTED: reservation operation".into())
+        }
+        return Ok(true);
+    }
+
+    if !permissions(&user.role).contains(&"rooms.manage"){return Err("Permission required: rooms.manage".into());}
+
+    if op.starts_with("roomType."){
+        let key=text(p,"id")?.to_string();
+        let current=room_any(tx,"roomTypes",&key)?;
+        match op {
+            "roomType.save"=>{
+                if current.as_ref().is_some_and(|v|v.2){return Err("INVALID_STATE: reactivate room type before editing".into());}
+                room_expect_version(current.as_ref(),cmd.target_version)?;
+                let data=p["data"].as_object().ok_or("Room type data is required")?;
+                for field in data.keys(){if !["name","code","maxGuests","features","notes"].contains(&field.as_str()){return Err(format!("VALIDATION_FAILED: room type field {field}"));}}
+                let name=data.get("name").and_then(Value::as_str).map(str::trim).filter(|v|!v.is_empty()).ok_or("Room type name is required")?;
+                let code=data.get("code").and_then(Value::as_str).map(str::trim).filter(|v|!v.is_empty()).ok_or("Room type code is required")?;
+                let max_guests=data.get("maxGuests").and_then(Value::as_i64).ok_or("Room type maxGuests is required")?;
+                if !(1..=1000).contains(&max_guests){return Err("VALIDATION_FAILED: room type capacity".into());}
+                if data.get("features").is_some_and(|v|!v.is_array()){return Err("VALIDATION_FAILED: room type features must be an array".into());}
+                room_unique_text(tx,"roomTypes","code",&key,code)?;
+                let mut next=current.as_ref().map(|(_,v,_)|v.clone()).unwrap_or_else(||json!({"createdAt":now()}));
+                next["name"]=json!(name);next["code"]=json!(code);next["maxGuests"]=json!(max_guests);
+                let features=data.get("features").cloned().or_else(||next.get("features").cloned()).unwrap_or(json!([]));
+                let notes=data.get("notes").cloned().or_else(||next.get("notes").cloned()).unwrap_or(json!(""));
+                next["features"]=features;next["notes"]=notes;next["updatedAt"]=json!(now());
+                put(tx,"roomTypes",&key,next,changes)?;
+            }
+            "roomType.archive"=>{
+                let (version,_,archived)=current.ok_or("Room type not found")?;
+                if archived{return Err("Room type is already archived".into());}
+                if cmd.target_version!=Some(version){return Err("CONFLICT: Room type changed".into());}
+                if room_active_reference(tx,"rooms","roomTypeId",&key,&[])?
+                    ||room_active_reference(tx,"ratePlans","roomTypeId",&key,&[])?{
+                    return Err("INVALID_STATE: room type has active rooms or rate plans".into());
+                }
+                room_put_archived(tx,"roomTypes",&key,true,changes)?;
+            }
+            "roomType.reactivate"=>{
+                let (version,data,archived)=current.ok_or("Room type not found")?;
+                if !archived{return Err("Room type is already active".into());}
+                if cmd.target_version!=Some(version){return Err("CONFLICT: Room type changed".into());}
+                room_unique_text(tx,"roomTypes","code",&key,text(&data,"code")?)?;
+                room_put_archived(tx,"roomTypes",&key,false,changes)?;
+            }
+            _=>return Err("PROTOCOL_UNSUPPORTED: room type operation".into())
+        }
+        return Ok(true);
+    }
+
+    if op.starts_with("ratePlan."){
+        let key=text(p,"id")?.to_string();
+        let current=room_any(tx,"ratePlans",&key)?;
+        match op {
+            "ratePlan.save"=>{
+                if current.as_ref().is_some_and(|v|v.2){return Err("INVALID_STATE: reactivate rate plan before editing".into());}
+                room_expect_version(current.as_ref(),cmd.target_version)?;
+                let data=p["data"].as_object().ok_or("Rate plan data is required")?;
+                for field in data.keys(){if !["name","roomTypeId","mode","priceMinor","currency","taxBasisPoints","durationMinutes","mealPlan","minNights","maxNights","notes"].contains(&field.as_str()){return Err(format!("VALIDATION_FAILED: rate field {field}"));}}
+                let name=data.get("name").and_then(Value::as_str).map(str::trim).filter(|v|!v.is_empty()).ok_or("Rate plan name is required")?;
+                let room_type=data.get("roomTypeId").and_then(Value::as_str).ok_or("Rate plan room type is required")?;
+                get(tx,"roomTypes",room_type)?;
+                let price=data.get("priceMinor").and_then(Value::as_i64).ok_or("Rate priceMinor is required")?;
+                if price<0{return Err("VALIDATION_FAILED: rate price".into());}
+                if data.get("currency").and_then(Value::as_str)!=Some("KES"){return Err("VALIDATION_FAILED: rate currency must be KES".into());}
+                let tax=data.get("taxBasisPoints").and_then(Value::as_i64).unwrap_or(0);
+                if !(0..=10000).contains(&tax){return Err("VALIDATION_FAILED: rate tax".into());}
+                let mode=data.get("mode").and_then(Value::as_str).unwrap_or("NIGHTLY");
+                if !["NIGHTLY","DAY_USE"].contains(&mode){return Err("VALIDATION_FAILED: rate mode".into());}
+                if mode=="DAY_USE"{
+                    let duration=data.get("durationMinutes").and_then(Value::as_i64).unwrap_or(0);
+                    if !(1..=1440).contains(&duration){return Err("VALIDATION_FAILED: day-use duration".into());}
+                }
+                let min_nights=data.get("minNights").and_then(Value::as_i64).unwrap_or(1);
+                let max_nights=data.get("maxNights").and_then(Value::as_i64).unwrap_or(366);
+                if min_nights<1||max_nights<min_nights||max_nights>366{return Err("VALIDATION_FAILED: rate stay limits".into());}
+                let mut next=current.as_ref().map(|(_,v,_)|v.clone()).unwrap_or_else(||json!({"createdAt":now()}));
+                next["name"]=json!(name);next["roomTypeId"]=json!(room_type);next["mode"]=json!(mode);
+                next["priceMinor"]=json!(price);next["currency"]=json!("KES");next["taxBasisPoints"]=json!(tax);
+                next["durationMinutes"]=data.get("durationMinutes").cloned().unwrap_or(Value::Null);
+                next["mealPlan"]=data.get("mealPlan").cloned().unwrap_or_else(||json!("ROOM_ONLY"));
+                next["minNights"]=json!(min_nights);next["maxNights"]=json!(max_nights);
+                let notes=data.get("notes").cloned().or_else(||next.get("notes").cloned()).unwrap_or(json!(""));
+                next["notes"]=notes;next["updatedAt"]=json!(now());
+                put(tx,"ratePlans",&key,next,changes)?;
+            }
+            "ratePlan.archive"=>{
+                let (version,_,archived)=current.ok_or("Rate plan not found")?;
+                if archived{return Err("Rate plan is already archived".into());}
+                if cmd.target_version!=Some(version){return Err("CONFLICT: Rate plan changed".into());}
+                if room_active_reference(tx,"roomReservations","ratePlanId",&key,&["RESERVED","CHECKED_IN"])?{
+                    return Err("INVALID_STATE: rate plan has active reservations".into());
+                }
+                room_put_archived(tx,"ratePlans",&key,true,changes)?;
+            }
+            "ratePlan.reactivate"=>{
+                let (version,data,archived)=current.ok_or("Rate plan not found")?;
+                if !archived{return Err("Rate plan is already active".into());}
+                if cmd.target_version!=Some(version){return Err("CONFLICT: Rate plan changed".into());}
+                get(tx,"roomTypes",text(&data,"roomTypeId")?)?;
+                room_put_archived(tx,"ratePlans",&key,false,changes)?;
+            }
+            _=>return Err("PROTOCOL_UNSUPPORTED: rate plan operation".into())
+        }
+        return Ok(true);
+    }
+
+    let key=text(p,"id")?.to_string();
+    let target=if ["room.block","room.unblock"].contains(&op){"roomBlocks"}else{"rooms"};
+    let current=room_any(tx,target,&key)?;
+    match op {
+        "room.save"=>{
+            if current.as_ref().is_some_and(|v|v.2){return Err("INVALID_STATE: reactivate room before editing".into());}
+            room_expect_version(current.as_ref(),cmd.target_version)?;
+            let data=p["data"].as_object().ok_or("Room data is required")?;
+            for field in data.keys(){if !["number","roomTypeId","capacity","turnaroundMinutes","floor","wing","amenities","notes","initialStatus"].contains(&field.as_str()){return Err(format!("VALIDATION_FAILED: room field {field}"));}}
+            let number=data.get("number").and_then(Value::as_str).map(str::trim).filter(|v|!v.is_empty()).ok_or("Room number is required")?;
+            room_unique_text(tx,"rooms","number",&key,number)?;
+            let room_type=data.get("roomTypeId").and_then(Value::as_str).ok_or("Room type is required")?;
+            let (_,kind)=get(tx,"roomTypes",room_type)?;
+            let capacity=data.get("capacity").and_then(Value::as_i64).ok_or("Room capacity is required")?;
+            let max_guests=kind["maxGuests"].as_i64().unwrap_or(0);
+            let turnaround=data.get("turnaroundMinutes").and_then(Value::as_i64).unwrap_or(30);
+            if capacity<1||capacity>max_guests||!(0..=1440).contains(&turnaround){return Err("VALIDATION_FAILED: capacity or turnaround".into());}
+            if data.get("amenities").is_some_and(|v|!v.is_array()){return Err("VALIDATION_FAILED: room amenities must be an array".into());}
+            if let Some((_,prior,_))=&current{
+                let changed=prior["roomTypeId"].as_str()!=Some(room_type)||prior["capacity"].as_i64()!=Some(capacity)||prior["turnaroundMinutes"].as_i64()!=Some(turnaround);
+                if changed&&room_active_reference(tx,"roomReservations","roomId",&key,&["RESERVED","CHECKED_IN"])?{
+                    return Err("INVALID_STATE: resolve active reservations before changing room constraints".into());
+                }
+                if data.contains_key("initialStatus"){return Err("VALIDATION_FAILED: initialStatus is only valid when creating a room".into());}
+            }
+            let mut next=current.as_ref().map(|(_,v,_)|v.clone()).unwrap_or_else(||json!({
+                "housekeepingState":"CLEAN","maintenanceState":"AVAILABLE","createdAt":now()
+            }));
+            if current.is_none(){
+                match data.get("initialStatus").and_then(Value::as_str).unwrap_or("READY"){
+                    "READY"=>{next["housekeepingState"]=json!("CLEAN");next["maintenanceState"]=json!("AVAILABLE");},
+                    "DIRTY"=>{next["housekeepingState"]=json!("DIRTY");next["maintenanceState"]=json!("AVAILABLE");},
+                    "OUT_OF_ORDER"=>{next["housekeepingState"]=json!("CLEAN");next["maintenanceState"]=json!("OUT_OF_ORDER");},
+                    _=>return Err("VALIDATION_FAILED: initial room status".into())
+                }
+            }
+            next["number"]=json!(number);next["roomTypeId"]=json!(room_type);next["capacity"]=json!(capacity);next["turnaroundMinutes"]=json!(turnaround);
+            for field in ["floor","wing","amenities","notes"]{if let Some(v)=data.get(field){next[field]=v.clone();}}
+            next["updatedAt"]=json!(now());
+            put(tx,"rooms",&key,next,changes)?;
+        }
+        "room.archive"=>{
+            let (version,_,archived)=current.ok_or("Room not found")?;
+            if archived{return Err("Room is already archived".into());}
+            if cmd.target_version!=Some(version){return Err("CONFLICT: Room changed".into());}
+            if room_active_reference(tx,"roomReservations","roomId",&key,&["RESERVED","CHECKED_IN"])?
+                ||room_active_reference(tx,"roomBlocks","roomId",&key,&["ACTIVE"])?{
+                return Err("INVALID_STATE: room has active reservations or blocks".into());
+            }
+            room_put_archived(tx,"rooms",&key,true,changes)?;
+        }
+        "room.reactivate"=>{
+            let (version,data,archived)=current.ok_or("Room not found")?;
+            if !archived{return Err("Room is already active".into());}
+            if cmd.target_version!=Some(version){return Err("CONFLICT: Room changed".into());}
+            room_unique_text(tx,"rooms","number",&key,text(&data,"number")?)?;
+            get(tx,"roomTypes",text(&data,"roomTypeId")?)?;
+            room_put_archived(tx,"rooms",&key,false,changes)?;
+        }
+        "room.housekeeping"=>{
+            let (version,mut data,archived)=current.ok_or("Room not found")?;
+            if archived{return Err("Room is archived".into());}
+            if cmd.target_version!=Some(version){return Err("CONFLICT: Room changed".into());}
+            let state=text(p,"state")?;
+            let old=data["housekeepingState"].as_str().unwrap_or("CLEAN");
+            let valid=(old=="DIRTY"&&state=="CLEANING")||(old=="CLEANING"&&state=="INSPECTION")||(old=="INSPECTION"&&["CLEAN","DIRTY"].contains(&state))||(old=="CLEAN"&&state=="DIRTY");
+            if !valid{return Err("INVALID_STATE: housekeeping transition".into());}
+            data["housekeepingState"]=json!(state);data["housekeepingAt"]=json!(now());data["housekeepingBy"]=json!(user.staff_id);
+            put(tx,"rooms",&key,data,changes)?;
+        }
+        "room.condition"=>{
+            let (version,mut data,archived)=current.ok_or("Room not found")?;
+            if archived{return Err("Room is archived".into());}
+            if cmd.target_version!=Some(version){return Err("CONFLICT: Room changed".into());}
+            let state=text(p,"state")?;
+            if !["AVAILABLE","OUT_OF_ORDER"].contains(&state){return Err("VALIDATION_FAILED: room condition".into());}
+            if state=="OUT_OF_ORDER"&&room_active_reference(tx,"roomReservations","roomId",&key,&["RESERVED","CHECKED_IN"])?{
+                return Err("INVALID_STATE: use a room block or resolve active reservations before taking the room out of order".into());
+            }
+            data["maintenanceState"]=json!(state);data["conditionReason"]=p.get("reason").cloned().unwrap_or(Value::Null);
+            data["conditionAt"]=json!(now());data["conditionBy"]=json!(user.staff_id);
+            put(tx,"rooms",&key,data,changes)?;
+        }
+        "room.block"=>{
+            if current.is_some(){return Err("DUPLICATE_REFERENCE: room block".into());}
+            if cmd.target_version.is_some(){return Err("CONFLICT: new room block must not have a target version".into());}
+            let room_id=text(p,"roomId")?;
+            let start=room_parse_time(text(p,"startsAt")?)?;let end=room_parse_time(text(p,"endsAt")?)?;
+            room_validate_interval(start,end)?;
+            if p.get("maintenanceOrderId").and_then(Value::as_str).is_some_and(|v|!v.trim().is_empty()){
+                return Err("Maintenance-linked room blocks are enabled with the Assets & Maintenance domain in Patch 08".into());
+            }
+            room_available(tx,room_id,start,end,None)?;
+            put(tx,"roomBlocks",&key,json!({
+                "id":key,"roomId":room_id,"startsAt":start.to_rfc3339(),"endsAt":end.to_rfc3339(),
+                "reason":text(p,"reason")?,"status":"ACTIVE","createdAt":now(),"createdBy":user.staff_id
+            }),changes)?;
+        }
+        "room.unblock"=>{
+            let (version,mut data,archived)=current.ok_or("Room block not found")?;
+            if archived||data["status"].as_str()!=Some("ACTIVE"){return Err("INVALID_STATE: room block already released".into());}
+            if cmd.target_version!=Some(version){return Err("CONFLICT: Room block changed".into());}
+            data["status"]=json!("RELEASED");data["releasedAt"]=json!(now());data["inspection"]=json!(text(p,"inspection")?);data["releasedBy"]=json!(user.staff_id);
+            put(tx,"roomBlocks",&key,data,changes)?;
+        }
+        _=>return Err("PROTOCOL_UNSUPPORTED: room operation".into())
+    }
+    Ok(true)
+}
+
 pub fn execute(db: &mut Connection, token: &str, cmd: BusinessCommand) -> Result<Value> {
     let user = actor(db, token, true)?;
     execute_as(db, &user, cmd)
@@ -637,6 +1014,11 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
     let mut changes = vec![];
     let p = &cmd.payload;
     live_required(&tx, &cmd.operation)?;
+    if room_execute(&tx,user,&cmd,&mut changes)? {
+        let result=finish(&tx,&cmd,&user.staff_id,changes)?;
+        tx.commit().map_err(error)?;
+        return Ok(result);
+    }
     match cmd.operation.as_str() {
         "business.identity" => {
             authorize(&tx,user,"business.configure",p,None)?;
@@ -2673,9 +3055,92 @@ fn import_plan_row_record(
             "Employee credentials cannot be imported. Create staff accounts through Staff Access so each PIN is established securely.".into(),None,None);
         return Ok(steps);
     }
-    if ["room_types","rooms","rate_plans","hotel_services"].contains(&template_key) {
+    if ["room_types","rooms","rate_plans"].contains(&template_key) {
+        if import_boolean(row,"active")==Some(false) {
+            one("BLOCKED",None,None,None,None,None,
+                "Archived room masters are not imported implicitly. Apply the active record first, then archive it through Rooms Studio if required.".into(),None,None);
+            return Ok(steps);
+        }
+        let (namespace,collection,operation,checks,desired,payload_data)=match template_key {
+            "room_types"=>{
+                let code=import_string(row,"code").unwrap_or_default();
+                let max_guests=(import_number(row,"capacity_adults").unwrap_or(0.0)+import_number(row,"capacity_children").unwrap_or(0.0)).round() as i64;
+                if max_guests<1||max_guests>1000 {
+                    one("BLOCKED",None,Some("roomTypes"),None,None,None,"Room type total guest capacity must be between 1 and 1000".into(),Some("room_types"),Some(&external_id));
+                    return Ok(steps);
+                }
+                let desired=json!({"name":import_string(row,"name").unwrap_or_default(),"code":code,"maxGuests":max_guests});
+                ("room_types","roomTypes","roomType.save",vec![("code".into(),desired["code"].as_str().unwrap_or("").to_string())],desired.clone(),desired)
+            },
+            "rooms"=>{
+                let room_type_external=import_string(row,"room_type_external_id").unwrap_or_default();
+                let room_type_id=match import_mapping_lookup(db,"room_types",&room_type_external)?{
+                    Some((_,id))=>id,
+                    None=>{
+                        one("CONFLICT",None,Some("rooms"),None,None,None,format!("Room type external ID {room_type_external} is not applied yet"),Some("rooms"),Some(&external_id));
+                        return Ok(steps);
+                    }
+                };
+                let (_,room_type)=get(db,"roomTypes",&room_type_id)?;
+                let number=import_string(row,"room_number").unwrap_or_default();
+                let desired=json!({
+                    "number":number,"roomTypeId":room_type_id,"capacity":room_type["maxGuests"].as_i64().unwrap_or(1),
+                    "turnaroundMinutes":30,"floor":import_string(row,"floor").unwrap_or_default(),
+                    "wing":import_string(row,"wing").unwrap_or_default()
+                });
+                let mut payload=desired.clone();
+                payload["initialStatus"]=json!(import_string(row,"initial_status").unwrap_or_else(||"READY".into()));
+                ("rooms","rooms","room.save",vec![("number".into(),desired["number"].as_str().unwrap_or("").to_string())],desired,payload)
+            },
+            "rate_plans"=>{
+                let room_type_external=import_string(row,"room_type_external_id").unwrap_or_default();
+                let room_type_id=match import_mapping_lookup(db,"room_types",&room_type_external)?{
+                    Some((_,id))=>id,
+                    None=>{
+                        one("CONFLICT",None,Some("ratePlans"),None,None,None,format!("Room type external ID {room_type_external} is not applied yet"),Some("rate_plans"),Some(&external_id));
+                        return Ok(steps);
+                    }
+                };
+                let (_,property)=get(db,"property","property")?;
+                let currency=import_string(row,"currency").unwrap_or_else(||"KES".into());
+                if currency!="KES" {
+                    one("BLOCKED",None,Some("ratePlans"),None,None,None,"Rate-plan CSV currency must be KES".into(),Some("rate_plans"),Some(&external_id));
+                    return Ok(steps);
+                }
+                let minimum=import_number(row,"min_nights").unwrap_or(1.0).round() as i64;
+                let maximum=import_number(row,"max_nights").unwrap_or(366.0).round() as i64;
+                if minimum<1||maximum<minimum||maximum>366 {
+                    one("BLOCKED",None,Some("ratePlans"),None,None,None,"Rate-plan min/max nights are invalid".into(),Some("rate_plans"),Some(&external_id));
+                    return Ok(steps);
+                }
+                let tax_bps=((property["vatRatePct"].as_f64().unwrap_or(0.0)+property["levyRatePct"].as_f64().unwrap_or(0.0))*100.0).round() as i64;
+                let desired=json!({
+                    "name":import_string(row,"name").unwrap_or_default(),"roomTypeId":room_type_id,"mode":"NIGHTLY",
+                    "priceMinor":(import_number(row,"nightly_rate").unwrap_or(0.0)*100.0).round() as i64,
+                    "currency":currency,"taxBasisPoints":tax_bps,
+                    "mealPlan":import_string(row,"meal_plan").unwrap_or_else(||"ROOM_ONLY".into()),
+                    "minNights":minimum,
+                    "maxNights":maximum
+                });
+                ("rate_plans","ratePlans","ratePlan.save",vec![("name".into(),desired["name"].as_str().unwrap_or("").to_string())],desired.clone(),desired)
+            },
+            _=>unreachable!()
+        };
+        let (target_id,version,existing,match_error)=import_target(db,namespace,&external_id,collection,&checks)?;
+        if let Some(reason)=match_error {
+            one("CONFLICT",None,Some(collection),if target_id.is_empty(){None}else{Some(&target_id)},version,None,reason,Some(namespace),Some(&external_id));
+            return Ok(steps);
+        }
+        let same=existing.as_ref().is_some_and(|prior|import_patch_matches(prior,&desired));
+        let action=if same{"NO_CHANGE"}else if version.is_some(){"UPDATE"}else{"CREATE"};
+        one(action,Some(operation),Some(collection),Some(&target_id),version,Some(json!({"id":target_id,"data":payload_data})),
+            if same{"Current room-domain record already matches the staged fields".into()}else if version.is_some(){"Versioned room-domain update".into()}else{"Create through the native rooms domain".into()},
+            Some(namespace),Some(&external_id));
+        return Ok(steps);
+    }
+    if template_key=="hotel_services" {
         one("BLOCKED",None,None,None,None,None,
-            "This staged dataset is reserved for Patch 05 Rooms/PMS so room-state and reservation invariants exist before application.".into(),None,None);
+            "Hotel services remain staged until Patch 07 Folios so service posting and price/tax snapshots are atomic.".into(),None,None);
         return Ok(steps);
     }
     if ["asset_categories","assets"].contains(&template_key) {

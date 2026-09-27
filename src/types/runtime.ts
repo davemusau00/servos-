@@ -20,6 +20,7 @@ export type Permission =
   | 'inventory.view' | 'inventory.receive' | 'inventory.transfer' | 'inventory.waste' | 'inventory.count' | 'inventory.adjust'
   | 'procurement.view' | 'procurement.manage' | 'procurement.receive' | 'procurement.over_receive' | 'procurement.pay'
   | 'floorplan.view' | 'floorplan.manage'
+  | 'rooms.view' | 'rooms.manage' | 'rooms.operate' | 'rooms.guests.view'
   | 'kds.view' | 'kds.update'
   | 'accounting.view' | 'reports.view' | 'audit.view'
   | 'backup.create' | 'backup.restore' | 'sync.manual' | 'system.configure' | 'help.view'

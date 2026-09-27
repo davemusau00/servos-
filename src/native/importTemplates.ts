@@ -57,7 +57,7 @@ export const IMPORT_TEMPLATES: ImportTemplateDefinition[] = [
       "kind",
       "active"
     ],
-    "csv": "external_id,name,outlet_external_id,kind,active\r\nstock-main,Main Store,outlet-main,MAIN,true\r\n"
+    "csv": "external_id,name,outlet_external_id,kind,active\r\nstock-main,Main Store,,MAIN,true\r\n"
   },
   {
     "key": "suppliers",

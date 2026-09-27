@@ -427,11 +427,62 @@ fn controlled_import_blocks_live_opening_inventory_and_deferred_domains() {
     let plan=import_plan(&mut db,&s.token,batch["id"].as_str().unwrap()).unwrap();
     assert_eq!(plan["status"],"BLOCKED");
     assert!(plan["steps"].as_array().unwrap().iter().any(|x|x["reason"].as_str().unwrap().contains("after Go Live")));
-    let rooms="external_id,name,code,capacity_adults,capacity_children,base_rate,active\nroomtype-x,Suite,SUITE,2,0,10000,true\n";
-    let room_batch=import_stage(&mut db,&s.token,"room_types","room_types.csv",rooms).unwrap();
-    let room_plan=import_plan(&mut db,&s.token,room_batch["id"].as_str().unwrap()).unwrap();
-    assert_eq!(room_plan["status"],"BLOCKED");
-    assert!(room_plan["steps"][0]["reason"].as_str().unwrap().contains("Patch 05"));
+    let services="external_id,code,name,category,unit_price,taxable,active\nservice-x,ROOM-SVC,Room Service,ROOM_SERVICE,1000,true,true\n";
+    let service_batch=import_stage(&mut db,&s.token,"hotel_services","hotel_services.csv",services).unwrap();
+    let service_plan=import_plan(&mut db,&s.token,service_batch["id"].as_str().unwrap()).unwrap();
+    assert_eq!(service_plan["status"],"BLOCKED");
+    assert!(service_plan["steps"][0]["reason"].as_str().unwrap().contains("Patch 07"));
+}
+
+// SERVOS_PATCH_05_ROOMS_ENGINE
+#[test]
+fn rooms_engine_blocks_overlap_turnaround_and_preserves_rate_snapshot() {
+    let (_,mut db,s)=setup();
+    run(&mut db,&s,"record.save",json!({"collection":"customers","id":"guest-a","data":{"name":"Guest A","phone":"+254700000001"}}));
+    run(&mut db,&s,"record.save",json!({"collection":"customers","id":"guest-b","data":{"name":"Guest B","phone":"+254700000002"}}));
+    run(&mut db,&s,"roomType.save",json!({"id":"type-standard","data":{"name":"Standard","code":"STD","maxGuests":2}}));
+    run(&mut db,&s,"ratePlan.save",json!({"id":"rate-standard","data":{"name":"Standard Night","roomTypeId":"type-standard","mode":"NIGHTLY","priceMinor":10000,"currency":"KES","taxBasisPoints":0,"minNights":1,"maxNights":30}}));
+    run(&mut db,&s,"room.save",json!({"id":"room-101","data":{"number":"101","roomTypeId":"type-standard","capacity":2,"turnaroundMinutes":30,"floor":"1"}}));
+    run(&mut db,&s,"roomReservation.create",json!({"id":"res-a","roomId":"room-101","ratePlanId":"rate-standard","customerId":"guest-a","guests":2,"startsAt":"2030-01-01T12:00:00Z","endsAt":"2030-01-02T10:00:00Z"}));
+    let first=get(&db,"roomReservations","res-a").unwrap().1;
+    assert_eq!(first["quotedAmountMinor"],10000);
+    assert_eq!(first["blockedUntil"],"2030-01-02T10:30:00+00:00");
+    assert!(execute(&mut db,&s.token,cmd("roomReservation.create",json!({"id":"res-overlap","roomId":"room-101","ratePlanId":"rate-standard","customerId":"guest-b","guests":1,"startsAt":"2030-01-02T10:15:00Z","endsAt":"2030-01-03T10:00:00Z"}))).is_err());
+    run(&mut db,&s,"roomReservation.create",json!({"id":"res-b","roomId":"room-101","ratePlanId":"rate-standard","customerId":"guest-b","guests":1,"startsAt":"2030-01-02T10:30:00Z","endsAt":"2030-01-03T10:00:00Z"}));
+    let (rate_version,_)=get(&db,"ratePlans","rate-standard").unwrap();
+    let mut update=cmd("ratePlan.save",json!({"id":"rate-standard","data":{"name":"Standard Night","roomTypeId":"type-standard","mode":"NIGHTLY","priceMinor":15000,"currency":"KES","taxBasisPoints":0,"minNights":1,"maxNights":30}}));
+    update.target_version=Some(rate_version);execute(&mut db,&s.token,update).unwrap();
+    assert_eq!(get(&db,"roomReservations","res-a").unwrap().1["rateSnapshot"]["priceMinor"],10000);
+}
+#[test]
+fn rooms_engine_enforces_blocks_housekeeping_and_reservation_closure() {
+    let (_,mut db,s)=setup();
+    run(&mut db,&s,"record.save",json!({"collection":"customers","id":"guest","data":{"name":"Guest","phone":"+254700000003"}}));
+    run(&mut db,&s,"roomType.save",json!({"id":"type","data":{"name":"Suite","code":"STE","maxGuests":3}}));
+    run(&mut db,&s,"ratePlan.save",json!({"id":"rate","data":{"name":"Suite Night","roomTypeId":"type","mode":"NIGHTLY","priceMinor":20000,"currency":"KES","taxBasisPoints":0}}));
+    run(&mut db,&s,"room.save",json!({"id":"room","data":{"number":"201","roomTypeId":"type","capacity":3,"turnaroundMinutes":0,"initialStatus":"DIRTY"}}));
+    let (v,_)=get(&db,"rooms","room").unwrap();let mut clean=cmd("room.housekeeping",json!({"id":"room","state":"CLEANING"}));clean.target_version=Some(v);execute(&mut db,&s.token,clean).unwrap();
+    let (v,_)=get(&db,"rooms","room").unwrap();let mut inspect=cmd("room.housekeeping",json!({"id":"room","state":"INSPECTION"}));inspect.target_version=Some(v);execute(&mut db,&s.token,inspect).unwrap();
+    let (v,_)=get(&db,"rooms","room").unwrap();let mut ready=cmd("room.housekeeping",json!({"id":"room","state":"CLEAN"}));ready.target_version=Some(v);execute(&mut db,&s.token,ready).unwrap();
+    run(&mut db,&s,"room.block",json!({"id":"block","roomId":"room","startsAt":"2030-02-01T08:00:00Z","endsAt":"2030-02-02T08:00:00Z","reason":"Painting"}));
+    assert!(execute(&mut db,&s.token,cmd("roomReservation.create",json!({"id":"blocked","roomId":"room","ratePlanId":"rate","customerId":"guest","guests":1,"startsAt":"2030-02-01T10:00:00Z","endsAt":"2030-02-02T07:00:00Z"}))).is_err());
+    let (bv,_)=get(&db,"roomBlocks","block").unwrap();let mut unblock=cmd("room.unblock",json!({"id":"block","inspection":"Paint cured and room inspected"}));unblock.target_version=Some(bv);execute(&mut db,&s.token,unblock).unwrap();
+    run(&mut db,&s,"roomReservation.create",json!({"id":"res","roomId":"room","ratePlanId":"rate","customerId":"guest","guests":1,"startsAt":"2030-02-01T10:00:00Z","endsAt":"2030-02-02T07:00:00Z"}));
+    let (rv,_)=get(&db,"roomReservations","res").unwrap();let mut cancel=cmd("roomReservation.cancel",json!({"id":"res","reason":"Guest cancelled"}));cancel.target_version=Some(rv);execute(&mut db,&s.token,cancel).unwrap();
+    assert_eq!(get(&db,"roomReservations","res").unwrap().1["status"],"CANCELLED");
+}
+#[test]
+fn room_csv_imports_apply_through_native_room_commands() {
+    let (_,mut db,s)=setup();
+    let types="external_id,name,code,capacity_adults,capacity_children,base_rate,active\nroomtype-standard,Standard Room,STD,2,1,6500,true\n";
+    let b=import_stage(&mut db,&s.token,"room_types","room_types.csv",types).unwrap();
+    let p=import_plan(&mut db,&s.token,b["id"].as_str().unwrap()).unwrap();assert_eq!(p["status"],"READY");
+    import_apply(&mut db,&s.token,p["id"].as_str().unwrap()).unwrap();
+    let rooms="external_id,room_number,room_type_external_id,floor,wing,initial_status,active\nroom-101,101,roomtype-standard,1,Main,READY,true\n";
+    let b=import_stage(&mut db,&s.token,"rooms","rooms.csv",rooms).unwrap();let p=import_plan(&mut db,&s.token,b["id"].as_str().unwrap()).unwrap();assert_eq!(p["status"],"READY");import_apply(&mut db,&s.token,p["id"].as_str().unwrap()).unwrap();
+    let rates="external_id,name,room_type_external_id,meal_plan,currency,nightly_rate,min_nights,max_nights,active\nrate-standard,Standard BB,roomtype-standard,BB,KES,7500,1,30,true\n";
+    let b=import_stage(&mut db,&s.token,"rate_plans","rate_plans.csv",rates).unwrap();let p=import_plan(&mut db,&s.token,b["id"].as_str().unwrap()).unwrap();assert_eq!(p["status"],"READY");import_apply(&mut db,&s.token,p["id"].as_str().unwrap()).unwrap();
+    assert_eq!(list(&db,"roomTypes").unwrap().len(),1);assert_eq!(list(&db,"rooms").unwrap().len(),1);assert_eq!(list(&db,"ratePlans").unwrap().len(),1);
 }
 
 #[test]
