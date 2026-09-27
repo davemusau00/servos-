@@ -53,6 +53,7 @@ begin
   till_key:=servos_v2.required_text(p,'id');perform servos_v2.assert_version(command,'tillSessions',till_key);
   select r.data into till from servos_v2.records r where r.collection='tillSessions' and r.id=till_key and not r.archived for update;
   if till is null or till->>'status'<>'OPEN' then raise exception 'INVALID_STATE: till is not open';end if;
+  if exists(select 1 from servos_v2.records r where r.collection='orders' and not r.archived and r.data->>'state' not in ('COMPLETED','VOIDED')) then raise exception 'INVALID_STATE: close open orders before closing the till';end if;
   counted:=servos_v2.minor(p,'countedCashMinor');expected:=(till->>'expectedCashMinor')::bigint;
   variance:=counted-expected;
   if variance<>0 then

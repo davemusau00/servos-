@@ -156,6 +156,32 @@ select pg_temp.pos_command('payment.record','orders','order-partial','{"orderId"
 select pg_temp.pos_command('order.addItem','orders','order-partial','{"orderId":"order-partial","productId":"gin-shot","itemId":"late-line","quantity":1,"portionId":"single","modifierIds":[]}','REJECTED','INVALID_STATE');
 select pg_temp.pos_command('payment.record','orders','order-partial','{"orderId":"order-partial","amountMinor":50001,"accountId":"cash","cashTenderedMinor":50001}','REJECTED','VALIDATION_FAILED');
 
+-- Two devices cannot both settle from the same order/till baseline.
+do $$declare versions jsonb;c1 jsonb;c2 jsonb;r1 jsonb;r2 jsonb;seq1 bigint;seq2 bigint;baseline bigint;begin
+ select version into baseline from servos_v2.records where collection='orders' and id='order-partial';
+ select coalesce(jsonb_agg(jsonb_build_object('collection',collection,'id',id,'version',version)),'[]') into versions from servos_v2.records;
+ select last_sequence+1 into seq1 from servos_v2.devices where id='10000000-0000-4000-8000-000000000051';
+ select last_sequence+1 into seq2 from servos_v2.devices where id='10000000-0000-4000-8000-000000000052';
+ c1:=jsonb_build_object('id',gen_random_uuid(),'schemaVersion',2,'deviceId','10000000-0000-4000-8000-000000000051','actorId',auth.uid(),'clientSequence',seq1,'operation','payment.record','payload',jsonb_build_object('orderId','order-partial','amountMinor',5000,'accountId','cash','cashTenderedMinor',5000),'expectedVersions',versions);
+ c2:=jsonb_build_object('id',gen_random_uuid(),'schemaVersion',2,'deviceId','10000000-0000-4000-8000-000000000052','actorId',auth.uid(),'clientSequence',seq2,'operation','payment.record','payload',jsonb_build_object('orderId','order-partial','amountMinor',5000,'accountId','cash','cashTenderedMinor',5000),'expectedVersions',versions);
+ r1:=public.servos_v2_execute(c1);r2:=public.servos_v2_execute(c2);
+ if r1->>'status'<>'SYNCHRONIZED' then raise exception 'First competing payment failed: %',r1;end if;
+ if r2->>'status'<>'CONFLICT' or r2->'error'->>'code'<>'VERSION_CONFLICT' then raise exception 'Stale second-device payment did not conflict: %',r2;end if;
+ if (select count(*) from servos_v2.records where collection='payments' and data->>'orderId'='order-partial')<>2 then raise exception 'Stale payment partially committed';end if;
+ if baseline is null then raise exception 'Payment conflict fixture missing order baseline';end if;
+end$$;
+select pg_temp.pos_command('till.close','tillSessions','shift-1','{"id":"shift-1","countedCashMinor":1000}','REJECTED','INVALID_STATE');
+select pg_temp.pos_command('payment.record','orders','order-partial','{"orderId":"order-partial","amountMinor":45000,"accountId":"cash","cashTenderedMinor":45000}');
+select pg_temp.pos_command('order.void','orders','order-duplicate','{"orderId":"order-duplicate","reason":"Close duplicate-reference test tab"}');
+
+-- Card payment requires a manually observed external authorization reference.
+select pg_temp.pos_command('order.create','orders','order-card','{"id":"order-card","outletId":"bar","name":"Card settlement"}');
+select pg_temp.pos_command('order.addItem','orders','order-card','{"orderId":"order-card","productId":"gin-shot","itemId":"card-line","quantity":1,"portionId":"single","modifierIds":[]}');
+select pg_temp.pos_command('payment.record','orders','order-card','{"orderId":"order-card","amountMinor":30000,"accountId":"card","reference":"EXT-991","manuallyConfirmed":true}');
+do $$begin
+ if not exists(select 1 from servos_v2.records where collection='payments' and data->>'orderId'='order-card' and data->>'confirmation'='MANUALLY_CONFIRMED' and data->>'reference'='EXT-991') then raise exception 'Card authorization evidence was not captured';end if;
+end$$;
+
 -- Completing a table order releases the table and does not repeat fire consumption.
 select pg_temp.pos_command('order.create','orders','order-table-pay','{"id":"order-table-pay","outletId":"bar","tableId":"t1","name":"Settled table"}');
 select pg_temp.pos_command('order.addItem','orders','order-table-pay','{"orderId":"order-table-pay","productId":"gin-shot","itemId":"table-pay-line","quantity":1,"portionId":"single","modifierIds":[]}');
@@ -169,6 +195,15 @@ do $$declare t jsonb;o jsonb;receipt jsonb;s jsonb;begin
  if receipt->'items'->0->>'productName'<>'Gin Shot' then raise exception 'Receipt snapshot changed after catalog rename';end if;
  if (s->'currentStock'->>'bar-stock')::numeric<>9.85 then raise exception 'Settlement repeated stock consumption';end if;
  begin update servos_v2.records set data=data||jsonb_build_object('message','mutated') where collection='receiptDocuments' and id=receipt->>'id';raise exception 'Receipt was mutable';exception when others then if sqlerrm<>'Immutable business history' then raise;end if;end;
+end$$;
+select pg_temp.pos_command('till.cashMovement','tillSessions','shift-1','{"tillSessionId":"shift-1","direction":"PAID_IN","amountMinor":500,"reason":"Verified float adjustment"}');
+select pg_temp.pos_command('till.cashMovement','tillSessions','shift-1','{"tillSessionId":"shift-1","direction":"PAID_OUT","amountMinor":200,"reason":"Approved cash purchase"}');
+select pg_temp.pos_command('till.close','tillSessions','shift-1','{"id":"shift-1","countedCashMinor":106300}');
+do $$declare t jsonb;begin
+ t:=servos_v2.read_record('tillSessions','shift-1');
+ if t->>'status'<>'CLOSED' or (t->>'expectedCashMinor')::bigint<>106300 or (t->>'cashVarianceMinor')::bigint<>0 then raise exception 'Till close did not conserve counted cash';end if;
+ if (select count(*) from servos_v2.records where collection='cashMovements')<>2 then raise exception 'Till movements missing';end if;
+ begin update servos_v2.records set data=data||jsonb_build_object('reason','mutated') where collection='cashMovements';raise exception 'Cash movement was mutable';exception when others then if sqlerrm<>'Immutable business history' then raise;end if;end;
 end$$;
 
 -- Permission rejection.
