@@ -200,12 +200,36 @@ do $$declare t jsonb;o jsonb;receipt jsonb;s jsonb;begin
 end$$;
 select pg_temp.pos_command('till.cashMovement','tillSessions','shift-1','{"tillSessionId":"shift-1","direction":"PAID_IN","amountMinor":500,"reason":"Verified float adjustment"}');
 select pg_temp.pos_command('till.cashMovement','tillSessions','shift-1','{"tillSessionId":"shift-1","direction":"PAID_OUT","amountMinor":200,"reason":"Approved cash purchase"}');
+
+-- Partial refund and full reversal retain the original tender and conserve the till.
+select pg_temp.pos_command('order.create','orders','order-refund','{"id":"order-refund","outletId":"bar","name":"Refund workflow"}');
+select pg_temp.pos_command('order.addItem','orders','order-refund','{"orderId":"order-refund","productId":"gin-shot","itemId":"refund-line","quantity":1,"portionId":"single","modifierIds":[]}');
+select pg_temp.pos_command('payment.record','orders','order-refund','{"orderId":"order-refund","amountMinor":30000,"accountId":"cash","cashTenderedMinor":30000}');
+do $$declare payment_key text;begin
+ select id into payment_key from servos_v2.records where collection='payments' and data->>'orderId'='order-refund';
+ perform pg_temp.pos_command('payment.refund','payments',payment_key,jsonb_build_object('paymentId',payment_key,'amountMinor',10000,'reason','Partial customer refund'));
+ perform pg_temp.pos_command('payment.refund','payments',payment_key,jsonb_build_object('paymentId',payment_key,'amountMinor',25000,'reason','Over-refund'),'REJECTED','VALIDATION_FAILED');
+ perform pg_temp.pos_command('payment.reverse','payments',payment_key,jsonb_build_object('paymentId',payment_key,'reason','Reverse remaining tender'));
+ if (select count(*) from servos_v2.records where collection='refunds' and data->>'paymentId'=payment_key)<>2 then raise exception 'Partial refund and reversal history missing';end if;
+ if (servos_v2.read_record('orders','order-refund')->>'refundedMinor')::bigint<>30000 then raise exception 'Order refund total is incorrect';end if;
+ if (servos_v2.read_record('tillSessions','shift-1')->>'expectedCashMinor')::bigint<>106300 then raise exception 'Cash refunds did not conserve expected drawer';end if;
+ begin update servos_v2.records set data=data||jsonb_build_object('amountMinor',1) where collection='payments' and id=payment_key;raise exception 'Payment was mutable';exception when others then if sqlerrm<>'Immutable business history' then raise;end if;end;
+end$$;
 select pg_temp.pos_command('till.close','tillSessions','shift-1','{"id":"shift-1","countedCashMinor":106300}');
 do $$declare t jsonb;begin
  t:=servos_v2.read_record('tillSessions','shift-1');
  if t->>'status'<>'CLOSED' or (t->>'expectedCashMinor')::bigint<>106300 or (t->>'cashVarianceMinor')::bigint<>0 then raise exception 'Till close did not conserve counted cash';end if;
  if (select count(*) from servos_v2.records where collection='cashMovements')<>2 then raise exception 'Till movements missing';end if;
  begin update servos_v2.records set data=data||jsonb_build_object('reason','mutated') where collection='cashMovements';raise exception 'Cash movement was mutable';exception when others then if sqlerrm<>'Immutable business history' then raise;end if;end;
+end$$;
+select pg_temp.pos_command('closeDay.generate','closeDayReports','close-day-shift-1','{"tillId":"shift-1"}');
+do $$declare report jsonb;begin
+ select data into report from servos_v2.records where collection='closeDayReports' and id='close-day-shift-1';
+ if report->'sales'->>'grossMinor'<>'200000' or report->'sales'->>'refundsMinor'<>'30000' then raise exception 'Close-day sales or refund totals are wrong: %',report;end if;
+ if report->'tenders'->>'mpesaMinor'<>'35000' or report->'tenders'->>'cardMinor'<>'30000' or report->'tenders'->>'cashMinor'<>'135000' then raise exception 'Close-day tender totals are wrong: %',report;end if;
+ if report->'cash'->>'varianceMinor'<>'0' or report->'orders'->>'openCount'<>'0' then raise exception 'Close-day drawer/open-tab snapshot is wrong';end if;
+ if report->'reconciliation'->>'providerInitiated'<>'false' then raise exception 'Close-day report invented provider settlement';end if;
+ begin update servos_v2.records set data=data||jsonb_build_object('sales','{}') where collection='closeDayReports';raise exception 'Close-day report was mutable';exception when others then if sqlerrm<>'Immutable business history' then raise;end if;end;
 end$$;
 
 -- Permission rejection.

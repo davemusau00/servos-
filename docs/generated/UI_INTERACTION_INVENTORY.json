@@ -1,7 +1,7 @@
 {
   "generatedBy": "npm run audit:ui",
   "scope": "Static controls, handlers and route cases; runtime card and modal review still required",
-  "count": 2679,
+  "count": 2706,
   "interactions": [
     {
       "id": "src/App.tsx:97:12",
@@ -30652,9 +30652,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/runtime/web/WebPosView.tsx:108:19",
+      "id": "src/runtime/web/WebPosView.tsx:145:19",
       "file": "src/runtime/web/WebPosView.tsx",
-      "line": 108,
+      "line": 145,
       "kind": "button",
       "source": "{canOpen&&<><button disabled={disabled||!currentOutlet} className={primary} onClick={()=>void createOrder({name:`Walk-in ${new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}`})}>Quick tab</button><button disabled={disabled||!currentOutlet} className={button} onClick={()=>setNewTab(true)}>Named tab</button></>}",
       "status": "unverified",
@@ -30664,9 +30664,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/runtime/web/WebPosView.tsx:108:83",
+      "id": "src/runtime/web/WebPosView.tsx:145:83",
       "file": "src/runtime/web/WebPosView.tsx",
-      "line": 108,
+      "line": 145,
       "kind": "onClick",
       "source": "{canOpen&&<><button disabled={disabled||!currentOutlet} className={primary} onClick={()=>void createOrder({name:`Walk-in ${new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}`})}>Quick tab</button><button disabled={disabled||!currentOutlet} className={button} onClick={()=>setNewTab(true)}>Named tab</button></>}",
       "status": "unverified",
@@ -30676,9 +30676,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/runtime/web/WebPosView.tsx:108:222",
+      "id": "src/runtime/web/WebPosView.tsx:145:222",
       "file": "src/runtime/web/WebPosView.tsx",
-      "line": 108,
+      "line": 145,
       "kind": "button",
       "source": "{canOpen&&<><button disabled={disabled||!currentOutlet} className={primary} onClick={()=>void createOrder({name:`Walk-in ${new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}`})}>Quick tab</button><button disabled={disabled||!currentOutlet} className={button} onClick={()=>setNewTab(true)}>Named tab</button></>}",
       "status": "unverified",
@@ -30688,9 +30688,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/runtime/web/WebPosView.tsx:108:285",
+      "id": "src/runtime/web/WebPosView.tsx:145:285",
       "file": "src/runtime/web/WebPosView.tsx",
-      "line": 108,
+      "line": 145,
       "kind": "onClick",
       "source": "{canOpen&&<><button disabled={disabled||!currentOutlet} className={primary} onClick={()=>void createOrder({name:`Walk-in ${new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}`})}>Quick tab</button><button disabled={disabled||!currentOutlet} className={button} onClick={()=>setNewTab(true)}>Named tab</button></>}",
       "status": "unverified",
@@ -30700,9 +30700,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/runtime/web/WebPosView.tsx:115:9",
+      "id": "src/runtime/web/WebPosView.tsx:152:9",
       "file": "src/runtime/web/WebPosView.tsx",
-      "line": 115,
+      "line": 152,
       "kind": "select",
       "source": "<select className={field} value={outletId} onChange={e=>setOutletId(e.target.value)}>{outlets.map(outlet=><option key={outlet.id} value={outlet.id}>{String(data(outlet)?.name)}</option>)}</select>",
       "status": "unverified",
@@ -30712,9 +30712,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/runtime/web/WebPosView.tsx:115:52",
+      "id": "src/runtime/web/WebPosView.tsx:152:52",
       "file": "src/runtime/web/WebPosView.tsx",
-      "line": 115,
+      "line": 152,
       "kind": "onChange",
       "source": "<select className={field} value={outletId} onChange={e=>setOutletId(e.target.value)}>{outlets.map(outlet=><option key={outlet.id} value={outlet.id}>{String(data(outlet)?.name)}</option>)}</select>",
       "status": "unverified",
@@ -30724,9 +30724,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/runtime/web/WebPosView.tsx:116:105",
+      "id": "src/runtime/web/WebPosView.tsx:153:105",
       "file": "src/runtime/web/WebPosView.tsx",
-      "line": 116,
+      "line": 153,
       "kind": "input",
       "source": "<label className=\"relative\"><Search className=\"absolute left-3 top-2.5 h-4 w-4 text-slate-500\"/><input data-barcode-capture=\"true\" className={field+' pl-9'} value={query} onChange={e=>setQuery(e.target.value)} placeholder=\"Search or scan barcode / SKU\"/></label>",
       "status": "unverified",
@@ -30736,9 +30736,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/runtime/web/WebPosView.tsx:116:180",
+      "id": "src/runtime/web/WebPosView.tsx:153:180",
       "file": "src/runtime/web/WebPosView.tsx",
-      "line": 116,
+      "line": 153,
       "kind": "onChange",
       "source": "<label className=\"relative\"><Search className=\"absolute left-3 top-2.5 h-4 w-4 text-slate-500\"/><input data-barcode-capture=\"true\" className={field+' pl-9'} value={query} onChange={e=>setQuery(e.target.value)} placeholder=\"Search or scan barcode / SKU\"/></label>",
       "status": "unverified",
@@ -30748,9 +30748,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/runtime/web/WebPosView.tsx:120:146",
+      "id": "src/runtime/web/WebPosView.tsx:157:146",
       "file": "src/runtime/web/WebPosView.tsx",
-      "line": 120,
+      "line": 157,
       "kind": "button",
       "source": "{tables.filter(table=>data(table)?.outletId===outletId).map(table=>{const d=data(table)!;const state=String(d.state||'AVAILABLE');return <button key={table.id} disabled={disabled||(!canOpen&&state==='AVAILABLE')||(!canTable&&state==='CLEANING')||!['AVAILABLE','CLEANING'].includes(state)} onClick={()=>state==='CLEANING'?void run('table.ready','tables',table.id,{tableId:table.id}):void createOrder({name:`Table ${String(d.label)}`,tableId:table.id})} className={`min-w-28 rounded-xl border p-3 text-left ${state==='AVAILABLE'?'border-emerald-700 bg-emerald-950/30':state==='CLEANING'?'border-amber-700 bg-amber-950/30':'border-slate-800 bg-slate-900 opacity-60'}`}><b className=\"block\">{String(d.label)}</b><span className=\"text-xs text-slate-400\">{state}</span></button>})}",
       "status": "unverified",
@@ -30760,9 +30760,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/runtime/web/WebPosView.tsx:120:298",
+      "id": "src/runtime/web/WebPosView.tsx:157:298",
       "file": "src/runtime/web/WebPosView.tsx",
-      "line": 120,
+      "line": 157,
       "kind": "onClick",
       "source": "{tables.filter(table=>data(table)?.outletId===outletId).map(table=>{const d=data(table)!;const state=String(d.state||'AVAILABLE');return <button key={table.id} disabled={disabled||(!canOpen&&state==='AVAILABLE')||(!canTable&&state==='CLEANING')||!['AVAILABLE','CLEANING'].includes(state)} onClick={()=>state==='CLEANING'?void run('table.ready','tables',table.id,{tableId:table.id}):void createOrder({name:`Table ${String(d.label)}`,tableId:table.id})} className={`min-w-28 rounded-xl border p-3 text-left ${state==='AVAILABLE'?'border-emerald-700 bg-emerald-950/30':state==='CLEANING'?'border-amber-700 bg-amber-950/30':'border-slate-800 bg-slate-900 opacity-60'}`}><b className=\"block\">{String(d.label)}</b><span className=\"text-xs text-slate-400\">{state}</span></button>})}",
       "status": "unverified",
@@ -30772,9 +30772,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/runtime/web/WebPosView.tsx:124:62",
+      "id": "src/runtime/web/WebPosView.tsx:161:62",
       "file": "src/runtime/web/WebPosView.tsx",
-      "line": 124,
+      "line": 161,
       "kind": "button",
       "source": "{visible.map(product=>{const d=data(product)!;return <button key={product.id} disabled={disabled||!canSell||!activeOrder} onClick={()=>addProduct(product)} className=\"rounded-xl border border-slate-800 bg-slate-900 p-4 text-left hover:border-amber-500 disabled:opacity-40\"><div className=\"text-[10px] font-black uppercase text-slate-500\">{String(d.category||d.routeTo||'ITEM')}</div><div className=\"mt-1 font-bold\">{String(d.name)}</div><div className=\"mt-2 text-amber-300\">{money(d.priceMinor)}</div>{d.barcode&&<div className=\"mt-2 flex items-center gap-1 font-mono text-[10px] text-slate-600\"><Barcode className=\"h-3 w-3\"/>{String(d.barcode)}</div>}</button>})}",
       "status": "unverified",
@@ -30784,9 +30784,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/runtime/web/WebPosView.tsx:124:131",
+      "id": "src/runtime/web/WebPosView.tsx:161:131",
       "file": "src/runtime/web/WebPosView.tsx",
-      "line": 124,
+      "line": 161,
       "kind": "onClick",
       "source": "{visible.map(product=>{const d=data(product)!;return <button key={product.id} disabled={disabled||!canSell||!activeOrder} onClick={()=>addProduct(product)} className=\"rounded-xl border border-slate-800 bg-slate-900 p-4 text-left hover:border-amber-500 disabled:opacity-40\"><div className=\"text-[10px] font-black uppercase text-slate-500\">{String(d.category||d.routeTo||'ITEM')}</div><div className=\"mt-1 font-bold\">{String(d.name)}</div><div className=\"mt-2 text-amber-300\">{money(d.priceMinor)}</div>{d.barcode&&<div className=\"mt-2 flex items-center gap-1 font-mono text-[10px] text-slate-600\"><Barcode className=\"h-3 w-3\"/>{String(d.barcode)}</div>}</button>})}",
       "status": "unverified",
@@ -30796,11 +30796,11 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/runtime/web/WebPosView.tsx:129:126",
+      "id": "src/runtime/web/WebPosView.tsx:166:281",
       "file": "src/runtime/web/WebPosView.tsx",
-      "line": 129,
-      "kind": "select",
-      "source": "<div className=\"mb-4\"><div className=\"text-[10px] font-black uppercase tracking-widest text-amber-400\">Active tab</div><select className={field} value={activeOrder?.id||''} onChange={e=>setActiveId(e.target.value)}><option value=\"\">Select order</option>{openOrders.map(order=><option key={order.id} value={order.id}>{String(data(order)?.tabName||data(order)?.orderNumber)} · {money(data(order)?.grandTotalMinor)}</option>)}</select></div>",
+      "line": 166,
+      "kind": "input",
+      "source": "{!openTill&&<div className=\"mb-4 rounded-lg border border-amber-800 bg-amber-950/30 p-3\"><b className=\"text-sm\">No open till</b>{allowed(session,'till.open')?<div className=\"mt-2 flex gap-2\"><label className=\"sr-only\" htmlFor=\"web-opening-float\">Opening float in KES</label><input id=\"web-opening-float\" aria-label=\"Opening float in KES\" type=\"number\" min=\"0\" step=\"0.01\" className={field} value={openingFloat} onChange={e=>setOpeningFloat(e.target.value)} placeholder=\"Opening float (KES)\"/><button disabled={disabled||openingFloat==='' } className={primary} onClick={()=>void submitOpenTill().catch(e=>setNotice(String(e)))}>Open till</button></div>:<p className=\"mt-1 text-xs text-slate-400\">A till operator must open a till before accepting payments.</p>}</div>}",
       "status": "unverified",
       "permission": "requires workflow review",
       "persistence": "requires workflow review",
@@ -30808,11 +30808,11 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/runtime/web/WebPosView.tsx:129:180",
+      "id": "src/runtime/web/WebPosView.tsx:166:418",
       "file": "src/runtime/web/WebPosView.tsx",
-      "line": 129,
+      "line": 166,
       "kind": "onChange",
-      "source": "<div className=\"mb-4\"><div className=\"text-[10px] font-black uppercase tracking-widest text-amber-400\">Active tab</div><select className={field} value={activeOrder?.id||''} onChange={e=>setActiveId(e.target.value)}><option value=\"\">Select order</option>{openOrders.map(order=><option key={order.id} value={order.id}>{String(data(order)?.tabName||data(order)?.orderNumber)} · {money(data(order)?.grandTotalMinor)}</option>)}</select></div>",
+      "source": "{!openTill&&<div className=\"mb-4 rounded-lg border border-amber-800 bg-amber-950/30 p-3\"><b className=\"text-sm\">No open till</b>{allowed(session,'till.open')?<div className=\"mt-2 flex gap-2\"><label className=\"sr-only\" htmlFor=\"web-opening-float\">Opening float in KES</label><input id=\"web-opening-float\" aria-label=\"Opening float in KES\" type=\"number\" min=\"0\" step=\"0.01\" className={field} value={openingFloat} onChange={e=>setOpeningFloat(e.target.value)} placeholder=\"Opening float (KES)\"/><button disabled={disabled||openingFloat==='' } className={primary} onClick={()=>void submitOpenTill().catch(e=>setNotice(String(e)))}>Open till</button></div>:<p className=\"mt-1 text-xs text-slate-400\">A till operator must open a till before accepting payments.</p>}</div>}",
       "status": "unverified",
       "permission": "requires workflow review",
       "persistence": "requires workflow review",
@@ -30820,11 +30820,11 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/runtime/web/WebPosView.tsx:131:659",
+      "id": "src/runtime/web/WebPosView.tsx:166:499",
       "file": "src/runtime/web/WebPosView.tsx",
-      "line": 131,
+      "line": 166,
       "kind": "button",
-      "source": "<div className=\"space-y-2\">{(data(activeOrder)?.items||[]).filter((item:any)=>item.state!=='VOIDED').map((item:any)=><div key={item.id} className=\"rounded-xl border border-slate-800 bg-slate-950 p-3\"><div className=\"flex justify-between gap-3\"><div><b>{String(item.productName)}</b><div className=\"text-xs text-slate-500\">{String(item.portionSnapshot?.name||'')}{item.modifiers?.length?` · ${item.modifiers.map((m:any)=>m.name).join(', ')}`:''}</div><div className=\"text-xs text-slate-600\">{String(item.courseStatus)} · round {Number(item.roundNo||1)}</div></div><b>{money(item.lineTotalMinor)}</b></div><div className=\"mt-2 flex items-center gap-1\"><button disabled={disabled||item.stockFired} className={button} onClick={()=>void updateQty(item,Number(item.quantity)-1)}><Minus className=\"h-3 w-3\"/></button><span className=\"px-3 text-sm\">{Number(item.quantity)}</span><button disabled={disabled||item.stockFired} className={button} onClick={()=>void updateQty(item,Number(item.quantity)+1)}><Plus className=\"h-3 w-3\"/></button>{item.stockFired&&<span className=\"ml-auto rounded bg-slate-800 px-2 py-1 text-[10px] font-black\">{String(item.courseStatus)}</span>}</div></div>)}</div>",
+      "source": "{!openTill&&<div className=\"mb-4 rounded-lg border border-amber-800 bg-amber-950/30 p-3\"><b className=\"text-sm\">No open till</b>{allowed(session,'till.open')?<div className=\"mt-2 flex gap-2\"><label className=\"sr-only\" htmlFor=\"web-opening-float\">Opening float in KES</label><input id=\"web-opening-float\" aria-label=\"Opening float in KES\" type=\"number\" min=\"0\" step=\"0.01\" className={field} value={openingFloat} onChange={e=>setOpeningFloat(e.target.value)} placeholder=\"Opening float (KES)\"/><button disabled={disabled||openingFloat==='' } className={primary} onClick={()=>void submitOpenTill().catch(e=>setNotice(String(e)))}>Open till</button></div>:<p className=\"mt-1 text-xs text-slate-400\">A till operator must open a till before accepting payments.</p>}</div>}",
       "status": "unverified",
       "permission": "requires workflow review",
       "persistence": "requires workflow review",
@@ -30832,11 +30832,11 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/runtime/web/WebPosView.tsx:131:723",
+      "id": "src/runtime/web/WebPosView.tsx:166:567",
       "file": "src/runtime/web/WebPosView.tsx",
-      "line": 131,
+      "line": 166,
       "kind": "onClick",
-      "source": "<div className=\"space-y-2\">{(data(activeOrder)?.items||[]).filter((item:any)=>item.state!=='VOIDED').map((item:any)=><div key={item.id} className=\"rounded-xl border border-slate-800 bg-slate-950 p-3\"><div className=\"flex justify-between gap-3\"><div><b>{String(item.productName)}</b><div className=\"text-xs text-slate-500\">{String(item.portionSnapshot?.name||'')}{item.modifiers?.length?` · ${item.modifiers.map((m:any)=>m.name).join(', ')}`:''}</div><div className=\"text-xs text-slate-600\">{String(item.courseStatus)} · round {Number(item.roundNo||1)}</div></div><b>{money(item.lineTotalMinor)}</b></div><div className=\"mt-2 flex items-center gap-1\"><button disabled={disabled||item.stockFired} className={button} onClick={()=>void updateQty(item,Number(item.quantity)-1)}><Minus className=\"h-3 w-3\"/></button><span className=\"px-3 text-sm\">{Number(item.quantity)}</span><button disabled={disabled||item.stockFired} className={button} onClick={()=>void updateQty(item,Number(item.quantity)+1)}><Plus className=\"h-3 w-3\"/></button>{item.stockFired&&<span className=\"ml-auto rounded bg-slate-800 px-2 py-1 text-[10px] font-black\">{String(item.courseStatus)}</span>}</div></div>)}</div>",
+      "source": "{!openTill&&<div className=\"mb-4 rounded-lg border border-amber-800 bg-amber-950/30 p-3\"><b className=\"text-sm\">No open till</b>{allowed(session,'till.open')?<div className=\"mt-2 flex gap-2\"><label className=\"sr-only\" htmlFor=\"web-opening-float\">Opening float in KES</label><input id=\"web-opening-float\" aria-label=\"Opening float in KES\" type=\"number\" min=\"0\" step=\"0.01\" className={field} value={openingFloat} onChange={e=>setOpeningFloat(e.target.value)} placeholder=\"Opening float (KES)\"/><button disabled={disabled||openingFloat==='' } className={primary} onClick={()=>void submitOpenTill().catch(e=>setNotice(String(e)))}>Open till</button></div>:<p className=\"mt-1 text-xs text-slate-400\">A till operator must open a till before accepting payments.</p>}</div>}",
       "status": "unverified",
       "permission": "requires workflow review",
       "persistence": "requires workflow review",
@@ -30844,11 +30844,35 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/runtime/web/WebPosView.tsx:131:880",
+      "id": "src/runtime/web/WebPosView.tsx:167:144",
       "file": "src/runtime/web/WebPosView.tsx",
-      "line": 131,
+      "line": 167,
+      "kind": "select",
+      "source": "<div className=\"mb-4\"><div className=\"text-[10px] font-black uppercase tracking-widest text-amber-400\">Active tab / receipt history</div><select aria-label=\"Select order or receipt history\" className={field} value={activeOrder?.id||''} onChange={e=>setActiveId(e.target.value)}><option value=\"\">Select order</option>{recentOrders.map(order=><option key={order.id} value={order.id}>{String(data(order)?.tabName||data(order)?.orderNumber)} · {String(data(order)?.state)} · {money(data(order)?.grandTotalMinor)}</option>)}</select></div>",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/runtime/web/WebPosView.tsx:167:243",
+      "file": "src/runtime/web/WebPosView.tsx",
+      "line": 167,
+      "kind": "onChange",
+      "source": "<div className=\"mb-4\"><div className=\"text-[10px] font-black uppercase tracking-widest text-amber-400\">Active tab / receipt history</div><select aria-label=\"Select order or receipt history\" className={field} value={activeOrder?.id||''} onChange={e=>setActiveId(e.target.value)}><option value=\"\">Select order</option>{recentOrders.map(order=><option key={order.id} value={order.id}>{String(data(order)?.tabName||data(order)?.orderNumber)} · {String(data(order)?.state)} · {money(data(order)?.grandTotalMinor)}</option>)}</select></div>",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/runtime/web/WebPosView.tsx:169:659",
+      "file": "src/runtime/web/WebPosView.tsx",
+      "line": 169,
       "kind": "button",
-      "source": "<div className=\"space-y-2\">{(data(activeOrder)?.items||[]).filter((item:any)=>item.state!=='VOIDED').map((item:any)=><div key={item.id} className=\"rounded-xl border border-slate-800 bg-slate-950 p-3\"><div className=\"flex justify-between gap-3\"><div><b>{String(item.productName)}</b><div className=\"text-xs text-slate-500\">{String(item.portionSnapshot?.name||'')}{item.modifiers?.length?` · ${item.modifiers.map((m:any)=>m.name).join(', ')}`:''}</div><div className=\"text-xs text-slate-600\">{String(item.courseStatus)} · round {Number(item.roundNo||1)}</div></div><b>{money(item.lineTotalMinor)}</b></div><div className=\"mt-2 flex items-center gap-1\"><button disabled={disabled||item.stockFired} className={button} onClick={()=>void updateQty(item,Number(item.quantity)-1)}><Minus className=\"h-3 w-3\"/></button><span className=\"px-3 text-sm\">{Number(item.quantity)}</span><button disabled={disabled||item.stockFired} className={button} onClick={()=>void updateQty(item,Number(item.quantity)+1)}><Plus className=\"h-3 w-3\"/></button>{item.stockFired&&<span className=\"ml-auto rounded bg-slate-800 px-2 py-1 text-[10px] font-black\">{String(item.courseStatus)}</span>}</div></div>)}</div>",
+      "source": "<div className=\"space-y-2\">{(data(activeOrder)?.items||[]).filter((item:any)=>item.state!=='VOIDED').map((item:any)=><div key={item.id} className=\"rounded-xl border border-slate-800 bg-slate-950 p-3\"><div className=\"flex justify-between gap-3\"><div><b>{String(item.productName)}</b><div className=\"text-xs text-slate-500\">{String(item.portionSnapshot?.name||'')}{item.modifiers?.length?` · ${item.modifiers.map((m:any)=>m.name).join(', ')}`:''}</div><div className=\"text-xs text-slate-600\">{String(item.courseStatus)} · round {Number(item.roundNo||1)}</div></div><b>{money(item.lineTotalMinor)}</b></div><div className=\"mt-2 flex items-center gap-1\"><button disabled={disabled||!orderEditable(activeOrder)||item.stockFired} className={button} onClick={()=>void updateQty(item,Number(item.quantity)-1)}><Minus className=\"h-3 w-3\"/></button><span className=\"px-3 text-sm\">{Number(item.quantity)}</span><button disabled={disabled||!orderEditable(activeOrder)||item.stockFired} className={button} onClick={()=>void updateQty(item,Number(item.quantity)+1)}><Plus className=\"h-3 w-3\"/></button>{item.stockFired&&<span className=\"ml-auto rounded bg-slate-800 px-2 py-1 text-[10px] font-black\">{String(item.courseStatus)}</span>}</div></div>)}</div>",
       "status": "unverified",
       "permission": "requires workflow review",
       "persistence": "requires workflow review",
@@ -30856,11 +30880,11 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/runtime/web/WebPosView.tsx:131:944",
+      "id": "src/runtime/web/WebPosView.tsx:169:752",
       "file": "src/runtime/web/WebPosView.tsx",
-      "line": 131,
+      "line": 169,
       "kind": "onClick",
-      "source": "<div className=\"space-y-2\">{(data(activeOrder)?.items||[]).filter((item:any)=>item.state!=='VOIDED').map((item:any)=><div key={item.id} className=\"rounded-xl border border-slate-800 bg-slate-950 p-3\"><div className=\"flex justify-between gap-3\"><div><b>{String(item.productName)}</b><div className=\"text-xs text-slate-500\">{String(item.portionSnapshot?.name||'')}{item.modifiers?.length?` · ${item.modifiers.map((m:any)=>m.name).join(', ')}`:''}</div><div className=\"text-xs text-slate-600\">{String(item.courseStatus)} · round {Number(item.roundNo||1)}</div></div><b>{money(item.lineTotalMinor)}</b></div><div className=\"mt-2 flex items-center gap-1\"><button disabled={disabled||item.stockFired} className={button} onClick={()=>void updateQty(item,Number(item.quantity)-1)}><Minus className=\"h-3 w-3\"/></button><span className=\"px-3 text-sm\">{Number(item.quantity)}</span><button disabled={disabled||item.stockFired} className={button} onClick={()=>void updateQty(item,Number(item.quantity)+1)}><Plus className=\"h-3 w-3\"/></button>{item.stockFired&&<span className=\"ml-auto rounded bg-slate-800 px-2 py-1 text-[10px] font-black\">{String(item.courseStatus)}</span>}</div></div>)}</div>",
+      "source": "<div className=\"space-y-2\">{(data(activeOrder)?.items||[]).filter((item:any)=>item.state!=='VOIDED').map((item:any)=><div key={item.id} className=\"rounded-xl border border-slate-800 bg-slate-950 p-3\"><div className=\"flex justify-between gap-3\"><div><b>{String(item.productName)}</b><div className=\"text-xs text-slate-500\">{String(item.portionSnapshot?.name||'')}{item.modifiers?.length?` · ${item.modifiers.map((m:any)=>m.name).join(', ')}`:''}</div><div className=\"text-xs text-slate-600\">{String(item.courseStatus)} · round {Number(item.roundNo||1)}</div></div><b>{money(item.lineTotalMinor)}</b></div><div className=\"mt-2 flex items-center gap-1\"><button disabled={disabled||!orderEditable(activeOrder)||item.stockFired} className={button} onClick={()=>void updateQty(item,Number(item.quantity)-1)}><Minus className=\"h-3 w-3\"/></button><span className=\"px-3 text-sm\">{Number(item.quantity)}</span><button disabled={disabled||!orderEditable(activeOrder)||item.stockFired} className={button} onClick={()=>void updateQty(item,Number(item.quantity)+1)}><Plus className=\"h-3 w-3\"/></button>{item.stockFired&&<span className=\"ml-auto rounded bg-slate-800 px-2 py-1 text-[10px] font-black\">{String(item.courseStatus)}</span>}</div></div>)}</div>",
       "status": "unverified",
       "permission": "requires workflow review",
       "persistence": "requires workflow review",
@@ -30868,11 +30892,11 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/runtime/web/WebPosView.tsx:133:54",
+      "id": "src/runtime/web/WebPosView.tsx:169:909",
       "file": "src/runtime/web/WebPosView.tsx",
-      "line": 133,
+      "line": 169,
       "kind": "button",
-      "source": "<div className=\"mt-4 grid grid-cols-2 gap-2\"><button disabled={disabled||!canFire} className={primary} onClick={()=>void run('order.fire','orders',activeOrder.id,{orderId:activeOrder.id})}><Flame className=\"mr-1 inline h-4 w-4\"/>Fire</button><button disabled className={button}>Payments · 11E</button><button disabled={disabled||!canSell||!(data(activeOrder)?.items||[]).some((item:any)=>item.stockFired)} className={button} onClick={()=>void run('order.repeatRound','orders',activeOrder.id,{orderId:activeOrder.id})}>Repeat round</button><button disabled={disabled||!canVoid} className={button} onClick={()=>setVoiding(true)}><ShieldAlert className=\"mr-1 inline h-4 w-4\"/>Void</button></div>",
+      "source": "<div className=\"space-y-2\">{(data(activeOrder)?.items||[]).filter((item:any)=>item.state!=='VOIDED').map((item:any)=><div key={item.id} className=\"rounded-xl border border-slate-800 bg-slate-950 p-3\"><div className=\"flex justify-between gap-3\"><div><b>{String(item.productName)}</b><div className=\"text-xs text-slate-500\">{String(item.portionSnapshot?.name||'')}{item.modifiers?.length?` · ${item.modifiers.map((m:any)=>m.name).join(', ')}`:''}</div><div className=\"text-xs text-slate-600\">{String(item.courseStatus)} · round {Number(item.roundNo||1)}</div></div><b>{money(item.lineTotalMinor)}</b></div><div className=\"mt-2 flex items-center gap-1\"><button disabled={disabled||!orderEditable(activeOrder)||item.stockFired} className={button} onClick={()=>void updateQty(item,Number(item.quantity)-1)}><Minus className=\"h-3 w-3\"/></button><span className=\"px-3 text-sm\">{Number(item.quantity)}</span><button disabled={disabled||!orderEditable(activeOrder)||item.stockFired} className={button} onClick={()=>void updateQty(item,Number(item.quantity)+1)}><Plus className=\"h-3 w-3\"/></button>{item.stockFired&&<span className=\"ml-auto rounded bg-slate-800 px-2 py-1 text-[10px] font-black\">{String(item.courseStatus)}</span>}</div></div>)}</div>",
       "status": "unverified",
       "permission": "requires workflow review",
       "persistence": "requires workflow review",
@@ -30880,11 +30904,11 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/runtime/web/WebPosView.tsx:133:112",
+      "id": "src/runtime/web/WebPosView.tsx:169:1002",
       "file": "src/runtime/web/WebPosView.tsx",
-      "line": 133,
+      "line": 169,
       "kind": "onClick",
-      "source": "<div className=\"mt-4 grid grid-cols-2 gap-2\"><button disabled={disabled||!canFire} className={primary} onClick={()=>void run('order.fire','orders',activeOrder.id,{orderId:activeOrder.id})}><Flame className=\"mr-1 inline h-4 w-4\"/>Fire</button><button disabled className={button}>Payments · 11E</button><button disabled={disabled||!canSell||!(data(activeOrder)?.items||[]).some((item:any)=>item.stockFired)} className={button} onClick={()=>void run('order.repeatRound','orders',activeOrder.id,{orderId:activeOrder.id})}>Repeat round</button><button disabled={disabled||!canVoid} className={button} onClick={()=>setVoiding(true)}><ShieldAlert className=\"mr-1 inline h-4 w-4\"/>Void</button></div>",
+      "source": "<div className=\"space-y-2\">{(data(activeOrder)?.items||[]).filter((item:any)=>item.state!=='VOIDED').map((item:any)=><div key={item.id} className=\"rounded-xl border border-slate-800 bg-slate-950 p-3\"><div className=\"flex justify-between gap-3\"><div><b>{String(item.productName)}</b><div className=\"text-xs text-slate-500\">{String(item.portionSnapshot?.name||'')}{item.modifiers?.length?` · ${item.modifiers.map((m:any)=>m.name).join(', ')}`:''}</div><div className=\"text-xs text-slate-600\">{String(item.courseStatus)} · round {Number(item.roundNo||1)}</div></div><b>{money(item.lineTotalMinor)}</b></div><div className=\"mt-2 flex items-center gap-1\"><button disabled={disabled||!orderEditable(activeOrder)||item.stockFired} className={button} onClick={()=>void updateQty(item,Number(item.quantity)-1)}><Minus className=\"h-3 w-3\"/></button><span className=\"px-3 text-sm\">{Number(item.quantity)}</span><button disabled={disabled||!orderEditable(activeOrder)||item.stockFired} className={button} onClick={()=>void updateQty(item,Number(item.quantity)+1)}><Plus className=\"h-3 w-3\"/></button>{item.stockFired&&<span className=\"ml-auto rounded bg-slate-800 px-2 py-1 text-[10px] font-black\">{String(item.courseStatus)}</span>}</div></div>)}</div>",
       "status": "unverified",
       "permission": "requires workflow review",
       "persistence": "requires workflow review",
@@ -30892,11 +30916,11 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/runtime/web/WebPosView.tsx:133:251",
+      "id": "src/runtime/web/WebPosView.tsx:171:54",
       "file": "src/runtime/web/WebPosView.tsx",
-      "line": 133,
+      "line": 171,
       "kind": "button",
-      "source": "<div className=\"mt-4 grid grid-cols-2 gap-2\"><button disabled={disabled||!canFire} className={primary} onClick={()=>void run('order.fire','orders',activeOrder.id,{orderId:activeOrder.id})}><Flame className=\"mr-1 inline h-4 w-4\"/>Fire</button><button disabled className={button}>Payments · 11E</button><button disabled={disabled||!canSell||!(data(activeOrder)?.items||[]).some((item:any)=>item.stockFired)} className={button} onClick={()=>void run('order.repeatRound','orders',activeOrder.id,{orderId:activeOrder.id})}>Repeat round</button><button disabled={disabled||!canVoid} className={button} onClick={()=>setVoiding(true)}><ShieldAlert className=\"mr-1 inline h-4 w-4\"/>Void</button></div>",
+      "source": "<div className=\"mt-4 grid grid-cols-2 gap-2\"><button disabled={disabled||!canFire||!orderEditable(activeOrder)} className={primary} onClick={()=>void run('order.fire','orders',activeOrder.id,{orderId:activeOrder.id})}><Flame className=\"mr-1 inline h-4 w-4\"/>Fire</button><button disabled={disabled||!canPay||!openTill||!accounts.length||balance<=0||['COMPLETED','VOIDED'].includes(String(data(activeOrder)?.state))} className={button} onClick={startPayment}><Banknote className=\"mr-1 inline h-4 w-4\"/>Take payment</button><button disabled={disabled||!canSell||!orderEditable(activeOrder)||!(data(activeOrder)?.items||[]).some((item:any)=>item.stockFired)} className={button} onClick={()=>void run('order.repeatRound','orders',activeOrder.id,{orderId:activeOrder.id})}>Repeat round</button><button disabled={disabled||!canVoid||!orderEditable(activeOrder)} className={button} onClick={()=>setVoiding(true)}><ShieldAlert className=\"mr-1 inline h-4 w-4\"/>Void</button></div>",
       "status": "unverified",
       "permission": "requires workflow review",
       "persistence": "requires workflow review",
@@ -30904,23 +30928,11 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/runtime/web/WebPosView.tsx:133:310",
+      "id": "src/runtime/web/WebPosView.tsx:171:141",
       "file": "src/runtime/web/WebPosView.tsx",
-      "line": 133,
-      "kind": "button",
-      "source": "<div className=\"mt-4 grid grid-cols-2 gap-2\"><button disabled={disabled||!canFire} className={primary} onClick={()=>void run('order.fire','orders',activeOrder.id,{orderId:activeOrder.id})}><Flame className=\"mr-1 inline h-4 w-4\"/>Fire</button><button disabled className={button}>Payments · 11E</button><button disabled={disabled||!canSell||!(data(activeOrder)?.items||[]).some((item:any)=>item.stockFired)} className={button} onClick={()=>void run('order.repeatRound','orders',activeOrder.id,{orderId:activeOrder.id})}>Repeat round</button><button disabled={disabled||!canVoid} className={button} onClick={()=>setVoiding(true)}><ShieldAlert className=\"mr-1 inline h-4 w-4\"/>Void</button></div>",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/runtime/web/WebPosView.tsx:133:434",
-      "file": "src/runtime/web/WebPosView.tsx",
-      "line": 133,
+      "line": 171,
       "kind": "onClick",
-      "source": "<div className=\"mt-4 grid grid-cols-2 gap-2\"><button disabled={disabled||!canFire} className={primary} onClick={()=>void run('order.fire','orders',activeOrder.id,{orderId:activeOrder.id})}><Flame className=\"mr-1 inline h-4 w-4\"/>Fire</button><button disabled className={button}>Payments · 11E</button><button disabled={disabled||!canSell||!(data(activeOrder)?.items||[]).some((item:any)=>item.stockFired)} className={button} onClick={()=>void run('order.repeatRound','orders',activeOrder.id,{orderId:activeOrder.id})}>Repeat round</button><button disabled={disabled||!canVoid} className={button} onClick={()=>setVoiding(true)}><ShieldAlert className=\"mr-1 inline h-4 w-4\"/>Void</button></div>",
+      "source": "<div className=\"mt-4 grid grid-cols-2 gap-2\"><button disabled={disabled||!canFire||!orderEditable(activeOrder)} className={primary} onClick={()=>void run('order.fire','orders',activeOrder.id,{orderId:activeOrder.id})}><Flame className=\"mr-1 inline h-4 w-4\"/>Fire</button><button disabled={disabled||!canPay||!openTill||!accounts.length||balance<=0||['COMPLETED','VOIDED'].includes(String(data(activeOrder)?.state))} className={button} onClick={startPayment}><Banknote className=\"mr-1 inline h-4 w-4\"/>Take payment</button><button disabled={disabled||!canSell||!orderEditable(activeOrder)||!(data(activeOrder)?.items||[]).some((item:any)=>item.stockFired)} className={button} onClick={()=>void run('order.repeatRound','orders',activeOrder.id,{orderId:activeOrder.id})}>Repeat round</button><button disabled={disabled||!canVoid||!orderEditable(activeOrder)} className={button} onClick={()=>setVoiding(true)}><ShieldAlert className=\"mr-1 inline h-4 w-4\"/>Void</button></div>",
       "status": "unverified",
       "permission": "requires workflow review",
       "persistence": "requires workflow review",
@@ -30928,11 +30940,11 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/runtime/web/WebPosView.tsx:133:548",
+      "id": "src/runtime/web/WebPosView.tsx:171:280",
       "file": "src/runtime/web/WebPosView.tsx",
-      "line": 133,
+      "line": 171,
       "kind": "button",
-      "source": "<div className=\"mt-4 grid grid-cols-2 gap-2\"><button disabled={disabled||!canFire} className={primary} onClick={()=>void run('order.fire','orders',activeOrder.id,{orderId:activeOrder.id})}><Flame className=\"mr-1 inline h-4 w-4\"/>Fire</button><button disabled className={button}>Payments · 11E</button><button disabled={disabled||!canSell||!(data(activeOrder)?.items||[]).some((item:any)=>item.stockFired)} className={button} onClick={()=>void run('order.repeatRound','orders',activeOrder.id,{orderId:activeOrder.id})}>Repeat round</button><button disabled={disabled||!canVoid} className={button} onClick={()=>setVoiding(true)}><ShieldAlert className=\"mr-1 inline h-4 w-4\"/>Void</button></div>",
+      "source": "<div className=\"mt-4 grid grid-cols-2 gap-2\"><button disabled={disabled||!canFire||!orderEditable(activeOrder)} className={primary} onClick={()=>void run('order.fire','orders',activeOrder.id,{orderId:activeOrder.id})}><Flame className=\"mr-1 inline h-4 w-4\"/>Fire</button><button disabled={disabled||!canPay||!openTill||!accounts.length||balance<=0||['COMPLETED','VOIDED'].includes(String(data(activeOrder)?.state))} className={button} onClick={startPayment}><Banknote className=\"mr-1 inline h-4 w-4\"/>Take payment</button><button disabled={disabled||!canSell||!orderEditable(activeOrder)||!(data(activeOrder)?.items||[]).some((item:any)=>item.stockFired)} className={button} onClick={()=>void run('order.repeatRound','orders',activeOrder.id,{orderId:activeOrder.id})}>Repeat round</button><button disabled={disabled||!canVoid||!orderEditable(activeOrder)} className={button} onClick={()=>setVoiding(true)}><ShieldAlert className=\"mr-1 inline h-4 w-4\"/>Void</button></div>",
       "status": "unverified",
       "permission": "requires workflow review",
       "persistence": "requires workflow review",
@@ -30940,11 +30952,11 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/runtime/web/WebPosView.tsx:133:605",
+      "id": "src/runtime/web/WebPosView.tsx:171:444",
       "file": "src/runtime/web/WebPosView.tsx",
-      "line": 133,
+      "line": 171,
       "kind": "onClick",
-      "source": "<div className=\"mt-4 grid grid-cols-2 gap-2\"><button disabled={disabled||!canFire} className={primary} onClick={()=>void run('order.fire','orders',activeOrder.id,{orderId:activeOrder.id})}><Flame className=\"mr-1 inline h-4 w-4\"/>Fire</button><button disabled className={button}>Payments · 11E</button><button disabled={disabled||!canSell||!(data(activeOrder)?.items||[]).some((item:any)=>item.stockFired)} className={button} onClick={()=>void run('order.repeatRound','orders',activeOrder.id,{orderId:activeOrder.id})}>Repeat round</button><button disabled={disabled||!canVoid} className={button} onClick={()=>setVoiding(true)}><ShieldAlert className=\"mr-1 inline h-4 w-4\"/>Void</button></div>",
+      "source": "<div className=\"mt-4 grid grid-cols-2 gap-2\"><button disabled={disabled||!canFire||!orderEditable(activeOrder)} className={primary} onClick={()=>void run('order.fire','orders',activeOrder.id,{orderId:activeOrder.id})}><Flame className=\"mr-1 inline h-4 w-4\"/>Fire</button><button disabled={disabled||!canPay||!openTill||!accounts.length||balance<=0||['COMPLETED','VOIDED'].includes(String(data(activeOrder)?.state))} className={button} onClick={startPayment}><Banknote className=\"mr-1 inline h-4 w-4\"/>Take payment</button><button disabled={disabled||!canSell||!orderEditable(activeOrder)||!(data(activeOrder)?.items||[]).some((item:any)=>item.stockFired)} className={button} onClick={()=>void run('order.repeatRound','orders',activeOrder.id,{orderId:activeOrder.id})}>Repeat round</button><button disabled={disabled||!canVoid||!orderEditable(activeOrder)} className={button} onClick={()=>setVoiding(true)}><ShieldAlert className=\"mr-1 inline h-4 w-4\"/>Void</button></div>",
       "status": "unverified",
       "permission": "requires workflow review",
       "persistence": "requires workflow review",
@@ -30952,9 +30964,57 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/runtime/web/WebPosView.tsx:139:141",
+      "id": "src/runtime/web/WebPosView.tsx:171:531",
       "file": "src/runtime/web/WebPosView.tsx",
-      "line": 139,
+      "line": 171,
+      "kind": "button",
+      "source": "<div className=\"mt-4 grid grid-cols-2 gap-2\"><button disabled={disabled||!canFire||!orderEditable(activeOrder)} className={primary} onClick={()=>void run('order.fire','orders',activeOrder.id,{orderId:activeOrder.id})}><Flame className=\"mr-1 inline h-4 w-4\"/>Fire</button><button disabled={disabled||!canPay||!openTill||!accounts.length||balance<=0||['COMPLETED','VOIDED'].includes(String(data(activeOrder)?.state))} className={button} onClick={startPayment}><Banknote className=\"mr-1 inline h-4 w-4\"/>Take payment</button><button disabled={disabled||!canSell||!orderEditable(activeOrder)||!(data(activeOrder)?.items||[]).some((item:any)=>item.stockFired)} className={button} onClick={()=>void run('order.repeatRound','orders',activeOrder.id,{orderId:activeOrder.id})}>Repeat round</button><button disabled={disabled||!canVoid||!orderEditable(activeOrder)} className={button} onClick={()=>setVoiding(true)}><ShieldAlert className=\"mr-1 inline h-4 w-4\"/>Void</button></div>",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/runtime/web/WebPosView.tsx:171:684",
+      "file": "src/runtime/web/WebPosView.tsx",
+      "line": 171,
+      "kind": "onClick",
+      "source": "<div className=\"mt-4 grid grid-cols-2 gap-2\"><button disabled={disabled||!canFire||!orderEditable(activeOrder)} className={primary} onClick={()=>void run('order.fire','orders',activeOrder.id,{orderId:activeOrder.id})}><Flame className=\"mr-1 inline h-4 w-4\"/>Fire</button><button disabled={disabled||!canPay||!openTill||!accounts.length||balance<=0||['COMPLETED','VOIDED'].includes(String(data(activeOrder)?.state))} className={button} onClick={startPayment}><Banknote className=\"mr-1 inline h-4 w-4\"/>Take payment</button><button disabled={disabled||!canSell||!orderEditable(activeOrder)||!(data(activeOrder)?.items||[]).some((item:any)=>item.stockFired)} className={button} onClick={()=>void run('order.repeatRound','orders',activeOrder.id,{orderId:activeOrder.id})}>Repeat round</button><button disabled={disabled||!canVoid||!orderEditable(activeOrder)} className={button} onClick={()=>setVoiding(true)}><ShieldAlert className=\"mr-1 inline h-4 w-4\"/>Void</button></div>",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/runtime/web/WebPosView.tsx:171:798",
+      "file": "src/runtime/web/WebPosView.tsx",
+      "line": 171,
+      "kind": "button",
+      "source": "<div className=\"mt-4 grid grid-cols-2 gap-2\"><button disabled={disabled||!canFire||!orderEditable(activeOrder)} className={primary} onClick={()=>void run('order.fire','orders',activeOrder.id,{orderId:activeOrder.id})}><Flame className=\"mr-1 inline h-4 w-4\"/>Fire</button><button disabled={disabled||!canPay||!openTill||!accounts.length||balance<=0||['COMPLETED','VOIDED'].includes(String(data(activeOrder)?.state))} className={button} onClick={startPayment}><Banknote className=\"mr-1 inline h-4 w-4\"/>Take payment</button><button disabled={disabled||!canSell||!orderEditable(activeOrder)||!(data(activeOrder)?.items||[]).some((item:any)=>item.stockFired)} className={button} onClick={()=>void run('order.repeatRound','orders',activeOrder.id,{orderId:activeOrder.id})}>Repeat round</button><button disabled={disabled||!canVoid||!orderEditable(activeOrder)} className={button} onClick={()=>setVoiding(true)}><ShieldAlert className=\"mr-1 inline h-4 w-4\"/>Void</button></div>",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/runtime/web/WebPosView.tsx:171:884",
+      "file": "src/runtime/web/WebPosView.tsx",
+      "line": 171,
+      "kind": "onClick",
+      "source": "<div className=\"mt-4 grid grid-cols-2 gap-2\"><button disabled={disabled||!canFire||!orderEditable(activeOrder)} className={primary} onClick={()=>void run('order.fire','orders',activeOrder.id,{orderId:activeOrder.id})}><Flame className=\"mr-1 inline h-4 w-4\"/>Fire</button><button disabled={disabled||!canPay||!openTill||!accounts.length||balance<=0||['COMPLETED','VOIDED'].includes(String(data(activeOrder)?.state))} className={button} onClick={startPayment}><Banknote className=\"mr-1 inline h-4 w-4\"/>Take payment</button><button disabled={disabled||!canSell||!orderEditable(activeOrder)||!(data(activeOrder)?.items||[]).some((item:any)=>item.stockFired)} className={button} onClick={()=>void run('order.repeatRound','orders',activeOrder.id,{orderId:activeOrder.id})}>Repeat round</button><button disabled={disabled||!canVoid||!orderEditable(activeOrder)} className={button} onClick={()=>setVoiding(true)}><ShieldAlert className=\"mr-1 inline h-4 w-4\"/>Void</button></div>",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/runtime/web/WebPosView.tsx:179:141",
+      "file": "src/runtime/web/WebPosView.tsx",
+      "line": 179,
       "kind": "input",
       "source": "{newTab&&<Modal title=\"Open named tab\" onClose={()=>setNewTab(false)}><div className=\"space-y-3\"><label className=\"block text-sm\">Tab name<input className={field} value={tabName} onChange={e=>setTabName(e.target.value)} placeholder=\"Kamau, Birthday group, Pool table\"/></label><label className=\"block text-sm\">Customer (optional)<select className={field} value={customerId} onChange={e=>setCustomerId(e.target.value)}><option value=\"\">No linked customer</option>{customers.map(customer=><option key={customer.id} value={customer.id}>{String(data(customer)?.name)}</option>)}</select></label><button disabled={disabled||!(tabName.trim()||customerId)} className={primary} onClick={()=>void createOrder({name:tabName.trim()||String(data(customers.find(c=>c.id===customerId))?.name||'Named tab'),customerId:customerId||undefined})}>Open tab</button></div></Modal>}",
       "status": "unverified",
@@ -30964,9 +31024,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/runtime/web/WebPosView.tsx:139:182",
+      "id": "src/runtime/web/WebPosView.tsx:179:182",
       "file": "src/runtime/web/WebPosView.tsx",
-      "line": 139,
+      "line": 179,
       "kind": "onChange",
       "source": "{newTab&&<Modal title=\"Open named tab\" onClose={()=>setNewTab(false)}><div className=\"space-y-3\"><label className=\"block text-sm\">Tab name<input className={field} value={tabName} onChange={e=>setTabName(e.target.value)} placeholder=\"Kamau, Birthday group, Pool table\"/></label><label className=\"block text-sm\">Customer (optional)<select className={field} value={customerId} onChange={e=>setCustomerId(e.target.value)}><option value=\"\">No linked customer</option>{customers.map(customer=><option key={customer.id} value={customer.id}>{String(data(customer)?.name)}</option>)}</select></label><button disabled={disabled||!(tabName.trim()||customerId)} className={primary} onClick={()=>void createOrder({name:tabName.trim()||String(data(customers.find(c=>c.id===customerId))?.name||'Named tab'),customerId:customerId||undefined})}>Open tab</button></div></Modal>}",
       "status": "unverified",
@@ -30976,9 +31036,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/runtime/web/WebPosView.tsx:139:332",
+      "id": "src/runtime/web/WebPosView.tsx:179:332",
       "file": "src/runtime/web/WebPosView.tsx",
-      "line": 139,
+      "line": 179,
       "kind": "select",
       "source": "{newTab&&<Modal title=\"Open named tab\" onClose={()=>setNewTab(false)}><div className=\"space-y-3\"><label className=\"block text-sm\">Tab name<input className={field} value={tabName} onChange={e=>setTabName(e.target.value)} placeholder=\"Kamau, Birthday group, Pool table\"/></label><label className=\"block text-sm\">Customer (optional)<select className={field} value={customerId} onChange={e=>setCustomerId(e.target.value)}><option value=\"\">No linked customer</option>{customers.map(customer=><option key={customer.id} value={customer.id}>{String(data(customer)?.name)}</option>)}</select></label><button disabled={disabled||!(tabName.trim()||customerId)} className={primary} onClick={()=>void createOrder({name:tabName.trim()||String(data(customers.find(c=>c.id===customerId))?.name||'Named tab'),customerId:customerId||undefined})}>Open tab</button></div></Modal>}",
       "status": "unverified",
@@ -30988,9 +31048,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/runtime/web/WebPosView.tsx:139:377",
+      "id": "src/runtime/web/WebPosView.tsx:179:377",
       "file": "src/runtime/web/WebPosView.tsx",
-      "line": 139,
+      "line": 179,
       "kind": "onChange",
       "source": "{newTab&&<Modal title=\"Open named tab\" onClose={()=>setNewTab(false)}><div className=\"space-y-3\"><label className=\"block text-sm\">Tab name<input className={field} value={tabName} onChange={e=>setTabName(e.target.value)} placeholder=\"Kamau, Birthday group, Pool table\"/></label><label className=\"block text-sm\">Customer (optional)<select className={field} value={customerId} onChange={e=>setCustomerId(e.target.value)}><option value=\"\">No linked customer</option>{customers.map(customer=><option key={customer.id} value={customer.id}>{String(data(customer)?.name)}</option>)}</select></label><button disabled={disabled||!(tabName.trim()||customerId)} className={primary} onClick={()=>void createOrder({name:tabName.trim()||String(data(customers.find(c=>c.id===customerId))?.name||'Named tab'),customerId:customerId||undefined})}>Open tab</button></div></Modal>}",
       "status": "unverified",
@@ -31000,9 +31060,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/runtime/web/WebPosView.tsx:139:594",
+      "id": "src/runtime/web/WebPosView.tsx:179:594",
       "file": "src/runtime/web/WebPosView.tsx",
-      "line": 139,
+      "line": 179,
       "kind": "button",
       "source": "{newTab&&<Modal title=\"Open named tab\" onClose={()=>setNewTab(false)}><div className=\"space-y-3\"><label className=\"block text-sm\">Tab name<input className={field} value={tabName} onChange={e=>setTabName(e.target.value)} placeholder=\"Kamau, Birthday group, Pool table\"/></label><label className=\"block text-sm\">Customer (optional)<select className={field} value={customerId} onChange={e=>setCustomerId(e.target.value)}><option value=\"\">No linked customer</option>{customers.map(customer=><option key={customer.id} value={customer.id}>{String(data(customer)?.name)}</option>)}</select></label><button disabled={disabled||!(tabName.trim()||customerId)} className={primary} onClick={()=>void createOrder({name:tabName.trim()||String(data(customers.find(c=>c.id===customerId))?.name||'Named tab'),customerId:customerId||undefined})}>Open tab</button></div></Modal>}",
       "status": "unverified",
@@ -31012,9 +31072,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/runtime/web/WebPosView.tsx:139:673",
+      "id": "src/runtime/web/WebPosView.tsx:179:673",
       "file": "src/runtime/web/WebPosView.tsx",
-      "line": 139,
+      "line": 179,
       "kind": "onClick",
       "source": "{newTab&&<Modal title=\"Open named tab\" onClose={()=>setNewTab(false)}><div className=\"space-y-3\"><label className=\"block text-sm\">Tab name<input className={field} value={tabName} onChange={e=>setTabName(e.target.value)} placeholder=\"Kamau, Birthday group, Pool table\"/></label><label className=\"block text-sm\">Customer (optional)<select className={field} value={customerId} onChange={e=>setCustomerId(e.target.value)}><option value=\"\">No linked customer</option>{customers.map(customer=><option key={customer.id} value={customer.id}>{String(data(customer)?.name)}</option>)}</select></label><button disabled={disabled||!(tabName.trim()||customerId)} className={primary} onClick={()=>void createOrder({name:tabName.trim()||String(data(customers.find(c=>c.id===customerId))?.name||'Named tab'),customerId:customerId||undefined})}>Open tab</button></div></Modal>}",
       "status": "unverified",
@@ -31024,9 +31084,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/runtime/web/WebPosView.tsx:141:175",
+      "id": "src/runtime/web/WebPosView.tsx:181:175",
       "file": "src/runtime/web/WebPosView.tsx",
-      "line": 141,
+      "line": 181,
       "kind": "input",
       "source": "{config&&<Modal title={`Configure ${String(data(config.product)?.name)}`} onClose={()=>setConfig(null)}><div className=\"space-y-3\"><label className=\"block text-sm\">Quantity<input type=\"number\" min=\"0.001\" step=\"0.001\" className={field} value={config.quantity} onChange={e=>setConfig({...config,quantity:Number(e.target.value)})}/></label>{Array.isArray(data(config.product)?.portions)&&data(config.product)!.portions.length>0&&<label className=\"block text-sm\">Portion<select className={field} value={config.portionId} onChange={e=>setConfig({...config,portionId:e.target.value})}>{data(config.product)!.portions.map((portion:any)=><option key={portion.id} value={portion.id}>{String(portion.name)} · {money(portion.priceMinor)}</option>)}</select></label>}{Array.isArray(data(config.product)?.modifiers)&&data(config.product)!.modifiers.length>0&&<div><div className=\"mb-2 text-sm\">Modifiers</div>{data(config.product)!.modifiers.map((modifier:any)=><label key={modifier.id} className=\"mb-2 flex items-center gap-2 text-sm\"><input type=\"checkbox\" checked={config.modifierIds.includes(modifier.id)} onChange={e=>setConfig({...config,modifierIds:e.target.checked?[...config.modifierIds,modifier.id]:config.modifierIds.filter(id=>id!==modifier.id)})}/>{String(modifier.name)} {Number(modifier.priceDeltaMinor||0)>0?`(+${money(modifier.priceDeltaMinor)})`:''}</label>)}</div>}<button disabled={disabled||config.quantity<=0} className={primary} onClick={()=>void saveConfigured()}>Add to tab</button></div></Modal>}",
       "status": "unverified",
@@ -31036,9 +31096,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/runtime/web/WebPosView.tsx:141:263",
+      "id": "src/runtime/web/WebPosView.tsx:181:263",
       "file": "src/runtime/web/WebPosView.tsx",
-      "line": 141,
+      "line": 181,
       "kind": "onChange",
       "source": "{config&&<Modal title={`Configure ${String(data(config.product)?.name)}`} onClose={()=>setConfig(null)}><div className=\"space-y-3\"><label className=\"block text-sm\">Quantity<input type=\"number\" min=\"0.001\" step=\"0.001\" className={field} value={config.quantity} onChange={e=>setConfig({...config,quantity:Number(e.target.value)})}/></label>{Array.isArray(data(config.product)?.portions)&&data(config.product)!.portions.length>0&&<label className=\"block text-sm\">Portion<select className={field} value={config.portionId} onChange={e=>setConfig({...config,portionId:e.target.value})}>{data(config.product)!.portions.map((portion:any)=><option key={portion.id} value={portion.id}>{String(portion.name)} · {money(portion.priceMinor)}</option>)}</select></label>}{Array.isArray(data(config.product)?.modifiers)&&data(config.product)!.modifiers.length>0&&<div><div className=\"mb-2 text-sm\">Modifiers</div>{data(config.product)!.modifiers.map((modifier:any)=><label key={modifier.id} className=\"mb-2 flex items-center gap-2 text-sm\"><input type=\"checkbox\" checked={config.modifierIds.includes(modifier.id)} onChange={e=>setConfig({...config,modifierIds:e.target.checked?[...config.modifierIds,modifier.id]:config.modifierIds.filter(id=>id!==modifier.id)})}/>{String(modifier.name)} {Number(modifier.priceDeltaMinor||0)>0?`(+${money(modifier.priceDeltaMinor)})`:''}</label>)}</div>}<button disabled={disabled||config.quantity<=0} className={primary} onClick={()=>void saveConfigured()}>Add to tab</button></div></Modal>}",
       "status": "unverified",
@@ -31048,9 +31108,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/runtime/web/WebPosView.tsx:141:470",
+      "id": "src/runtime/web/WebPosView.tsx:181:470",
       "file": "src/runtime/web/WebPosView.tsx",
-      "line": 141,
+      "line": 181,
       "kind": "select",
       "source": "{config&&<Modal title={`Configure ${String(data(config.product)?.name)}`} onClose={()=>setConfig(null)}><div className=\"space-y-3\"><label className=\"block text-sm\">Quantity<input type=\"number\" min=\"0.001\" step=\"0.001\" className={field} value={config.quantity} onChange={e=>setConfig({...config,quantity:Number(e.target.value)})}/></label>{Array.isArray(data(config.product)?.portions)&&data(config.product)!.portions.length>0&&<label className=\"block text-sm\">Portion<select className={field} value={config.portionId} onChange={e=>setConfig({...config,portionId:e.target.value})}>{data(config.product)!.portions.map((portion:any)=><option key={portion.id} value={portion.id}>{String(portion.name)} · {money(portion.priceMinor)}</option>)}</select></label>}{Array.isArray(data(config.product)?.modifiers)&&data(config.product)!.modifiers.length>0&&<div><div className=\"mb-2 text-sm\">Modifiers</div>{data(config.product)!.modifiers.map((modifier:any)=><label key={modifier.id} className=\"mb-2 flex items-center gap-2 text-sm\"><input type=\"checkbox\" checked={config.modifierIds.includes(modifier.id)} onChange={e=>setConfig({...config,modifierIds:e.target.checked?[...config.modifierIds,modifier.id]:config.modifierIds.filter(id=>id!==modifier.id)})}/>{String(modifier.name)} {Number(modifier.priceDeltaMinor||0)>0?`(+${money(modifier.priceDeltaMinor)})`:''}</label>)}</div>}<button disabled={disabled||config.quantity<=0} className={primary} onClick={()=>void saveConfigured()}>Add to tab</button></div></Modal>}",
       "status": "unverified",
@@ -31060,9 +31120,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/runtime/web/WebPosView.tsx:141:521",
+      "id": "src/runtime/web/WebPosView.tsx:181:521",
       "file": "src/runtime/web/WebPosView.tsx",
-      "line": 141,
+      "line": 181,
       "kind": "onChange",
       "source": "{config&&<Modal title={`Configure ${String(data(config.product)?.name)}`} onClose={()=>setConfig(null)}><div className=\"space-y-3\"><label className=\"block text-sm\">Quantity<input type=\"number\" min=\"0.001\" step=\"0.001\" className={field} value={config.quantity} onChange={e=>setConfig({...config,quantity:Number(e.target.value)})}/></label>{Array.isArray(data(config.product)?.portions)&&data(config.product)!.portions.length>0&&<label className=\"block text-sm\">Portion<select className={field} value={config.portionId} onChange={e=>setConfig({...config,portionId:e.target.value})}>{data(config.product)!.portions.map((portion:any)=><option key={portion.id} value={portion.id}>{String(portion.name)} · {money(portion.priceMinor)}</option>)}</select></label>}{Array.isArray(data(config.product)?.modifiers)&&data(config.product)!.modifiers.length>0&&<div><div className=\"mb-2 text-sm\">Modifiers</div>{data(config.product)!.modifiers.map((modifier:any)=><label key={modifier.id} className=\"mb-2 flex items-center gap-2 text-sm\"><input type=\"checkbox\" checked={config.modifierIds.includes(modifier.id)} onChange={e=>setConfig({...config,modifierIds:e.target.checked?[...config.modifierIds,modifier.id]:config.modifierIds.filter(id=>id!==modifier.id)})}/>{String(modifier.name)} {Number(modifier.priceDeltaMinor||0)>0?`(+${money(modifier.priceDeltaMinor)})`:''}</label>)}</div>}<button disabled={disabled||config.quantity<=0} className={primary} onClick={()=>void saveConfigured()}>Add to tab</button></div></Modal>}",
       "status": "unverified",
@@ -31072,9 +31132,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/runtime/web/WebPosView.tsx:141:1027",
+      "id": "src/runtime/web/WebPosView.tsx:181:1027",
       "file": "src/runtime/web/WebPosView.tsx",
-      "line": 141,
+      "line": 181,
       "kind": "input",
       "source": "{config&&<Modal title={`Configure ${String(data(config.product)?.name)}`} onClose={()=>setConfig(null)}><div className=\"space-y-3\"><label className=\"block text-sm\">Quantity<input type=\"number\" min=\"0.001\" step=\"0.001\" className={field} value={config.quantity} onChange={e=>setConfig({...config,quantity:Number(e.target.value)})}/></label>{Array.isArray(data(config.product)?.portions)&&data(config.product)!.portions.length>0&&<label className=\"block text-sm\">Portion<select className={field} value={config.portionId} onChange={e=>setConfig({...config,portionId:e.target.value})}>{data(config.product)!.portions.map((portion:any)=><option key={portion.id} value={portion.id}>{String(portion.name)} · {money(portion.priceMinor)}</option>)}</select></label>}{Array.isArray(data(config.product)?.modifiers)&&data(config.product)!.modifiers.length>0&&<div><div className=\"mb-2 text-sm\">Modifiers</div>{data(config.product)!.modifiers.map((modifier:any)=><label key={modifier.id} className=\"mb-2 flex items-center gap-2 text-sm\"><input type=\"checkbox\" checked={config.modifierIds.includes(modifier.id)} onChange={e=>setConfig({...config,modifierIds:e.target.checked?[...config.modifierIds,modifier.id]:config.modifierIds.filter(id=>id!==modifier.id)})}/>{String(modifier.name)} {Number(modifier.priceDeltaMinor||0)>0?`(+${money(modifier.priceDeltaMinor)})`:''}</label>)}</div>}<button disabled={disabled||config.quantity<=0} className={primary} onClick={()=>void saveConfigured()}>Add to tab</button></div></Modal>}",
       "status": "unverified",
@@ -31084,9 +31144,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/runtime/web/WebPosView.tsx:141:1101",
+      "id": "src/runtime/web/WebPosView.tsx:181:1101",
       "file": "src/runtime/web/WebPosView.tsx",
-      "line": 141,
+      "line": 181,
       "kind": "onChange",
       "source": "{config&&<Modal title={`Configure ${String(data(config.product)?.name)}`} onClose={()=>setConfig(null)}><div className=\"space-y-3\"><label className=\"block text-sm\">Quantity<input type=\"number\" min=\"0.001\" step=\"0.001\" className={field} value={config.quantity} onChange={e=>setConfig({...config,quantity:Number(e.target.value)})}/></label>{Array.isArray(data(config.product)?.portions)&&data(config.product)!.portions.length>0&&<label className=\"block text-sm\">Portion<select className={field} value={config.portionId} onChange={e=>setConfig({...config,portionId:e.target.value})}>{data(config.product)!.portions.map((portion:any)=><option key={portion.id} value={portion.id}>{String(portion.name)} · {money(portion.priceMinor)}</option>)}</select></label>}{Array.isArray(data(config.product)?.modifiers)&&data(config.product)!.modifiers.length>0&&<div><div className=\"mb-2 text-sm\">Modifiers</div>{data(config.product)!.modifiers.map((modifier:any)=><label key={modifier.id} className=\"mb-2 flex items-center gap-2 text-sm\"><input type=\"checkbox\" checked={config.modifierIds.includes(modifier.id)} onChange={e=>setConfig({...config,modifierIds:e.target.checked?[...config.modifierIds,modifier.id]:config.modifierIds.filter(id=>id!==modifier.id)})}/>{String(modifier.name)} {Number(modifier.priceDeltaMinor||0)>0?`(+${money(modifier.priceDeltaMinor)})`:''}</label>)}</div>}<button disabled={disabled||config.quantity<=0} className={primary} onClick={()=>void saveConfigured()}>Add to tab</button></div></Modal>}",
       "status": "unverified",
@@ -31096,9 +31156,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/runtime/web/WebPosView.tsx:141:1375",
+      "id": "src/runtime/web/WebPosView.tsx:181:1375",
       "file": "src/runtime/web/WebPosView.tsx",
-      "line": 141,
+      "line": 181,
       "kind": "button",
       "source": "{config&&<Modal title={`Configure ${String(data(config.product)?.name)}`} onClose={()=>setConfig(null)}><div className=\"space-y-3\"><label className=\"block text-sm\">Quantity<input type=\"number\" min=\"0.001\" step=\"0.001\" className={field} value={config.quantity} onChange={e=>setConfig({...config,quantity:Number(e.target.value)})}/></label>{Array.isArray(data(config.product)?.portions)&&data(config.product)!.portions.length>0&&<label className=\"block text-sm\">Portion<select className={field} value={config.portionId} onChange={e=>setConfig({...config,portionId:e.target.value})}>{data(config.product)!.portions.map((portion:any)=><option key={portion.id} value={portion.id}>{String(portion.name)} · {money(portion.priceMinor)}</option>)}</select></label>}{Array.isArray(data(config.product)?.modifiers)&&data(config.product)!.modifiers.length>0&&<div><div className=\"mb-2 text-sm\">Modifiers</div>{data(config.product)!.modifiers.map((modifier:any)=><label key={modifier.id} className=\"mb-2 flex items-center gap-2 text-sm\"><input type=\"checkbox\" checked={config.modifierIds.includes(modifier.id)} onChange={e=>setConfig({...config,modifierIds:e.target.checked?[...config.modifierIds,modifier.id]:config.modifierIds.filter(id=>id!==modifier.id)})}/>{String(modifier.name)} {Number(modifier.priceDeltaMinor||0)>0?`(+${money(modifier.priceDeltaMinor)})`:''}</label>)}</div>}<button disabled={disabled||config.quantity<=0} className={primary} onClick={()=>void saveConfigured()}>Add to tab</button></div></Modal>}",
       "status": "unverified",
@@ -31108,9 +31168,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/runtime/web/WebPosView.tsx:141:1443",
+      "id": "src/runtime/web/WebPosView.tsx:181:1443",
       "file": "src/runtime/web/WebPosView.tsx",
-      "line": 141,
+      "line": 181,
       "kind": "onClick",
       "source": "{config&&<Modal title={`Configure ${String(data(config.product)?.name)}`} onClose={()=>setConfig(null)}><div className=\"space-y-3\"><label className=\"block text-sm\">Quantity<input type=\"number\" min=\"0.001\" step=\"0.001\" className={field} value={config.quantity} onChange={e=>setConfig({...config,quantity:Number(e.target.value)})}/></label>{Array.isArray(data(config.product)?.portions)&&data(config.product)!.portions.length>0&&<label className=\"block text-sm\">Portion<select className={field} value={config.portionId} onChange={e=>setConfig({...config,portionId:e.target.value})}>{data(config.product)!.portions.map((portion:any)=><option key={portion.id} value={portion.id}>{String(portion.name)} · {money(portion.priceMinor)}</option>)}</select></label>}{Array.isArray(data(config.product)?.modifiers)&&data(config.product)!.modifiers.length>0&&<div><div className=\"mb-2 text-sm\">Modifiers</div>{data(config.product)!.modifiers.map((modifier:any)=><label key={modifier.id} className=\"mb-2 flex items-center gap-2 text-sm\"><input type=\"checkbox\" checked={config.modifierIds.includes(modifier.id)} onChange={e=>setConfig({...config,modifierIds:e.target.checked?[...config.modifierIds,modifier.id]:config.modifierIds.filter(id=>id!==modifier.id)})}/>{String(modifier.name)} {Number(modifier.priceDeltaMinor||0)>0?`(+${money(modifier.priceDeltaMinor)})`:''}</label>)}</div>}<button disabled={disabled||config.quantity<=0} className={primary} onClick={()=>void saveConfigured()}>Add to tab</button></div></Modal>}",
       "status": "unverified",
@@ -31120,9 +31180,273 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/runtime/web/WebPosView.tsx:143:150",
+      "id": "src/runtime/web/WebPosView.tsx:183:675",
       "file": "src/runtime/web/WebPosView.tsx",
-      "line": 143,
+      "line": 183,
+      "kind": "select",
+      "source": "{paying&&activeOrder&&<Modal title={`Settle ${String(data(activeOrder)?.tabName||data(activeOrder)?.orderNumber)}`} onClose={()=>setPaying(false)}><div className=\"space-y-3\"><div className=\"flex justify-between rounded-lg bg-slate-950 p-3\"><span>Outstanding</span><b>{money(balance)}</b></div>{tenders.map((line,index)=>{const method=String(data(accounts.find(a=>a.id===line.accountId))?.method||'');const permitted=method!=='MPESA'||allowed(session,'mpesa.record');return <fieldset key={index} className=\"space-y-2 rounded-lg border border-slate-700 p-3\"><legend className=\"px-1 text-sm font-bold\">Tender {index+1}</legend><label className=\"block text-sm\">Payment account<select className={field} value={line.accountId} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...draftTender(e.target.value,v.amount)}:v))}><option value=\"\">Select account</option>{accounts.map(account=><option key={account.id} value={account.id}>{String(data(account)?.name)} · {String(data(account)?.method)}</option>)}</select></label><label className=\"block text-sm\">Amount (KES)<input aria-label={`Tender ${index+1} amount in KES`} type=\"number\" min=\"0.01\" step=\"0.01\" className={field} value={line.amount} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,amount:e.target.value,...(method==='CASH'?{cashTendered:e.target.value}:{}),...(method==='MPESA'?{receivedAmount:e.target.value}:{})}:v))}/></label>{method==='CASH'&&<label className=\"block text-sm\">Cash received (KES)<input type=\"number\" min=\"0\" step=\"0.01\" className={field} value={line.cashTendered} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,cashTendered:e.target.value}:v))}/><small className=\"text-slate-500\">Change {cashChange(line.cashTendered,line.amount)}</small></label>}{method==='MPESA'&&<><label className=\"block text-sm\">M-Pesa transaction code<input className={field} value={line.reference} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,reference:e.target.value.toUpperCase()}:v))}/></label><label className=\"block text-sm\">Amount shown on receipt (KES)<input type=\"number\" min=\"0.01\" step=\"0.01\" className={field} value={line.receivedAmount} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,receivedAmount:e.target.value}:v))}/></label><label className=\"block text-sm\">Receipt time<input type=\"datetime-local\" className={field} value={line.receivedAt} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,receivedAt:e.target.value}:v))}/></label></>}{method==='CARD'&&<label className=\"block text-sm\">External authorization reference<input className={field} value={line.reference} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,reference:e.target.value}:v))}/></label>}{method!=='CASH'&&<label className=\"flex items-start gap-2 text-xs\"><input type=\"checkbox\" checked={line.confirmed} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,confirmed:e.target.checked}:v))}/><span>I manually verified that the funds were received. ServOS did not initiate or confirm a provider payment.</span></label>}{!permitted&&<p role=\"alert\" className=\"text-xs text-rose-300\">Your role cannot record M-Pesa payments.</p>}{tenders.length>1&&<button type=\"button\" className={button} onClick={()=>setTenders(old=>old.filter((_,i)=>i!==index))}>Remove tender</button>}</fieldset>})}<div className=\"flex flex-wrap gap-2\"><button type=\"button\" disabled={tenders.length>=10||!accounts.length} className={button} onClick={()=>setTenders(old=>[...old,draftTender(accounts.find(a=>data(a)?.method!=='CASH')?.id||accounts[0]?.id||'')])}>Add split tender</button><button disabled={disabled||!openTill||!canPay||tenders.some(t=>!t.accountId||!allowed(session,'mpesa.record')&&data(accounts.find(a=>a.id===t.accountId))?.method==='MPESA')} className={primary} onClick={()=>void submitPayment().catch(e=>setNotice(String(e)))}><CreditCard className=\"mr-1 inline h-4 w-4\"/>Record payment</button></div><p className=\"text-xs text-slate-500\">Online server confirmation is required. M-Pesa codes must allocate the exact receipt amount in this staged flow. Failed or offline submissions remain queued as drafts/commands; no provider initiation is represented.</p></div></Modal>}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/runtime/web/WebPosView.tsx:183:724",
+      "file": "src/runtime/web/WebPosView.tsx",
+      "line": 183,
+      "kind": "onChange",
+      "source": "{paying&&activeOrder&&<Modal title={`Settle ${String(data(activeOrder)?.tabName||data(activeOrder)?.orderNumber)}`} onClose={()=>setPaying(false)}><div className=\"space-y-3\"><div className=\"flex justify-between rounded-lg bg-slate-950 p-3\"><span>Outstanding</span><b>{money(balance)}</b></div>{tenders.map((line,index)=>{const method=String(data(accounts.find(a=>a.id===line.accountId))?.method||'');const permitted=method!=='MPESA'||allowed(session,'mpesa.record');return <fieldset key={index} className=\"space-y-2 rounded-lg border border-slate-700 p-3\"><legend className=\"px-1 text-sm font-bold\">Tender {index+1}</legend><label className=\"block text-sm\">Payment account<select className={field} value={line.accountId} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...draftTender(e.target.value,v.amount)}:v))}><option value=\"\">Select account</option>{accounts.map(account=><option key={account.id} value={account.id}>{String(data(account)?.name)} · {String(data(account)?.method)}</option>)}</select></label><label className=\"block text-sm\">Amount (KES)<input aria-label={`Tender ${index+1} amount in KES`} type=\"number\" min=\"0.01\" step=\"0.01\" className={field} value={line.amount} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,amount:e.target.value,...(method==='CASH'?{cashTendered:e.target.value}:{}),...(method==='MPESA'?{receivedAmount:e.target.value}:{})}:v))}/></label>{method==='CASH'&&<label className=\"block text-sm\">Cash received (KES)<input type=\"number\" min=\"0\" step=\"0.01\" className={field} value={line.cashTendered} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,cashTendered:e.target.value}:v))}/><small className=\"text-slate-500\">Change {cashChange(line.cashTendered,line.amount)}</small></label>}{method==='MPESA'&&<><label className=\"block text-sm\">M-Pesa transaction code<input className={field} value={line.reference} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,reference:e.target.value.toUpperCase()}:v))}/></label><label className=\"block text-sm\">Amount shown on receipt (KES)<input type=\"number\" min=\"0.01\" step=\"0.01\" className={field} value={line.receivedAmount} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,receivedAmount:e.target.value}:v))}/></label><label className=\"block text-sm\">Receipt time<input type=\"datetime-local\" className={field} value={line.receivedAt} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,receivedAt:e.target.value}:v))}/></label></>}{method==='CARD'&&<label className=\"block text-sm\">External authorization reference<input className={field} value={line.reference} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,reference:e.target.value}:v))}/></label>}{method!=='CASH'&&<label className=\"flex items-start gap-2 text-xs\"><input type=\"checkbox\" checked={line.confirmed} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,confirmed:e.target.checked}:v))}/><span>I manually verified that the funds were received. ServOS did not initiate or confirm a provider payment.</span></label>}{!permitted&&<p role=\"alert\" className=\"text-xs text-rose-300\">Your role cannot record M-Pesa payments.</p>}{tenders.length>1&&<button type=\"button\" className={button} onClick={()=>setTenders(old=>old.filter((_,i)=>i!==index))}>Remove tender</button>}</fieldset>})}<div className=\"flex flex-wrap gap-2\"><button type=\"button\" disabled={tenders.length>=10||!accounts.length} className={button} onClick={()=>setTenders(old=>[...old,draftTender(accounts.find(a=>data(a)?.method!=='CASH')?.id||accounts[0]?.id||'')])}>Add split tender</button><button disabled={disabled||!openTill||!canPay||tenders.some(t=>!t.accountId||!allowed(session,'mpesa.record')&&data(accounts.find(a=>a.id===t.accountId))?.method==='MPESA')} className={primary} onClick={()=>void submitPayment().catch(e=>setNotice(String(e)))}><CreditCard className=\"mr-1 inline h-4 w-4\"/>Record payment</button></div><p className=\"text-xs text-slate-500\">Online server confirmation is required. M-Pesa codes must allocate the exact receipt amount in this staged flow. Failed or offline submissions remain queued as drafts/commands; no provider initiation is represented.</p></div></Modal>}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/runtime/web/WebPosView.tsx:183:1068",
+      "file": "src/runtime/web/WebPosView.tsx",
+      "line": 183,
+      "kind": "input",
+      "source": "{paying&&activeOrder&&<Modal title={`Settle ${String(data(activeOrder)?.tabName||data(activeOrder)?.orderNumber)}`} onClose={()=>setPaying(false)}><div className=\"space-y-3\"><div className=\"flex justify-between rounded-lg bg-slate-950 p-3\"><span>Outstanding</span><b>{money(balance)}</b></div>{tenders.map((line,index)=>{const method=String(data(accounts.find(a=>a.id===line.accountId))?.method||'');const permitted=method!=='MPESA'||allowed(session,'mpesa.record');return <fieldset key={index} className=\"space-y-2 rounded-lg border border-slate-700 p-3\"><legend className=\"px-1 text-sm font-bold\">Tender {index+1}</legend><label className=\"block text-sm\">Payment account<select className={field} value={line.accountId} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...draftTender(e.target.value,v.amount)}:v))}><option value=\"\">Select account</option>{accounts.map(account=><option key={account.id} value={account.id}>{String(data(account)?.name)} · {String(data(account)?.method)}</option>)}</select></label><label className=\"block text-sm\">Amount (KES)<input aria-label={`Tender ${index+1} amount in KES`} type=\"number\" min=\"0.01\" step=\"0.01\" className={field} value={line.amount} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,amount:e.target.value,...(method==='CASH'?{cashTendered:e.target.value}:{}),...(method==='MPESA'?{receivedAmount:e.target.value}:{})}:v))}/></label>{method==='CASH'&&<label className=\"block text-sm\">Cash received (KES)<input type=\"number\" min=\"0\" step=\"0.01\" className={field} value={line.cashTendered} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,cashTendered:e.target.value}:v))}/><small className=\"text-slate-500\">Change {cashChange(line.cashTendered,line.amount)}</small></label>}{method==='MPESA'&&<><label className=\"block text-sm\">M-Pesa transaction code<input className={field} value={line.reference} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,reference:e.target.value.toUpperCase()}:v))}/></label><label className=\"block text-sm\">Amount shown on receipt (KES)<input type=\"number\" min=\"0.01\" step=\"0.01\" className={field} value={line.receivedAmount} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,receivedAmount:e.target.value}:v))}/></label><label className=\"block text-sm\">Receipt time<input type=\"datetime-local\" className={field} value={line.receivedAt} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,receivedAt:e.target.value}:v))}/></label></>}{method==='CARD'&&<label className=\"block text-sm\">External authorization reference<input className={field} value={line.reference} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,reference:e.target.value}:v))}/></label>}{method!=='CASH'&&<label className=\"flex items-start gap-2 text-xs\"><input type=\"checkbox\" checked={line.confirmed} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,confirmed:e.target.checked}:v))}/><span>I manually verified that the funds were received. ServOS did not initiate or confirm a provider payment.</span></label>}{!permitted&&<p role=\"alert\" className=\"text-xs text-rose-300\">Your role cannot record M-Pesa payments.</p>}{tenders.length>1&&<button type=\"button\" className={button} onClick={()=>setTenders(old=>old.filter((_,i)=>i!==index))}>Remove tender</button>}</fieldset>})}<div className=\"flex flex-wrap gap-2\"><button type=\"button\" disabled={tenders.length>=10||!accounts.length} className={button} onClick={()=>setTenders(old=>[...old,draftTender(accounts.find(a=>data(a)?.method!=='CASH')?.id||accounts[0]?.id||'')])}>Add split tender</button><button disabled={disabled||!openTill||!canPay||tenders.some(t=>!t.accountId||!allowed(session,'mpesa.record')&&data(accounts.find(a=>a.id===t.accountId))?.method==='MPESA')} className={primary} onClick={()=>void submitPayment().catch(e=>setNotice(String(e)))}><CreditCard className=\"mr-1 inline h-4 w-4\"/>Record payment</button></div><p className=\"text-xs text-slate-500\">Online server confirmation is required. M-Pesa codes must allocate the exact receipt amount in this staged flow. Failed or offline submissions remain queued as drafts/commands; no provider initiation is represented.</p></div></Modal>}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/runtime/web/WebPosView.tsx:183:1197",
+      "file": "src/runtime/web/WebPosView.tsx",
+      "line": 183,
+      "kind": "onChange",
+      "source": "{paying&&activeOrder&&<Modal title={`Settle ${String(data(activeOrder)?.tabName||data(activeOrder)?.orderNumber)}`} onClose={()=>setPaying(false)}><div className=\"space-y-3\"><div className=\"flex justify-between rounded-lg bg-slate-950 p-3\"><span>Outstanding</span><b>{money(balance)}</b></div>{tenders.map((line,index)=>{const method=String(data(accounts.find(a=>a.id===line.accountId))?.method||'');const permitted=method!=='MPESA'||allowed(session,'mpesa.record');return <fieldset key={index} className=\"space-y-2 rounded-lg border border-slate-700 p-3\"><legend className=\"px-1 text-sm font-bold\">Tender {index+1}</legend><label className=\"block text-sm\">Payment account<select className={field} value={line.accountId} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...draftTender(e.target.value,v.amount)}:v))}><option value=\"\">Select account</option>{accounts.map(account=><option key={account.id} value={account.id}>{String(data(account)?.name)} · {String(data(account)?.method)}</option>)}</select></label><label className=\"block text-sm\">Amount (KES)<input aria-label={`Tender ${index+1} amount in KES`} type=\"number\" min=\"0.01\" step=\"0.01\" className={field} value={line.amount} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,amount:e.target.value,...(method==='CASH'?{cashTendered:e.target.value}:{}),...(method==='MPESA'?{receivedAmount:e.target.value}:{})}:v))}/></label>{method==='CASH'&&<label className=\"block text-sm\">Cash received (KES)<input type=\"number\" min=\"0\" step=\"0.01\" className={field} value={line.cashTendered} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,cashTendered:e.target.value}:v))}/><small className=\"text-slate-500\">Change {cashChange(line.cashTendered,line.amount)}</small></label>}{method==='MPESA'&&<><label className=\"block text-sm\">M-Pesa transaction code<input className={field} value={line.reference} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,reference:e.target.value.toUpperCase()}:v))}/></label><label className=\"block text-sm\">Amount shown on receipt (KES)<input type=\"number\" min=\"0.01\" step=\"0.01\" className={field} value={line.receivedAmount} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,receivedAmount:e.target.value}:v))}/></label><label className=\"block text-sm\">Receipt time<input type=\"datetime-local\" className={field} value={line.receivedAt} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,receivedAt:e.target.value}:v))}/></label></>}{method==='CARD'&&<label className=\"block text-sm\">External authorization reference<input className={field} value={line.reference} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,reference:e.target.value}:v))}/></label>}{method!=='CASH'&&<label className=\"flex items-start gap-2 text-xs\"><input type=\"checkbox\" checked={line.confirmed} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,confirmed:e.target.checked}:v))}/><span>I manually verified that the funds were received. ServOS did not initiate or confirm a provider payment.</span></label>}{!permitted&&<p role=\"alert\" className=\"text-xs text-rose-300\">Your role cannot record M-Pesa payments.</p>}{tenders.length>1&&<button type=\"button\" className={button} onClick={()=>setTenders(old=>old.filter((_,i)=>i!==index))}>Remove tender</button>}</fieldset>})}<div className=\"flex flex-wrap gap-2\"><button type=\"button\" disabled={tenders.length>=10||!accounts.length} className={button} onClick={()=>setTenders(old=>[...old,draftTender(accounts.find(a=>data(a)?.method!=='CASH')?.id||accounts[0]?.id||'')])}>Add split tender</button><button disabled={disabled||!openTill||!canPay||tenders.some(t=>!t.accountId||!allowed(session,'mpesa.record')&&data(accounts.find(a=>a.id===t.accountId))?.method==='MPESA')} className={primary} onClick={()=>void submitPayment().catch(e=>setNotice(String(e)))}><CreditCard className=\"mr-1 inline h-4 w-4\"/>Record payment</button></div><p className=\"text-xs text-slate-500\">Online server confirmation is required. M-Pesa codes must allocate the exact receipt amount in this staged flow. Failed or offline submissions remain queued as drafts/commands; no provider initiation is represented.</p></div></Modal>}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/runtime/web/WebPosView.tsx:183:1475",
+      "file": "src/runtime/web/WebPosView.tsx",
+      "line": 183,
+      "kind": "input",
+      "source": "{paying&&activeOrder&&<Modal title={`Settle ${String(data(activeOrder)?.tabName||data(activeOrder)?.orderNumber)}`} onClose={()=>setPaying(false)}><div className=\"space-y-3\"><div className=\"flex justify-between rounded-lg bg-slate-950 p-3\"><span>Outstanding</span><b>{money(balance)}</b></div>{tenders.map((line,index)=>{const method=String(data(accounts.find(a=>a.id===line.accountId))?.method||'');const permitted=method!=='MPESA'||allowed(session,'mpesa.record');return <fieldset key={index} className=\"space-y-2 rounded-lg border border-slate-700 p-3\"><legend className=\"px-1 text-sm font-bold\">Tender {index+1}</legend><label className=\"block text-sm\">Payment account<select className={field} value={line.accountId} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...draftTender(e.target.value,v.amount)}:v))}><option value=\"\">Select account</option>{accounts.map(account=><option key={account.id} value={account.id}>{String(data(account)?.name)} · {String(data(account)?.method)}</option>)}</select></label><label className=\"block text-sm\">Amount (KES)<input aria-label={`Tender ${index+1} amount in KES`} type=\"number\" min=\"0.01\" step=\"0.01\" className={field} value={line.amount} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,amount:e.target.value,...(method==='CASH'?{cashTendered:e.target.value}:{}),...(method==='MPESA'?{receivedAmount:e.target.value}:{})}:v))}/></label>{method==='CASH'&&<label className=\"block text-sm\">Cash received (KES)<input type=\"number\" min=\"0\" step=\"0.01\" className={field} value={line.cashTendered} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,cashTendered:e.target.value}:v))}/><small className=\"text-slate-500\">Change {cashChange(line.cashTendered,line.amount)}</small></label>}{method==='MPESA'&&<><label className=\"block text-sm\">M-Pesa transaction code<input className={field} value={line.reference} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,reference:e.target.value.toUpperCase()}:v))}/></label><label className=\"block text-sm\">Amount shown on receipt (KES)<input type=\"number\" min=\"0.01\" step=\"0.01\" className={field} value={line.receivedAmount} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,receivedAmount:e.target.value}:v))}/></label><label className=\"block text-sm\">Receipt time<input type=\"datetime-local\" className={field} value={line.receivedAt} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,receivedAt:e.target.value}:v))}/></label></>}{method==='CARD'&&<label className=\"block text-sm\">External authorization reference<input className={field} value={line.reference} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,reference:e.target.value}:v))}/></label>}{method!=='CASH'&&<label className=\"flex items-start gap-2 text-xs\"><input type=\"checkbox\" checked={line.confirmed} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,confirmed:e.target.checked}:v))}/><span>I manually verified that the funds were received. ServOS did not initiate or confirm a provider payment.</span></label>}{!permitted&&<p role=\"alert\" className=\"text-xs text-rose-300\">Your role cannot record M-Pesa payments.</p>}{tenders.length>1&&<button type=\"button\" className={button} onClick={()=>setTenders(old=>old.filter((_,i)=>i!==index))}>Remove tender</button>}</fieldset>})}<div className=\"flex flex-wrap gap-2\"><button type=\"button\" disabled={tenders.length>=10||!accounts.length} className={button} onClick={()=>setTenders(old=>[...old,draftTender(accounts.find(a=>data(a)?.method!=='CASH')?.id||accounts[0]?.id||'')])}>Add split tender</button><button disabled={disabled||!openTill||!canPay||tenders.some(t=>!t.accountId||!allowed(session,'mpesa.record')&&data(accounts.find(a=>a.id===t.accountId))?.method==='MPESA')} className={primary} onClick={()=>void submitPayment().catch(e=>setNotice(String(e)))}><CreditCard className=\"mr-1 inline h-4 w-4\"/>Record payment</button></div><p className=\"text-xs text-slate-500\">Online server confirmation is required. M-Pesa codes must allocate the exact receipt amount in this staged flow. Failed or offline submissions remain queued as drafts/commands; no provider initiation is represented.</p></div></Modal>}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/runtime/web/WebPosView.tsx:183:1560",
+      "file": "src/runtime/web/WebPosView.tsx",
+      "line": 183,
+      "kind": "onChange",
+      "source": "{paying&&activeOrder&&<Modal title={`Settle ${String(data(activeOrder)?.tabName||data(activeOrder)?.orderNumber)}`} onClose={()=>setPaying(false)}><div className=\"space-y-3\"><div className=\"flex justify-between rounded-lg bg-slate-950 p-3\"><span>Outstanding</span><b>{money(balance)}</b></div>{tenders.map((line,index)=>{const method=String(data(accounts.find(a=>a.id===line.accountId))?.method||'');const permitted=method!=='MPESA'||allowed(session,'mpesa.record');return <fieldset key={index} className=\"space-y-2 rounded-lg border border-slate-700 p-3\"><legend className=\"px-1 text-sm font-bold\">Tender {index+1}</legend><label className=\"block text-sm\">Payment account<select className={field} value={line.accountId} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...draftTender(e.target.value,v.amount)}:v))}><option value=\"\">Select account</option>{accounts.map(account=><option key={account.id} value={account.id}>{String(data(account)?.name)} · {String(data(account)?.method)}</option>)}</select></label><label className=\"block text-sm\">Amount (KES)<input aria-label={`Tender ${index+1} amount in KES`} type=\"number\" min=\"0.01\" step=\"0.01\" className={field} value={line.amount} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,amount:e.target.value,...(method==='CASH'?{cashTendered:e.target.value}:{}),...(method==='MPESA'?{receivedAmount:e.target.value}:{})}:v))}/></label>{method==='CASH'&&<label className=\"block text-sm\">Cash received (KES)<input type=\"number\" min=\"0\" step=\"0.01\" className={field} value={line.cashTendered} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,cashTendered:e.target.value}:v))}/><small className=\"text-slate-500\">Change {cashChange(line.cashTendered,line.amount)}</small></label>}{method==='MPESA'&&<><label className=\"block text-sm\">M-Pesa transaction code<input className={field} value={line.reference} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,reference:e.target.value.toUpperCase()}:v))}/></label><label className=\"block text-sm\">Amount shown on receipt (KES)<input type=\"number\" min=\"0.01\" step=\"0.01\" className={field} value={line.receivedAmount} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,receivedAmount:e.target.value}:v))}/></label><label className=\"block text-sm\">Receipt time<input type=\"datetime-local\" className={field} value={line.receivedAt} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,receivedAt:e.target.value}:v))}/></label></>}{method==='CARD'&&<label className=\"block text-sm\">External authorization reference<input className={field} value={line.reference} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,reference:e.target.value}:v))}/></label>}{method!=='CASH'&&<label className=\"flex items-start gap-2 text-xs\"><input type=\"checkbox\" checked={line.confirmed} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,confirmed:e.target.checked}:v))}/><span>I manually verified that the funds were received. ServOS did not initiate or confirm a provider payment.</span></label>}{!permitted&&<p role=\"alert\" className=\"text-xs text-rose-300\">Your role cannot record M-Pesa payments.</p>}{tenders.length>1&&<button type=\"button\" className={button} onClick={()=>setTenders(old=>old.filter((_,i)=>i!==index))}>Remove tender</button>}</fieldset>})}<div className=\"flex flex-wrap gap-2\"><button type=\"button\" disabled={tenders.length>=10||!accounts.length} className={button} onClick={()=>setTenders(old=>[...old,draftTender(accounts.find(a=>data(a)?.method!=='CASH')?.id||accounts[0]?.id||'')])}>Add split tender</button><button disabled={disabled||!openTill||!canPay||tenders.some(t=>!t.accountId||!allowed(session,'mpesa.record')&&data(accounts.find(a=>a.id===t.accountId))?.method==='MPESA')} className={primary} onClick={()=>void submitPayment().catch(e=>setNotice(String(e)))}><CreditCard className=\"mr-1 inline h-4 w-4\"/>Record payment</button></div><p className=\"text-xs text-slate-500\">Online server confirmation is required. M-Pesa codes must allocate the exact receipt amount in this staged flow. Failed or offline submissions remain queued as drafts/commands; no provider initiation is represented.</p></div></Modal>}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/runtime/web/WebPosView.tsx:183:1833",
+      "file": "src/runtime/web/WebPosView.tsx",
+      "line": 183,
+      "kind": "input",
+      "source": "{paying&&activeOrder&&<Modal title={`Settle ${String(data(activeOrder)?.tabName||data(activeOrder)?.orderNumber)}`} onClose={()=>setPaying(false)}><div className=\"space-y-3\"><div className=\"flex justify-between rounded-lg bg-slate-950 p-3\"><span>Outstanding</span><b>{money(balance)}</b></div>{tenders.map((line,index)=>{const method=String(data(accounts.find(a=>a.id===line.accountId))?.method||'');const permitted=method!=='MPESA'||allowed(session,'mpesa.record');return <fieldset key={index} className=\"space-y-2 rounded-lg border border-slate-700 p-3\"><legend className=\"px-1 text-sm font-bold\">Tender {index+1}</legend><label className=\"block text-sm\">Payment account<select className={field} value={line.accountId} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...draftTender(e.target.value,v.amount)}:v))}><option value=\"\">Select account</option>{accounts.map(account=><option key={account.id} value={account.id}>{String(data(account)?.name)} · {String(data(account)?.method)}</option>)}</select></label><label className=\"block text-sm\">Amount (KES)<input aria-label={`Tender ${index+1} amount in KES`} type=\"number\" min=\"0.01\" step=\"0.01\" className={field} value={line.amount} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,amount:e.target.value,...(method==='CASH'?{cashTendered:e.target.value}:{}),...(method==='MPESA'?{receivedAmount:e.target.value}:{})}:v))}/></label>{method==='CASH'&&<label className=\"block text-sm\">Cash received (KES)<input type=\"number\" min=\"0\" step=\"0.01\" className={field} value={line.cashTendered} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,cashTendered:e.target.value}:v))}/><small className=\"text-slate-500\">Change {cashChange(line.cashTendered,line.amount)}</small></label>}{method==='MPESA'&&<><label className=\"block text-sm\">M-Pesa transaction code<input className={field} value={line.reference} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,reference:e.target.value.toUpperCase()}:v))}/></label><label className=\"block text-sm\">Amount shown on receipt (KES)<input type=\"number\" min=\"0.01\" step=\"0.01\" className={field} value={line.receivedAmount} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,receivedAmount:e.target.value}:v))}/></label><label className=\"block text-sm\">Receipt time<input type=\"datetime-local\" className={field} value={line.receivedAt} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,receivedAt:e.target.value}:v))}/></label></>}{method==='CARD'&&<label className=\"block text-sm\">External authorization reference<input className={field} value={line.reference} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,reference:e.target.value}:v))}/></label>}{method!=='CASH'&&<label className=\"flex items-start gap-2 text-xs\"><input type=\"checkbox\" checked={line.confirmed} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,confirmed:e.target.checked}:v))}/><span>I manually verified that the funds were received. ServOS did not initiate or confirm a provider payment.</span></label>}{!permitted&&<p role=\"alert\" className=\"text-xs text-rose-300\">Your role cannot record M-Pesa payments.</p>}{tenders.length>1&&<button type=\"button\" className={button} onClick={()=>setTenders(old=>old.filter((_,i)=>i!==index))}>Remove tender</button>}</fieldset>})}<div className=\"flex flex-wrap gap-2\"><button type=\"button\" disabled={tenders.length>=10||!accounts.length} className={button} onClick={()=>setTenders(old=>[...old,draftTender(accounts.find(a=>data(a)?.method!=='CASH')?.id||accounts[0]?.id||'')])}>Add split tender</button><button disabled={disabled||!openTill||!canPay||tenders.some(t=>!t.accountId||!allowed(session,'mpesa.record')&&data(accounts.find(a=>a.id===t.accountId))?.method==='MPESA')} className={primary} onClick={()=>void submitPayment().catch(e=>setNotice(String(e)))}><CreditCard className=\"mr-1 inline h-4 w-4\"/>Record payment</button></div><p className=\"text-xs text-slate-500\">Online server confirmation is required. M-Pesa codes must allocate the exact receipt amount in this staged flow. Failed or offline submissions remain queued as drafts/commands; no provider initiation is represented.</p></div></Modal>}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/runtime/web/WebPosView.tsx:183:1881",
+      "file": "src/runtime/web/WebPosView.tsx",
+      "line": 183,
+      "kind": "onChange",
+      "source": "{paying&&activeOrder&&<Modal title={`Settle ${String(data(activeOrder)?.tabName||data(activeOrder)?.orderNumber)}`} onClose={()=>setPaying(false)}><div className=\"space-y-3\"><div className=\"flex justify-between rounded-lg bg-slate-950 p-3\"><span>Outstanding</span><b>{money(balance)}</b></div>{tenders.map((line,index)=>{const method=String(data(accounts.find(a=>a.id===line.accountId))?.method||'');const permitted=method!=='MPESA'||allowed(session,'mpesa.record');return <fieldset key={index} className=\"space-y-2 rounded-lg border border-slate-700 p-3\"><legend className=\"px-1 text-sm font-bold\">Tender {index+1}</legend><label className=\"block text-sm\">Payment account<select className={field} value={line.accountId} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...draftTender(e.target.value,v.amount)}:v))}><option value=\"\">Select account</option>{accounts.map(account=><option key={account.id} value={account.id}>{String(data(account)?.name)} · {String(data(account)?.method)}</option>)}</select></label><label className=\"block text-sm\">Amount (KES)<input aria-label={`Tender ${index+1} amount in KES`} type=\"number\" min=\"0.01\" step=\"0.01\" className={field} value={line.amount} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,amount:e.target.value,...(method==='CASH'?{cashTendered:e.target.value}:{}),...(method==='MPESA'?{receivedAmount:e.target.value}:{})}:v))}/></label>{method==='CASH'&&<label className=\"block text-sm\">Cash received (KES)<input type=\"number\" min=\"0\" step=\"0.01\" className={field} value={line.cashTendered} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,cashTendered:e.target.value}:v))}/><small className=\"text-slate-500\">Change {cashChange(line.cashTendered,line.amount)}</small></label>}{method==='MPESA'&&<><label className=\"block text-sm\">M-Pesa transaction code<input className={field} value={line.reference} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,reference:e.target.value.toUpperCase()}:v))}/></label><label className=\"block text-sm\">Amount shown on receipt (KES)<input type=\"number\" min=\"0.01\" step=\"0.01\" className={field} value={line.receivedAmount} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,receivedAmount:e.target.value}:v))}/></label><label className=\"block text-sm\">Receipt time<input type=\"datetime-local\" className={field} value={line.receivedAt} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,receivedAt:e.target.value}:v))}/></label></>}{method==='CARD'&&<label className=\"block text-sm\">External authorization reference<input className={field} value={line.reference} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,reference:e.target.value}:v))}/></label>}{method!=='CASH'&&<label className=\"flex items-start gap-2 text-xs\"><input type=\"checkbox\" checked={line.confirmed} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,confirmed:e.target.checked}:v))}/><span>I manually verified that the funds were received. ServOS did not initiate or confirm a provider payment.</span></label>}{!permitted&&<p role=\"alert\" className=\"text-xs text-rose-300\">Your role cannot record M-Pesa payments.</p>}{tenders.length>1&&<button type=\"button\" className={button} onClick={()=>setTenders(old=>old.filter((_,i)=>i!==index))}>Remove tender</button>}</fieldset>})}<div className=\"flex flex-wrap gap-2\"><button type=\"button\" disabled={tenders.length>=10||!accounts.length} className={button} onClick={()=>setTenders(old=>[...old,draftTender(accounts.find(a=>data(a)?.method!=='CASH')?.id||accounts[0]?.id||'')])}>Add split tender</button><button disabled={disabled||!openTill||!canPay||tenders.some(t=>!t.accountId||!allowed(session,'mpesa.record')&&data(accounts.find(a=>a.id===t.accountId))?.method==='MPESA')} className={primary} onClick={()=>void submitPayment().catch(e=>setNotice(String(e)))}><CreditCard className=\"mr-1 inline h-4 w-4\"/>Record payment</button></div><p className=\"text-xs text-slate-500\">Online server confirmation is required. M-Pesa codes must allocate the exact receipt amount in this staged flow. Failed or offline submissions remain queued as drafts/commands; no provider initiation is represented.</p></div></Modal>}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/runtime/web/WebPosView.tsx:183:2057",
+      "file": "src/runtime/web/WebPosView.tsx",
+      "line": 183,
+      "kind": "input",
+      "source": "{paying&&activeOrder&&<Modal title={`Settle ${String(data(activeOrder)?.tabName||data(activeOrder)?.orderNumber)}`} onClose={()=>setPaying(false)}><div className=\"space-y-3\"><div className=\"flex justify-between rounded-lg bg-slate-950 p-3\"><span>Outstanding</span><b>{money(balance)}</b></div>{tenders.map((line,index)=>{const method=String(data(accounts.find(a=>a.id===line.accountId))?.method||'');const permitted=method!=='MPESA'||allowed(session,'mpesa.record');return <fieldset key={index} className=\"space-y-2 rounded-lg border border-slate-700 p-3\"><legend className=\"px-1 text-sm font-bold\">Tender {index+1}</legend><label className=\"block text-sm\">Payment account<select className={field} value={line.accountId} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...draftTender(e.target.value,v.amount)}:v))}><option value=\"\">Select account</option>{accounts.map(account=><option key={account.id} value={account.id}>{String(data(account)?.name)} · {String(data(account)?.method)}</option>)}</select></label><label className=\"block text-sm\">Amount (KES)<input aria-label={`Tender ${index+1} amount in KES`} type=\"number\" min=\"0.01\" step=\"0.01\" className={field} value={line.amount} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,amount:e.target.value,...(method==='CASH'?{cashTendered:e.target.value}:{}),...(method==='MPESA'?{receivedAmount:e.target.value}:{})}:v))}/></label>{method==='CASH'&&<label className=\"block text-sm\">Cash received (KES)<input type=\"number\" min=\"0\" step=\"0.01\" className={field} value={line.cashTendered} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,cashTendered:e.target.value}:v))}/><small className=\"text-slate-500\">Change {cashChange(line.cashTendered,line.amount)}</small></label>}{method==='MPESA'&&<><label className=\"block text-sm\">M-Pesa transaction code<input className={field} value={line.reference} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,reference:e.target.value.toUpperCase()}:v))}/></label><label className=\"block text-sm\">Amount shown on receipt (KES)<input type=\"number\" min=\"0.01\" step=\"0.01\" className={field} value={line.receivedAmount} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,receivedAmount:e.target.value}:v))}/></label><label className=\"block text-sm\">Receipt time<input type=\"datetime-local\" className={field} value={line.receivedAt} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,receivedAt:e.target.value}:v))}/></label></>}{method==='CARD'&&<label className=\"block text-sm\">External authorization reference<input className={field} value={line.reference} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,reference:e.target.value}:v))}/></label>}{method!=='CASH'&&<label className=\"flex items-start gap-2 text-xs\"><input type=\"checkbox\" checked={line.confirmed} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,confirmed:e.target.checked}:v))}/><span>I manually verified that the funds were received. ServOS did not initiate or confirm a provider payment.</span></label>}{!permitted&&<p role=\"alert\" className=\"text-xs text-rose-300\">Your role cannot record M-Pesa payments.</p>}{tenders.length>1&&<button type=\"button\" className={button} onClick={()=>setTenders(old=>old.filter((_,i)=>i!==index))}>Remove tender</button>}</fieldset>})}<div className=\"flex flex-wrap gap-2\"><button type=\"button\" disabled={tenders.length>=10||!accounts.length} className={button} onClick={()=>setTenders(old=>[...old,draftTender(accounts.find(a=>data(a)?.method!=='CASH')?.id||accounts[0]?.id||'')])}>Add split tender</button><button disabled={disabled||!openTill||!canPay||tenders.some(t=>!t.accountId||!allowed(session,'mpesa.record')&&data(accounts.find(a=>a.id===t.accountId))?.method==='MPESA')} className={primary} onClick={()=>void submitPayment().catch(e=>setNotice(String(e)))}><CreditCard className=\"mr-1 inline h-4 w-4\"/>Record payment</button></div><p className=\"text-xs text-slate-500\">Online server confirmation is required. M-Pesa codes must allocate the exact receipt amount in this staged flow. Failed or offline submissions remain queued as drafts/commands; no provider initiation is represented.</p></div></Modal>}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/runtime/web/WebPosView.tsx:183:2147",
+      "file": "src/runtime/web/WebPosView.tsx",
+      "line": 183,
+      "kind": "onChange",
+      "source": "{paying&&activeOrder&&<Modal title={`Settle ${String(data(activeOrder)?.tabName||data(activeOrder)?.orderNumber)}`} onClose={()=>setPaying(false)}><div className=\"space-y-3\"><div className=\"flex justify-between rounded-lg bg-slate-950 p-3\"><span>Outstanding</span><b>{money(balance)}</b></div>{tenders.map((line,index)=>{const method=String(data(accounts.find(a=>a.id===line.accountId))?.method||'');const permitted=method!=='MPESA'||allowed(session,'mpesa.record');return <fieldset key={index} className=\"space-y-2 rounded-lg border border-slate-700 p-3\"><legend className=\"px-1 text-sm font-bold\">Tender {index+1}</legend><label className=\"block text-sm\">Payment account<select className={field} value={line.accountId} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...draftTender(e.target.value,v.amount)}:v))}><option value=\"\">Select account</option>{accounts.map(account=><option key={account.id} value={account.id}>{String(data(account)?.name)} · {String(data(account)?.method)}</option>)}</select></label><label className=\"block text-sm\">Amount (KES)<input aria-label={`Tender ${index+1} amount in KES`} type=\"number\" min=\"0.01\" step=\"0.01\" className={field} value={line.amount} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,amount:e.target.value,...(method==='CASH'?{cashTendered:e.target.value}:{}),...(method==='MPESA'?{receivedAmount:e.target.value}:{})}:v))}/></label>{method==='CASH'&&<label className=\"block text-sm\">Cash received (KES)<input type=\"number\" min=\"0\" step=\"0.01\" className={field} value={line.cashTendered} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,cashTendered:e.target.value}:v))}/><small className=\"text-slate-500\">Change {cashChange(line.cashTendered,line.amount)}</small></label>}{method==='MPESA'&&<><label className=\"block text-sm\">M-Pesa transaction code<input className={field} value={line.reference} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,reference:e.target.value.toUpperCase()}:v))}/></label><label className=\"block text-sm\">Amount shown on receipt (KES)<input type=\"number\" min=\"0.01\" step=\"0.01\" className={field} value={line.receivedAmount} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,receivedAmount:e.target.value}:v))}/></label><label className=\"block text-sm\">Receipt time<input type=\"datetime-local\" className={field} value={line.receivedAt} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,receivedAt:e.target.value}:v))}/></label></>}{method==='CARD'&&<label className=\"block text-sm\">External authorization reference<input className={field} value={line.reference} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,reference:e.target.value}:v))}/></label>}{method!=='CASH'&&<label className=\"flex items-start gap-2 text-xs\"><input type=\"checkbox\" checked={line.confirmed} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,confirmed:e.target.checked}:v))}/><span>I manually verified that the funds were received. ServOS did not initiate or confirm a provider payment.</span></label>}{!permitted&&<p role=\"alert\" className=\"text-xs text-rose-300\">Your role cannot record M-Pesa payments.</p>}{tenders.length>1&&<button type=\"button\" className={button} onClick={()=>setTenders(old=>old.filter((_,i)=>i!==index))}>Remove tender</button>}</fieldset>})}<div className=\"flex flex-wrap gap-2\"><button type=\"button\" disabled={tenders.length>=10||!accounts.length} className={button} onClick={()=>setTenders(old=>[...old,draftTender(accounts.find(a=>data(a)?.method!=='CASH')?.id||accounts[0]?.id||'')])}>Add split tender</button><button disabled={disabled||!openTill||!canPay||tenders.some(t=>!t.accountId||!allowed(session,'mpesa.record')&&data(accounts.find(a=>a.id===t.accountId))?.method==='MPESA')} className={primary} onClick={()=>void submitPayment().catch(e=>setNotice(String(e)))}><CreditCard className=\"mr-1 inline h-4 w-4\"/>Record payment</button></div><p className=\"text-xs text-slate-500\">Online server confirmation is required. M-Pesa codes must allocate the exact receipt amount in this staged flow. Failed or offline submissions remain queued as drafts/commands; no provider initiation is represented.</p></div></Modal>}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/runtime/web/WebPosView.tsx:183:2297",
+      "file": "src/runtime/web/WebPosView.tsx",
+      "line": 183,
+      "kind": "input",
+      "source": "{paying&&activeOrder&&<Modal title={`Settle ${String(data(activeOrder)?.tabName||data(activeOrder)?.orderNumber)}`} onClose={()=>setPaying(false)}><div className=\"space-y-3\"><div className=\"flex justify-between rounded-lg bg-slate-950 p-3\"><span>Outstanding</span><b>{money(balance)}</b></div>{tenders.map((line,index)=>{const method=String(data(accounts.find(a=>a.id===line.accountId))?.method||'');const permitted=method!=='MPESA'||allowed(session,'mpesa.record');return <fieldset key={index} className=\"space-y-2 rounded-lg border border-slate-700 p-3\"><legend className=\"px-1 text-sm font-bold\">Tender {index+1}</legend><label className=\"block text-sm\">Payment account<select className={field} value={line.accountId} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...draftTender(e.target.value,v.amount)}:v))}><option value=\"\">Select account</option>{accounts.map(account=><option key={account.id} value={account.id}>{String(data(account)?.name)} · {String(data(account)?.method)}</option>)}</select></label><label className=\"block text-sm\">Amount (KES)<input aria-label={`Tender ${index+1} amount in KES`} type=\"number\" min=\"0.01\" step=\"0.01\" className={field} value={line.amount} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,amount:e.target.value,...(method==='CASH'?{cashTendered:e.target.value}:{}),...(method==='MPESA'?{receivedAmount:e.target.value}:{})}:v))}/></label>{method==='CASH'&&<label className=\"block text-sm\">Cash received (KES)<input type=\"number\" min=\"0\" step=\"0.01\" className={field} value={line.cashTendered} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,cashTendered:e.target.value}:v))}/><small className=\"text-slate-500\">Change {cashChange(line.cashTendered,line.amount)}</small></label>}{method==='MPESA'&&<><label className=\"block text-sm\">M-Pesa transaction code<input className={field} value={line.reference} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,reference:e.target.value.toUpperCase()}:v))}/></label><label className=\"block text-sm\">Amount shown on receipt (KES)<input type=\"number\" min=\"0.01\" step=\"0.01\" className={field} value={line.receivedAmount} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,receivedAmount:e.target.value}:v))}/></label><label className=\"block text-sm\">Receipt time<input type=\"datetime-local\" className={field} value={line.receivedAt} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,receivedAt:e.target.value}:v))}/></label></>}{method==='CARD'&&<label className=\"block text-sm\">External authorization reference<input className={field} value={line.reference} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,reference:e.target.value}:v))}/></label>}{method!=='CASH'&&<label className=\"flex items-start gap-2 text-xs\"><input type=\"checkbox\" checked={line.confirmed} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,confirmed:e.target.checked}:v))}/><span>I manually verified that the funds were received. ServOS did not initiate or confirm a provider payment.</span></label>}{!permitted&&<p role=\"alert\" className=\"text-xs text-rose-300\">Your role cannot record M-Pesa payments.</p>}{tenders.length>1&&<button type=\"button\" className={button} onClick={()=>setTenders(old=>old.filter((_,i)=>i!==index))}>Remove tender</button>}</fieldset>})}<div className=\"flex flex-wrap gap-2\"><button type=\"button\" disabled={tenders.length>=10||!accounts.length} className={button} onClick={()=>setTenders(old=>[...old,draftTender(accounts.find(a=>data(a)?.method!=='CASH')?.id||accounts[0]?.id||'')])}>Add split tender</button><button disabled={disabled||!openTill||!canPay||tenders.some(t=>!t.accountId||!allowed(session,'mpesa.record')&&data(accounts.find(a=>a.id===t.accountId))?.method==='MPESA')} className={primary} onClick={()=>void submitPayment().catch(e=>setNotice(String(e)))}><CreditCard className=\"mr-1 inline h-4 w-4\"/>Record payment</button></div><p className=\"text-xs text-slate-500\">Online server confirmation is required. M-Pesa codes must allocate the exact receipt amount in this staged flow. Failed or offline submissions remain queued as drafts/commands; no provider initiation is represented.</p></div></Modal>}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/runtime/web/WebPosView.tsx:183:2368",
+      "file": "src/runtime/web/WebPosView.tsx",
+      "line": 183,
+      "kind": "onChange",
+      "source": "{paying&&activeOrder&&<Modal title={`Settle ${String(data(activeOrder)?.tabName||data(activeOrder)?.orderNumber)}`} onClose={()=>setPaying(false)}><div className=\"space-y-3\"><div className=\"flex justify-between rounded-lg bg-slate-950 p-3\"><span>Outstanding</span><b>{money(balance)}</b></div>{tenders.map((line,index)=>{const method=String(data(accounts.find(a=>a.id===line.accountId))?.method||'');const permitted=method!=='MPESA'||allowed(session,'mpesa.record');return <fieldset key={index} className=\"space-y-2 rounded-lg border border-slate-700 p-3\"><legend className=\"px-1 text-sm font-bold\">Tender {index+1}</legend><label className=\"block text-sm\">Payment account<select className={field} value={line.accountId} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...draftTender(e.target.value,v.amount)}:v))}><option value=\"\">Select account</option>{accounts.map(account=><option key={account.id} value={account.id}>{String(data(account)?.name)} · {String(data(account)?.method)}</option>)}</select></label><label className=\"block text-sm\">Amount (KES)<input aria-label={`Tender ${index+1} amount in KES`} type=\"number\" min=\"0.01\" step=\"0.01\" className={field} value={line.amount} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,amount:e.target.value,...(method==='CASH'?{cashTendered:e.target.value}:{}),...(method==='MPESA'?{receivedAmount:e.target.value}:{})}:v))}/></label>{method==='CASH'&&<label className=\"block text-sm\">Cash received (KES)<input type=\"number\" min=\"0\" step=\"0.01\" className={field} value={line.cashTendered} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,cashTendered:e.target.value}:v))}/><small className=\"text-slate-500\">Change {cashChange(line.cashTendered,line.amount)}</small></label>}{method==='MPESA'&&<><label className=\"block text-sm\">M-Pesa transaction code<input className={field} value={line.reference} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,reference:e.target.value.toUpperCase()}:v))}/></label><label className=\"block text-sm\">Amount shown on receipt (KES)<input type=\"number\" min=\"0.01\" step=\"0.01\" className={field} value={line.receivedAmount} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,receivedAmount:e.target.value}:v))}/></label><label className=\"block text-sm\">Receipt time<input type=\"datetime-local\" className={field} value={line.receivedAt} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,receivedAt:e.target.value}:v))}/></label></>}{method==='CARD'&&<label className=\"block text-sm\">External authorization reference<input className={field} value={line.reference} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,reference:e.target.value}:v))}/></label>}{method!=='CASH'&&<label className=\"flex items-start gap-2 text-xs\"><input type=\"checkbox\" checked={line.confirmed} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,confirmed:e.target.checked}:v))}/><span>I manually verified that the funds were received. ServOS did not initiate or confirm a provider payment.</span></label>}{!permitted&&<p role=\"alert\" className=\"text-xs text-rose-300\">Your role cannot record M-Pesa payments.</p>}{tenders.length>1&&<button type=\"button\" className={button} onClick={()=>setTenders(old=>old.filter((_,i)=>i!==index))}>Remove tender</button>}</fieldset>})}<div className=\"flex flex-wrap gap-2\"><button type=\"button\" disabled={tenders.length>=10||!accounts.length} className={button} onClick={()=>setTenders(old=>[...old,draftTender(accounts.find(a=>data(a)?.method!=='CASH')?.id||accounts[0]?.id||'')])}>Add split tender</button><button disabled={disabled||!openTill||!canPay||tenders.some(t=>!t.accountId||!allowed(session,'mpesa.record')&&data(accounts.find(a=>a.id===t.accountId))?.method==='MPESA')} className={primary} onClick={()=>void submitPayment().catch(e=>setNotice(String(e)))}><CreditCard className=\"mr-1 inline h-4 w-4\"/>Record payment</button></div><p className=\"text-xs text-slate-500\">Online server confirmation is required. M-Pesa codes must allocate the exact receipt amount in this staged flow. Failed or offline submissions remain queued as drafts/commands; no provider initiation is represented.</p></div></Modal>}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/runtime/web/WebPosView.tsx:183:2556",
+      "file": "src/runtime/web/WebPosView.tsx",
+      "line": 183,
+      "kind": "input",
+      "source": "{paying&&activeOrder&&<Modal title={`Settle ${String(data(activeOrder)?.tabName||data(activeOrder)?.orderNumber)}`} onClose={()=>setPaying(false)}><div className=\"space-y-3\"><div className=\"flex justify-between rounded-lg bg-slate-950 p-3\"><span>Outstanding</span><b>{money(balance)}</b></div>{tenders.map((line,index)=>{const method=String(data(accounts.find(a=>a.id===line.accountId))?.method||'');const permitted=method!=='MPESA'||allowed(session,'mpesa.record');return <fieldset key={index} className=\"space-y-2 rounded-lg border border-slate-700 p-3\"><legend className=\"px-1 text-sm font-bold\">Tender {index+1}</legend><label className=\"block text-sm\">Payment account<select className={field} value={line.accountId} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...draftTender(e.target.value,v.amount)}:v))}><option value=\"\">Select account</option>{accounts.map(account=><option key={account.id} value={account.id}>{String(data(account)?.name)} · {String(data(account)?.method)}</option>)}</select></label><label className=\"block text-sm\">Amount (KES)<input aria-label={`Tender ${index+1} amount in KES`} type=\"number\" min=\"0.01\" step=\"0.01\" className={field} value={line.amount} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,amount:e.target.value,...(method==='CASH'?{cashTendered:e.target.value}:{}),...(method==='MPESA'?{receivedAmount:e.target.value}:{})}:v))}/></label>{method==='CASH'&&<label className=\"block text-sm\">Cash received (KES)<input type=\"number\" min=\"0\" step=\"0.01\" className={field} value={line.cashTendered} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,cashTendered:e.target.value}:v))}/><small className=\"text-slate-500\">Change {cashChange(line.cashTendered,line.amount)}</small></label>}{method==='MPESA'&&<><label className=\"block text-sm\">M-Pesa transaction code<input className={field} value={line.reference} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,reference:e.target.value.toUpperCase()}:v))}/></label><label className=\"block text-sm\">Amount shown on receipt (KES)<input type=\"number\" min=\"0.01\" step=\"0.01\" className={field} value={line.receivedAmount} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,receivedAmount:e.target.value}:v))}/></label><label className=\"block text-sm\">Receipt time<input type=\"datetime-local\" className={field} value={line.receivedAt} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,receivedAt:e.target.value}:v))}/></label></>}{method==='CARD'&&<label className=\"block text-sm\">External authorization reference<input className={field} value={line.reference} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,reference:e.target.value}:v))}/></label>}{method!=='CASH'&&<label className=\"flex items-start gap-2 text-xs\"><input type=\"checkbox\" checked={line.confirmed} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,confirmed:e.target.checked}:v))}/><span>I manually verified that the funds were received. ServOS did not initiate or confirm a provider payment.</span></label>}{!permitted&&<p role=\"alert\" className=\"text-xs text-rose-300\">Your role cannot record M-Pesa payments.</p>}{tenders.length>1&&<button type=\"button\" className={button} onClick={()=>setTenders(old=>old.filter((_,i)=>i!==index))}>Remove tender</button>}</fieldset>})}<div className=\"flex flex-wrap gap-2\"><button type=\"button\" disabled={tenders.length>=10||!accounts.length} className={button} onClick={()=>setTenders(old=>[...old,draftTender(accounts.find(a=>data(a)?.method!=='CASH')?.id||accounts[0]?.id||'')])}>Add split tender</button><button disabled={disabled||!openTill||!canPay||tenders.some(t=>!t.accountId||!allowed(session,'mpesa.record')&&data(accounts.find(a=>a.id===t.accountId))?.method==='MPESA')} className={primary} onClick={()=>void submitPayment().catch(e=>setNotice(String(e)))}><CreditCard className=\"mr-1 inline h-4 w-4\"/>Record payment</button></div><p className=\"text-xs text-slate-500\">Online server confirmation is required. M-Pesa codes must allocate the exact receipt amount in this staged flow. Failed or offline submissions remain queued as drafts/commands; no provider initiation is represented.</p></div></Modal>}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/runtime/web/WebPosView.tsx:183:2604",
+      "file": "src/runtime/web/WebPosView.tsx",
+      "line": 183,
+      "kind": "onChange",
+      "source": "{paying&&activeOrder&&<Modal title={`Settle ${String(data(activeOrder)?.tabName||data(activeOrder)?.orderNumber)}`} onClose={()=>setPaying(false)}><div className=\"space-y-3\"><div className=\"flex justify-between rounded-lg bg-slate-950 p-3\"><span>Outstanding</span><b>{money(balance)}</b></div>{tenders.map((line,index)=>{const method=String(data(accounts.find(a=>a.id===line.accountId))?.method||'');const permitted=method!=='MPESA'||allowed(session,'mpesa.record');return <fieldset key={index} className=\"space-y-2 rounded-lg border border-slate-700 p-3\"><legend className=\"px-1 text-sm font-bold\">Tender {index+1}</legend><label className=\"block text-sm\">Payment account<select className={field} value={line.accountId} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...draftTender(e.target.value,v.amount)}:v))}><option value=\"\">Select account</option>{accounts.map(account=><option key={account.id} value={account.id}>{String(data(account)?.name)} · {String(data(account)?.method)}</option>)}</select></label><label className=\"block text-sm\">Amount (KES)<input aria-label={`Tender ${index+1} amount in KES`} type=\"number\" min=\"0.01\" step=\"0.01\" className={field} value={line.amount} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,amount:e.target.value,...(method==='CASH'?{cashTendered:e.target.value}:{}),...(method==='MPESA'?{receivedAmount:e.target.value}:{})}:v))}/></label>{method==='CASH'&&<label className=\"block text-sm\">Cash received (KES)<input type=\"number\" min=\"0\" step=\"0.01\" className={field} value={line.cashTendered} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,cashTendered:e.target.value}:v))}/><small className=\"text-slate-500\">Change {cashChange(line.cashTendered,line.amount)}</small></label>}{method==='MPESA'&&<><label className=\"block text-sm\">M-Pesa transaction code<input className={field} value={line.reference} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,reference:e.target.value.toUpperCase()}:v))}/></label><label className=\"block text-sm\">Amount shown on receipt (KES)<input type=\"number\" min=\"0.01\" step=\"0.01\" className={field} value={line.receivedAmount} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,receivedAmount:e.target.value}:v))}/></label><label className=\"block text-sm\">Receipt time<input type=\"datetime-local\" className={field} value={line.receivedAt} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,receivedAt:e.target.value}:v))}/></label></>}{method==='CARD'&&<label className=\"block text-sm\">External authorization reference<input className={field} value={line.reference} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,reference:e.target.value}:v))}/></label>}{method!=='CASH'&&<label className=\"flex items-start gap-2 text-xs\"><input type=\"checkbox\" checked={line.confirmed} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,confirmed:e.target.checked}:v))}/><span>I manually verified that the funds were received. ServOS did not initiate or confirm a provider payment.</span></label>}{!permitted&&<p role=\"alert\" className=\"text-xs text-rose-300\">Your role cannot record M-Pesa payments.</p>}{tenders.length>1&&<button type=\"button\" className={button} onClick={()=>setTenders(old=>old.filter((_,i)=>i!==index))}>Remove tender</button>}</fieldset>})}<div className=\"flex flex-wrap gap-2\"><button type=\"button\" disabled={tenders.length>=10||!accounts.length} className={button} onClick={()=>setTenders(old=>[...old,draftTender(accounts.find(a=>data(a)?.method!=='CASH')?.id||accounts[0]?.id||'')])}>Add split tender</button><button disabled={disabled||!openTill||!canPay||tenders.some(t=>!t.accountId||!allowed(session,'mpesa.record')&&data(accounts.find(a=>a.id===t.accountId))?.method==='MPESA')} className={primary} onClick={()=>void submitPayment().catch(e=>setNotice(String(e)))}><CreditCard className=\"mr-1 inline h-4 w-4\"/>Record payment</button></div><p className=\"text-xs text-slate-500\">Online server confirmation is required. M-Pesa codes must allocate the exact receipt amount in this staged flow. Failed or offline submissions remain queued as drafts/commands; no provider initiation is represented.</p></div></Modal>}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/runtime/web/WebPosView.tsx:183:2773",
+      "file": "src/runtime/web/WebPosView.tsx",
+      "line": 183,
+      "kind": "input",
+      "source": "{paying&&activeOrder&&<Modal title={`Settle ${String(data(activeOrder)?.tabName||data(activeOrder)?.orderNumber)}`} onClose={()=>setPaying(false)}><div className=\"space-y-3\"><div className=\"flex justify-between rounded-lg bg-slate-950 p-3\"><span>Outstanding</span><b>{money(balance)}</b></div>{tenders.map((line,index)=>{const method=String(data(accounts.find(a=>a.id===line.accountId))?.method||'');const permitted=method!=='MPESA'||allowed(session,'mpesa.record');return <fieldset key={index} className=\"space-y-2 rounded-lg border border-slate-700 p-3\"><legend className=\"px-1 text-sm font-bold\">Tender {index+1}</legend><label className=\"block text-sm\">Payment account<select className={field} value={line.accountId} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...draftTender(e.target.value,v.amount)}:v))}><option value=\"\">Select account</option>{accounts.map(account=><option key={account.id} value={account.id}>{String(data(account)?.name)} · {String(data(account)?.method)}</option>)}</select></label><label className=\"block text-sm\">Amount (KES)<input aria-label={`Tender ${index+1} amount in KES`} type=\"number\" min=\"0.01\" step=\"0.01\" className={field} value={line.amount} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,amount:e.target.value,...(method==='CASH'?{cashTendered:e.target.value}:{}),...(method==='MPESA'?{receivedAmount:e.target.value}:{})}:v))}/></label>{method==='CASH'&&<label className=\"block text-sm\">Cash received (KES)<input type=\"number\" min=\"0\" step=\"0.01\" className={field} value={line.cashTendered} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,cashTendered:e.target.value}:v))}/><small className=\"text-slate-500\">Change {cashChange(line.cashTendered,line.amount)}</small></label>}{method==='MPESA'&&<><label className=\"block text-sm\">M-Pesa transaction code<input className={field} value={line.reference} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,reference:e.target.value.toUpperCase()}:v))}/></label><label className=\"block text-sm\">Amount shown on receipt (KES)<input type=\"number\" min=\"0.01\" step=\"0.01\" className={field} value={line.receivedAmount} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,receivedAmount:e.target.value}:v))}/></label><label className=\"block text-sm\">Receipt time<input type=\"datetime-local\" className={field} value={line.receivedAt} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,receivedAt:e.target.value}:v))}/></label></>}{method==='CARD'&&<label className=\"block text-sm\">External authorization reference<input className={field} value={line.reference} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,reference:e.target.value}:v))}/></label>}{method!=='CASH'&&<label className=\"flex items-start gap-2 text-xs\"><input type=\"checkbox\" checked={line.confirmed} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,confirmed:e.target.checked}:v))}/><span>I manually verified that the funds were received. ServOS did not initiate or confirm a provider payment.</span></label>}{!permitted&&<p role=\"alert\" className=\"text-xs text-rose-300\">Your role cannot record M-Pesa payments.</p>}{tenders.length>1&&<button type=\"button\" className={button} onClick={()=>setTenders(old=>old.filter((_,i)=>i!==index))}>Remove tender</button>}</fieldset>})}<div className=\"flex flex-wrap gap-2\"><button type=\"button\" disabled={tenders.length>=10||!accounts.length} className={button} onClick={()=>setTenders(old=>[...old,draftTender(accounts.find(a=>data(a)?.method!=='CASH')?.id||accounts[0]?.id||'')])}>Add split tender</button><button disabled={disabled||!openTill||!canPay||tenders.some(t=>!t.accountId||!allowed(session,'mpesa.record')&&data(accounts.find(a=>a.id===t.accountId))?.method==='MPESA')} className={primary} onClick={()=>void submitPayment().catch(e=>setNotice(String(e)))}><CreditCard className=\"mr-1 inline h-4 w-4\"/>Record payment</button></div><p className=\"text-xs text-slate-500\">Online server confirmation is required. M-Pesa codes must allocate the exact receipt amount in this staged flow. Failed or offline submissions remain queued as drafts/commands; no provider initiation is represented.</p></div></Modal>}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/runtime/web/WebPosView.tsx:183:2821",
+      "file": "src/runtime/web/WebPosView.tsx",
+      "line": 183,
+      "kind": "onChange",
+      "source": "{paying&&activeOrder&&<Modal title={`Settle ${String(data(activeOrder)?.tabName||data(activeOrder)?.orderNumber)}`} onClose={()=>setPaying(false)}><div className=\"space-y-3\"><div className=\"flex justify-between rounded-lg bg-slate-950 p-3\"><span>Outstanding</span><b>{money(balance)}</b></div>{tenders.map((line,index)=>{const method=String(data(accounts.find(a=>a.id===line.accountId))?.method||'');const permitted=method!=='MPESA'||allowed(session,'mpesa.record');return <fieldset key={index} className=\"space-y-2 rounded-lg border border-slate-700 p-3\"><legend className=\"px-1 text-sm font-bold\">Tender {index+1}</legend><label className=\"block text-sm\">Payment account<select className={field} value={line.accountId} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...draftTender(e.target.value,v.amount)}:v))}><option value=\"\">Select account</option>{accounts.map(account=><option key={account.id} value={account.id}>{String(data(account)?.name)} · {String(data(account)?.method)}</option>)}</select></label><label className=\"block text-sm\">Amount (KES)<input aria-label={`Tender ${index+1} amount in KES`} type=\"number\" min=\"0.01\" step=\"0.01\" className={field} value={line.amount} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,amount:e.target.value,...(method==='CASH'?{cashTendered:e.target.value}:{}),...(method==='MPESA'?{receivedAmount:e.target.value}:{})}:v))}/></label>{method==='CASH'&&<label className=\"block text-sm\">Cash received (KES)<input type=\"number\" min=\"0\" step=\"0.01\" className={field} value={line.cashTendered} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,cashTendered:e.target.value}:v))}/><small className=\"text-slate-500\">Change {cashChange(line.cashTendered,line.amount)}</small></label>}{method==='MPESA'&&<><label className=\"block text-sm\">M-Pesa transaction code<input className={field} value={line.reference} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,reference:e.target.value.toUpperCase()}:v))}/></label><label className=\"block text-sm\">Amount shown on receipt (KES)<input type=\"number\" min=\"0.01\" step=\"0.01\" className={field} value={line.receivedAmount} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,receivedAmount:e.target.value}:v))}/></label><label className=\"block text-sm\">Receipt time<input type=\"datetime-local\" className={field} value={line.receivedAt} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,receivedAt:e.target.value}:v))}/></label></>}{method==='CARD'&&<label className=\"block text-sm\">External authorization reference<input className={field} value={line.reference} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,reference:e.target.value}:v))}/></label>}{method!=='CASH'&&<label className=\"flex items-start gap-2 text-xs\"><input type=\"checkbox\" checked={line.confirmed} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,confirmed:e.target.checked}:v))}/><span>I manually verified that the funds were received. ServOS did not initiate or confirm a provider payment.</span></label>}{!permitted&&<p role=\"alert\" className=\"text-xs text-rose-300\">Your role cannot record M-Pesa payments.</p>}{tenders.length>1&&<button type=\"button\" className={button} onClick={()=>setTenders(old=>old.filter((_,i)=>i!==index))}>Remove tender</button>}</fieldset>})}<div className=\"flex flex-wrap gap-2\"><button type=\"button\" disabled={tenders.length>=10||!accounts.length} className={button} onClick={()=>setTenders(old=>[...old,draftTender(accounts.find(a=>data(a)?.method!=='CASH')?.id||accounts[0]?.id||'')])}>Add split tender</button><button disabled={disabled||!openTill||!canPay||tenders.some(t=>!t.accountId||!allowed(session,'mpesa.record')&&data(accounts.find(a=>a.id===t.accountId))?.method==='MPESA')} className={primary} onClick={()=>void submitPayment().catch(e=>setNotice(String(e)))}><CreditCard className=\"mr-1 inline h-4 w-4\"/>Record payment</button></div><p className=\"text-xs text-slate-500\">Online server confirmation is required. M-Pesa codes must allocate the exact receipt amount in this staged flow. Failed or offline submissions remain queued as drafts/commands; no provider initiation is represented.</p></div></Modal>}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/runtime/web/WebPosView.tsx:183:3168",
+      "file": "src/runtime/web/WebPosView.tsx",
+      "line": 183,
+      "kind": "button",
+      "source": "{paying&&activeOrder&&<Modal title={`Settle ${String(data(activeOrder)?.tabName||data(activeOrder)?.orderNumber)}`} onClose={()=>setPaying(false)}><div className=\"space-y-3\"><div className=\"flex justify-between rounded-lg bg-slate-950 p-3\"><span>Outstanding</span><b>{money(balance)}</b></div>{tenders.map((line,index)=>{const method=String(data(accounts.find(a=>a.id===line.accountId))?.method||'');const permitted=method!=='MPESA'||allowed(session,'mpesa.record');return <fieldset key={index} className=\"space-y-2 rounded-lg border border-slate-700 p-3\"><legend className=\"px-1 text-sm font-bold\">Tender {index+1}</legend><label className=\"block text-sm\">Payment account<select className={field} value={line.accountId} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...draftTender(e.target.value,v.amount)}:v))}><option value=\"\">Select account</option>{accounts.map(account=><option key={account.id} value={account.id}>{String(data(account)?.name)} · {String(data(account)?.method)}</option>)}</select></label><label className=\"block text-sm\">Amount (KES)<input aria-label={`Tender ${index+1} amount in KES`} type=\"number\" min=\"0.01\" step=\"0.01\" className={field} value={line.amount} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,amount:e.target.value,...(method==='CASH'?{cashTendered:e.target.value}:{}),...(method==='MPESA'?{receivedAmount:e.target.value}:{})}:v))}/></label>{method==='CASH'&&<label className=\"block text-sm\">Cash received (KES)<input type=\"number\" min=\"0\" step=\"0.01\" className={field} value={line.cashTendered} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,cashTendered:e.target.value}:v))}/><small className=\"text-slate-500\">Change {cashChange(line.cashTendered,line.amount)}</small></label>}{method==='MPESA'&&<><label className=\"block text-sm\">M-Pesa transaction code<input className={field} value={line.reference} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,reference:e.target.value.toUpperCase()}:v))}/></label><label className=\"block text-sm\">Amount shown on receipt (KES)<input type=\"number\" min=\"0.01\" step=\"0.01\" className={field} value={line.receivedAmount} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,receivedAmount:e.target.value}:v))}/></label><label className=\"block text-sm\">Receipt time<input type=\"datetime-local\" className={field} value={line.receivedAt} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,receivedAt:e.target.value}:v))}/></label></>}{method==='CARD'&&<label className=\"block text-sm\">External authorization reference<input className={field} value={line.reference} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,reference:e.target.value}:v))}/></label>}{method!=='CASH'&&<label className=\"flex items-start gap-2 text-xs\"><input type=\"checkbox\" checked={line.confirmed} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,confirmed:e.target.checked}:v))}/><span>I manually verified that the funds were received. ServOS did not initiate or confirm a provider payment.</span></label>}{!permitted&&<p role=\"alert\" className=\"text-xs text-rose-300\">Your role cannot record M-Pesa payments.</p>}{tenders.length>1&&<button type=\"button\" className={button} onClick={()=>setTenders(old=>old.filter((_,i)=>i!==index))}>Remove tender</button>}</fieldset>})}<div className=\"flex flex-wrap gap-2\"><button type=\"button\" disabled={tenders.length>=10||!accounts.length} className={button} onClick={()=>setTenders(old=>[...old,draftTender(accounts.find(a=>data(a)?.method!=='CASH')?.id||accounts[0]?.id||'')])}>Add split tender</button><button disabled={disabled||!openTill||!canPay||tenders.some(t=>!t.accountId||!allowed(session,'mpesa.record')&&data(accounts.find(a=>a.id===t.accountId))?.method==='MPESA')} className={primary} onClick={()=>void submitPayment().catch(e=>setNotice(String(e)))}><CreditCard className=\"mr-1 inline h-4 w-4\"/>Record payment</button></div><p className=\"text-xs text-slate-500\">Online server confirmation is required. M-Pesa codes must allocate the exact receipt amount in this staged flow. Failed or offline submissions remain queued as drafts/commands; no provider initiation is represented.</p></div></Modal>}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/runtime/web/WebPosView.tsx:183:3209",
+      "file": "src/runtime/web/WebPosView.tsx",
+      "line": 183,
+      "kind": "onClick",
+      "source": "{paying&&activeOrder&&<Modal title={`Settle ${String(data(activeOrder)?.tabName||data(activeOrder)?.orderNumber)}`} onClose={()=>setPaying(false)}><div className=\"space-y-3\"><div className=\"flex justify-between rounded-lg bg-slate-950 p-3\"><span>Outstanding</span><b>{money(balance)}</b></div>{tenders.map((line,index)=>{const method=String(data(accounts.find(a=>a.id===line.accountId))?.method||'');const permitted=method!=='MPESA'||allowed(session,'mpesa.record');return <fieldset key={index} className=\"space-y-2 rounded-lg border border-slate-700 p-3\"><legend className=\"px-1 text-sm font-bold\">Tender {index+1}</legend><label className=\"block text-sm\">Payment account<select className={field} value={line.accountId} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...draftTender(e.target.value,v.amount)}:v))}><option value=\"\">Select account</option>{accounts.map(account=><option key={account.id} value={account.id}>{String(data(account)?.name)} · {String(data(account)?.method)}</option>)}</select></label><label className=\"block text-sm\">Amount (KES)<input aria-label={`Tender ${index+1} amount in KES`} type=\"number\" min=\"0.01\" step=\"0.01\" className={field} value={line.amount} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,amount:e.target.value,...(method==='CASH'?{cashTendered:e.target.value}:{}),...(method==='MPESA'?{receivedAmount:e.target.value}:{})}:v))}/></label>{method==='CASH'&&<label className=\"block text-sm\">Cash received (KES)<input type=\"number\" min=\"0\" step=\"0.01\" className={field} value={line.cashTendered} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,cashTendered:e.target.value}:v))}/><small className=\"text-slate-500\">Change {cashChange(line.cashTendered,line.amount)}</small></label>}{method==='MPESA'&&<><label className=\"block text-sm\">M-Pesa transaction code<input className={field} value={line.reference} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,reference:e.target.value.toUpperCase()}:v))}/></label><label className=\"block text-sm\">Amount shown on receipt (KES)<input type=\"number\" min=\"0.01\" step=\"0.01\" className={field} value={line.receivedAmount} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,receivedAmount:e.target.value}:v))}/></label><label className=\"block text-sm\">Receipt time<input type=\"datetime-local\" className={field} value={line.receivedAt} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,receivedAt:e.target.value}:v))}/></label></>}{method==='CARD'&&<label className=\"block text-sm\">External authorization reference<input className={field} value={line.reference} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,reference:e.target.value}:v))}/></label>}{method!=='CASH'&&<label className=\"flex items-start gap-2 text-xs\"><input type=\"checkbox\" checked={line.confirmed} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,confirmed:e.target.checked}:v))}/><span>I manually verified that the funds were received. ServOS did not initiate or confirm a provider payment.</span></label>}{!permitted&&<p role=\"alert\" className=\"text-xs text-rose-300\">Your role cannot record M-Pesa payments.</p>}{tenders.length>1&&<button type=\"button\" className={button} onClick={()=>setTenders(old=>old.filter((_,i)=>i!==index))}>Remove tender</button>}</fieldset>})}<div className=\"flex flex-wrap gap-2\"><button type=\"button\" disabled={tenders.length>=10||!accounts.length} className={button} onClick={()=>setTenders(old=>[...old,draftTender(accounts.find(a=>data(a)?.method!=='CASH')?.id||accounts[0]?.id||'')])}>Add split tender</button><button disabled={disabled||!openTill||!canPay||tenders.some(t=>!t.accountId||!allowed(session,'mpesa.record')&&data(accounts.find(a=>a.id===t.accountId))?.method==='MPESA')} className={primary} onClick={()=>void submitPayment().catch(e=>setNotice(String(e)))}><CreditCard className=\"mr-1 inline h-4 w-4\"/>Record payment</button></div><p className=\"text-xs text-slate-500\">Online server confirmation is required. M-Pesa codes must allocate the exact receipt amount in this staged flow. Failed or offline submissions remain queued as drafts/commands; no provider initiation is represented.</p></div></Modal>}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/runtime/web/WebPosView.tsx:183:3344",
+      "file": "src/runtime/web/WebPosView.tsx",
+      "line": 183,
+      "kind": "button",
+      "source": "{paying&&activeOrder&&<Modal title={`Settle ${String(data(activeOrder)?.tabName||data(activeOrder)?.orderNumber)}`} onClose={()=>setPaying(false)}><div className=\"space-y-3\"><div className=\"flex justify-between rounded-lg bg-slate-950 p-3\"><span>Outstanding</span><b>{money(balance)}</b></div>{tenders.map((line,index)=>{const method=String(data(accounts.find(a=>a.id===line.accountId))?.method||'');const permitted=method!=='MPESA'||allowed(session,'mpesa.record');return <fieldset key={index} className=\"space-y-2 rounded-lg border border-slate-700 p-3\"><legend className=\"px-1 text-sm font-bold\">Tender {index+1}</legend><label className=\"block text-sm\">Payment account<select className={field} value={line.accountId} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...draftTender(e.target.value,v.amount)}:v))}><option value=\"\">Select account</option>{accounts.map(account=><option key={account.id} value={account.id}>{String(data(account)?.name)} · {String(data(account)?.method)}</option>)}</select></label><label className=\"block text-sm\">Amount (KES)<input aria-label={`Tender ${index+1} amount in KES`} type=\"number\" min=\"0.01\" step=\"0.01\" className={field} value={line.amount} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,amount:e.target.value,...(method==='CASH'?{cashTendered:e.target.value}:{}),...(method==='MPESA'?{receivedAmount:e.target.value}:{})}:v))}/></label>{method==='CASH'&&<label className=\"block text-sm\">Cash received (KES)<input type=\"number\" min=\"0\" step=\"0.01\" className={field} value={line.cashTendered} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,cashTendered:e.target.value}:v))}/><small className=\"text-slate-500\">Change {cashChange(line.cashTendered,line.amount)}</small></label>}{method==='MPESA'&&<><label className=\"block text-sm\">M-Pesa transaction code<input className={field} value={line.reference} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,reference:e.target.value.toUpperCase()}:v))}/></label><label className=\"block text-sm\">Amount shown on receipt (KES)<input type=\"number\" min=\"0.01\" step=\"0.01\" className={field} value={line.receivedAmount} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,receivedAmount:e.target.value}:v))}/></label><label className=\"block text-sm\">Receipt time<input type=\"datetime-local\" className={field} value={line.receivedAt} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,receivedAt:e.target.value}:v))}/></label></>}{method==='CARD'&&<label className=\"block text-sm\">External authorization reference<input className={field} value={line.reference} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,reference:e.target.value}:v))}/></label>}{method!=='CASH'&&<label className=\"flex items-start gap-2 text-xs\"><input type=\"checkbox\" checked={line.confirmed} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,confirmed:e.target.checked}:v))}/><span>I manually verified that the funds were received. ServOS did not initiate or confirm a provider payment.</span></label>}{!permitted&&<p role=\"alert\" className=\"text-xs text-rose-300\">Your role cannot record M-Pesa payments.</p>}{tenders.length>1&&<button type=\"button\" className={button} onClick={()=>setTenders(old=>old.filter((_,i)=>i!==index))}>Remove tender</button>}</fieldset>})}<div className=\"flex flex-wrap gap-2\"><button type=\"button\" disabled={tenders.length>=10||!accounts.length} className={button} onClick={()=>setTenders(old=>[...old,draftTender(accounts.find(a=>data(a)?.method!=='CASH')?.id||accounts[0]?.id||'')])}>Add split tender</button><button disabled={disabled||!openTill||!canPay||tenders.some(t=>!t.accountId||!allowed(session,'mpesa.record')&&data(accounts.find(a=>a.id===t.accountId))?.method==='MPESA')} className={primary} onClick={()=>void submitPayment().catch(e=>setNotice(String(e)))}><CreditCard className=\"mr-1 inline h-4 w-4\"/>Record payment</button></div><p className=\"text-xs text-slate-500\">Online server confirmation is required. M-Pesa codes must allocate the exact receipt amount in this staged flow. Failed or offline submissions remain queued as drafts/commands; no provider initiation is represented.</p></div></Modal>}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/runtime/web/WebPosView.tsx:183:3433",
+      "file": "src/runtime/web/WebPosView.tsx",
+      "line": 183,
+      "kind": "onClick",
+      "source": "{paying&&activeOrder&&<Modal title={`Settle ${String(data(activeOrder)?.tabName||data(activeOrder)?.orderNumber)}`} onClose={()=>setPaying(false)}><div className=\"space-y-3\"><div className=\"flex justify-between rounded-lg bg-slate-950 p-3\"><span>Outstanding</span><b>{money(balance)}</b></div>{tenders.map((line,index)=>{const method=String(data(accounts.find(a=>a.id===line.accountId))?.method||'');const permitted=method!=='MPESA'||allowed(session,'mpesa.record');return <fieldset key={index} className=\"space-y-2 rounded-lg border border-slate-700 p-3\"><legend className=\"px-1 text-sm font-bold\">Tender {index+1}</legend><label className=\"block text-sm\">Payment account<select className={field} value={line.accountId} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...draftTender(e.target.value,v.amount)}:v))}><option value=\"\">Select account</option>{accounts.map(account=><option key={account.id} value={account.id}>{String(data(account)?.name)} · {String(data(account)?.method)}</option>)}</select></label><label className=\"block text-sm\">Amount (KES)<input aria-label={`Tender ${index+1} amount in KES`} type=\"number\" min=\"0.01\" step=\"0.01\" className={field} value={line.amount} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,amount:e.target.value,...(method==='CASH'?{cashTendered:e.target.value}:{}),...(method==='MPESA'?{receivedAmount:e.target.value}:{})}:v))}/></label>{method==='CASH'&&<label className=\"block text-sm\">Cash received (KES)<input type=\"number\" min=\"0\" step=\"0.01\" className={field} value={line.cashTendered} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,cashTendered:e.target.value}:v))}/><small className=\"text-slate-500\">Change {cashChange(line.cashTendered,line.amount)}</small></label>}{method==='MPESA'&&<><label className=\"block text-sm\">M-Pesa transaction code<input className={field} value={line.reference} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,reference:e.target.value.toUpperCase()}:v))}/></label><label className=\"block text-sm\">Amount shown on receipt (KES)<input type=\"number\" min=\"0.01\" step=\"0.01\" className={field} value={line.receivedAmount} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,receivedAmount:e.target.value}:v))}/></label><label className=\"block text-sm\">Receipt time<input type=\"datetime-local\" className={field} value={line.receivedAt} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,receivedAt:e.target.value}:v))}/></label></>}{method==='CARD'&&<label className=\"block text-sm\">External authorization reference<input className={field} value={line.reference} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,reference:e.target.value}:v))}/></label>}{method!=='CASH'&&<label className=\"flex items-start gap-2 text-xs\"><input type=\"checkbox\" checked={line.confirmed} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,confirmed:e.target.checked}:v))}/><span>I manually verified that the funds were received. ServOS did not initiate or confirm a provider payment.</span></label>}{!permitted&&<p role=\"alert\" className=\"text-xs text-rose-300\">Your role cannot record M-Pesa payments.</p>}{tenders.length>1&&<button type=\"button\" className={button} onClick={()=>setTenders(old=>old.filter((_,i)=>i!==index))}>Remove tender</button>}</fieldset>})}<div className=\"flex flex-wrap gap-2\"><button type=\"button\" disabled={tenders.length>=10||!accounts.length} className={button} onClick={()=>setTenders(old=>[...old,draftTender(accounts.find(a=>data(a)?.method!=='CASH')?.id||accounts[0]?.id||'')])}>Add split tender</button><button disabled={disabled||!openTill||!canPay||tenders.some(t=>!t.accountId||!allowed(session,'mpesa.record')&&data(accounts.find(a=>a.id===t.accountId))?.method==='MPESA')} className={primary} onClick={()=>void submitPayment().catch(e=>setNotice(String(e)))}><CreditCard className=\"mr-1 inline h-4 w-4\"/>Record payment</button></div><p className=\"text-xs text-slate-500\">Online server confirmation is required. M-Pesa codes must allocate the exact receipt amount in this staged flow. Failed or offline submissions remain queued as drafts/commands; no provider initiation is represented.</p></div></Modal>}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/runtime/web/WebPosView.tsx:183:3579",
+      "file": "src/runtime/web/WebPosView.tsx",
+      "line": 183,
+      "kind": "button",
+      "source": "{paying&&activeOrder&&<Modal title={`Settle ${String(data(activeOrder)?.tabName||data(activeOrder)?.orderNumber)}`} onClose={()=>setPaying(false)}><div className=\"space-y-3\"><div className=\"flex justify-between rounded-lg bg-slate-950 p-3\"><span>Outstanding</span><b>{money(balance)}</b></div>{tenders.map((line,index)=>{const method=String(data(accounts.find(a=>a.id===line.accountId))?.method||'');const permitted=method!=='MPESA'||allowed(session,'mpesa.record');return <fieldset key={index} className=\"space-y-2 rounded-lg border border-slate-700 p-3\"><legend className=\"px-1 text-sm font-bold\">Tender {index+1}</legend><label className=\"block text-sm\">Payment account<select className={field} value={line.accountId} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...draftTender(e.target.value,v.amount)}:v))}><option value=\"\">Select account</option>{accounts.map(account=><option key={account.id} value={account.id}>{String(data(account)?.name)} · {String(data(account)?.method)}</option>)}</select></label><label className=\"block text-sm\">Amount (KES)<input aria-label={`Tender ${index+1} amount in KES`} type=\"number\" min=\"0.01\" step=\"0.01\" className={field} value={line.amount} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,amount:e.target.value,...(method==='CASH'?{cashTendered:e.target.value}:{}),...(method==='MPESA'?{receivedAmount:e.target.value}:{})}:v))}/></label>{method==='CASH'&&<label className=\"block text-sm\">Cash received (KES)<input type=\"number\" min=\"0\" step=\"0.01\" className={field} value={line.cashTendered} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,cashTendered:e.target.value}:v))}/><small className=\"text-slate-500\">Change {cashChange(line.cashTendered,line.amount)}</small></label>}{method==='MPESA'&&<><label className=\"block text-sm\">M-Pesa transaction code<input className={field} value={line.reference} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,reference:e.target.value.toUpperCase()}:v))}/></label><label className=\"block text-sm\">Amount shown on receipt (KES)<input type=\"number\" min=\"0.01\" step=\"0.01\" className={field} value={line.receivedAmount} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,receivedAmount:e.target.value}:v))}/></label><label className=\"block text-sm\">Receipt time<input type=\"datetime-local\" className={field} value={line.receivedAt} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,receivedAt:e.target.value}:v))}/></label></>}{method==='CARD'&&<label className=\"block text-sm\">External authorization reference<input className={field} value={line.reference} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,reference:e.target.value}:v))}/></label>}{method!=='CASH'&&<label className=\"flex items-start gap-2 text-xs\"><input type=\"checkbox\" checked={line.confirmed} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,confirmed:e.target.checked}:v))}/><span>I manually verified that the funds were received. ServOS did not initiate or confirm a provider payment.</span></label>}{!permitted&&<p role=\"alert\" className=\"text-xs text-rose-300\">Your role cannot record M-Pesa payments.</p>}{tenders.length>1&&<button type=\"button\" className={button} onClick={()=>setTenders(old=>old.filter((_,i)=>i!==index))}>Remove tender</button>}</fieldset>})}<div className=\"flex flex-wrap gap-2\"><button type=\"button\" disabled={tenders.length>=10||!accounts.length} className={button} onClick={()=>setTenders(old=>[...old,draftTender(accounts.find(a=>data(a)?.method!=='CASH')?.id||accounts[0]?.id||'')])}>Add split tender</button><button disabled={disabled||!openTill||!canPay||tenders.some(t=>!t.accountId||!allowed(session,'mpesa.record')&&data(accounts.find(a=>a.id===t.accountId))?.method==='MPESA')} className={primary} onClick={()=>void submitPayment().catch(e=>setNotice(String(e)))}><CreditCard className=\"mr-1 inline h-4 w-4\"/>Record payment</button></div><p className=\"text-xs text-slate-500\">Online server confirmation is required. M-Pesa codes must allocate the exact receipt amount in this staged flow. Failed or offline submissions remain queued as drafts/commands; no provider initiation is represented.</p></div></Modal>}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/runtime/web/WebPosView.tsx:183:3774",
+      "file": "src/runtime/web/WebPosView.tsx",
+      "line": 183,
+      "kind": "onClick",
+      "source": "{paying&&activeOrder&&<Modal title={`Settle ${String(data(activeOrder)?.tabName||data(activeOrder)?.orderNumber)}`} onClose={()=>setPaying(false)}><div className=\"space-y-3\"><div className=\"flex justify-between rounded-lg bg-slate-950 p-3\"><span>Outstanding</span><b>{money(balance)}</b></div>{tenders.map((line,index)=>{const method=String(data(accounts.find(a=>a.id===line.accountId))?.method||'');const permitted=method!=='MPESA'||allowed(session,'mpesa.record');return <fieldset key={index} className=\"space-y-2 rounded-lg border border-slate-700 p-3\"><legend className=\"px-1 text-sm font-bold\">Tender {index+1}</legend><label className=\"block text-sm\">Payment account<select className={field} value={line.accountId} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...draftTender(e.target.value,v.amount)}:v))}><option value=\"\">Select account</option>{accounts.map(account=><option key={account.id} value={account.id}>{String(data(account)?.name)} · {String(data(account)?.method)}</option>)}</select></label><label className=\"block text-sm\">Amount (KES)<input aria-label={`Tender ${index+1} amount in KES`} type=\"number\" min=\"0.01\" step=\"0.01\" className={field} value={line.amount} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,amount:e.target.value,...(method==='CASH'?{cashTendered:e.target.value}:{}),...(method==='MPESA'?{receivedAmount:e.target.value}:{})}:v))}/></label>{method==='CASH'&&<label className=\"block text-sm\">Cash received (KES)<input type=\"number\" min=\"0\" step=\"0.01\" className={field} value={line.cashTendered} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,cashTendered:e.target.value}:v))}/><small className=\"text-slate-500\">Change {cashChange(line.cashTendered,line.amount)}</small></label>}{method==='MPESA'&&<><label className=\"block text-sm\">M-Pesa transaction code<input className={field} value={line.reference} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,reference:e.target.value.toUpperCase()}:v))}/></label><label className=\"block text-sm\">Amount shown on receipt (KES)<input type=\"number\" min=\"0.01\" step=\"0.01\" className={field} value={line.receivedAmount} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,receivedAmount:e.target.value}:v))}/></label><label className=\"block text-sm\">Receipt time<input type=\"datetime-local\" className={field} value={line.receivedAt} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,receivedAt:e.target.value}:v))}/></label></>}{method==='CARD'&&<label className=\"block text-sm\">External authorization reference<input className={field} value={line.reference} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,reference:e.target.value}:v))}/></label>}{method!=='CASH'&&<label className=\"flex items-start gap-2 text-xs\"><input type=\"checkbox\" checked={line.confirmed} onChange={e=>setTenders(old=>old.map((v,i)=>i===index?{...v,confirmed:e.target.checked}:v))}/><span>I manually verified that the funds were received. ServOS did not initiate or confirm a provider payment.</span></label>}{!permitted&&<p role=\"alert\" className=\"text-xs text-rose-300\">Your role cannot record M-Pesa payments.</p>}{tenders.length>1&&<button type=\"button\" className={button} onClick={()=>setTenders(old=>old.filter((_,i)=>i!==index))}>Remove tender</button>}</fieldset>})}<div className=\"flex flex-wrap gap-2\"><button type=\"button\" disabled={tenders.length>=10||!accounts.length} className={button} onClick={()=>setTenders(old=>[...old,draftTender(accounts.find(a=>data(a)?.method!=='CASH')?.id||accounts[0]?.id||'')])}>Add split tender</button><button disabled={disabled||!openTill||!canPay||tenders.some(t=>!t.accountId||!allowed(session,'mpesa.record')&&data(accounts.find(a=>a.id===t.accountId))?.method==='MPESA')} className={primary} onClick={()=>void submitPayment().catch(e=>setNotice(String(e)))}><CreditCard className=\"mr-1 inline h-4 w-4\"/>Record payment</button></div><p className=\"text-xs text-slate-500\">Online server confirmation is required. M-Pesa codes must allocate the exact receipt amount in this staged flow. Failed or offline submissions remain queued as drafts/commands; no provider initiation is represented.</p></div></Modal>}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/runtime/web/WebPosView.tsx:185:150",
+      "file": "src/runtime/web/WebPosView.tsx",
+      "line": 185,
       "kind": "textarea",
       "source": "{voiding&&activeOrder&&<Modal title=\"Void order\" onClose={()=>setVoiding(false)}><div className=\"space-y-3\"><label className=\"block text-sm\">Reason<textarea className={field} value={voidReason} onChange={e=>setVoidReason(e.target.value)}/></label><label className=\"block text-sm\">Fired-stock disposition<select className={field} value={voidDisposition} onChange={e=>setVoidDisposition(e.target.value)}><option>WASTE</option><option>CONSUMED</option><option>RETURN_SEALED</option><option>MANAGER_ADJUSTMENT</option></select></label><p className=\"text-xs text-slate-500\">RETURN_SEALED reverses the exact ingredient snapshot. WASTE/CONSUMED keep fired stock consumed. Manager approvals are added with the administration/security patch.</p><button disabled={disabled||!voidReason.trim()} className={primary} onClick={()=>void voidOrder()}>Void order</button></div></Modal>}",
       "status": "unverified",
@@ -31132,9 +31456,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/runtime/web/WebPosView.tsx:143:197",
+      "id": "src/runtime/web/WebPosView.tsx:185:197",
       "file": "src/runtime/web/WebPosView.tsx",
-      "line": 143,
+      "line": 185,
       "kind": "onChange",
       "source": "{voiding&&activeOrder&&<Modal title=\"Void order\" onClose={()=>setVoiding(false)}><div className=\"space-y-3\"><label className=\"block text-sm\">Reason<textarea className={field} value={voidReason} onChange={e=>setVoidReason(e.target.value)}/></label><label className=\"block text-sm\">Fired-stock disposition<select className={field} value={voidDisposition} onChange={e=>setVoidDisposition(e.target.value)}><option>WASTE</option><option>CONSUMED</option><option>RETURN_SEALED</option><option>MANAGER_ADJUSTMENT</option></select></label><p className=\"text-xs text-slate-500\">RETURN_SEALED reverses the exact ingredient snapshot. WASTE/CONSUMED keep fired stock consumed. Manager approvals are added with the administration/security patch.</p><button disabled={disabled||!voidReason.trim()} className={primary} onClick={()=>void voidOrder()}>Void order</button></div></Modal>}",
       "status": "unverified",
@@ -31144,9 +31468,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/runtime/web/WebPosView.tsx:143:306",
+      "id": "src/runtime/web/WebPosView.tsx:185:306",
       "file": "src/runtime/web/WebPosView.tsx",
-      "line": 143,
+      "line": 185,
       "kind": "select",
       "source": "{voiding&&activeOrder&&<Modal title=\"Void order\" onClose={()=>setVoiding(false)}><div className=\"space-y-3\"><label className=\"block text-sm\">Reason<textarea className={field} value={voidReason} onChange={e=>setVoidReason(e.target.value)}/></label><label className=\"block text-sm\">Fired-stock disposition<select className={field} value={voidDisposition} onChange={e=>setVoidDisposition(e.target.value)}><option>WASTE</option><option>CONSUMED</option><option>RETURN_SEALED</option><option>MANAGER_ADJUSTMENT</option></select></label><p className=\"text-xs text-slate-500\">RETURN_SEALED reverses the exact ingredient snapshot. WASTE/CONSUMED keep fired stock consumed. Manager approvals are added with the administration/security patch.</p><button disabled={disabled||!voidReason.trim()} className={primary} onClick={()=>void voidOrder()}>Void order</button></div></Modal>}",
       "status": "unverified",
@@ -31156,9 +31480,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/runtime/web/WebPosView.tsx:143:356",
+      "id": "src/runtime/web/WebPosView.tsx:185:356",
       "file": "src/runtime/web/WebPosView.tsx",
-      "line": 143,
+      "line": 185,
       "kind": "onChange",
       "source": "{voiding&&activeOrder&&<Modal title=\"Void order\" onClose={()=>setVoiding(false)}><div className=\"space-y-3\"><label className=\"block text-sm\">Reason<textarea className={field} value={voidReason} onChange={e=>setVoidReason(e.target.value)}/></label><label className=\"block text-sm\">Fired-stock disposition<select className={field} value={voidDisposition} onChange={e=>setVoidDisposition(e.target.value)}><option>WASTE</option><option>CONSUMED</option><option>RETURN_SEALED</option><option>MANAGER_ADJUSTMENT</option></select></label><p className=\"text-xs text-slate-500\">RETURN_SEALED reverses the exact ingredient snapshot. WASTE/CONSUMED keep fired stock consumed. Manager approvals are added with the administration/security patch.</p><button disabled={disabled||!voidReason.trim()} className={primary} onClick={()=>void voidOrder()}>Void order</button></div></Modal>}",
       "status": "unverified",
@@ -31168,9 +31492,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/runtime/web/WebPosView.tsx:143:739",
+      "id": "src/runtime/web/WebPosView.tsx:185:739",
       "file": "src/runtime/web/WebPosView.tsx",
-      "line": 143,
+      "line": 185,
       "kind": "button",
       "source": "{voiding&&activeOrder&&<Modal title=\"Void order\" onClose={()=>setVoiding(false)}><div className=\"space-y-3\"><label className=\"block text-sm\">Reason<textarea className={field} value={voidReason} onChange={e=>setVoidReason(e.target.value)}/></label><label className=\"block text-sm\">Fired-stock disposition<select className={field} value={voidDisposition} onChange={e=>setVoidDisposition(e.target.value)}><option>WASTE</option><option>CONSUMED</option><option>RETURN_SEALED</option><option>MANAGER_ADJUSTMENT</option></select></label><p className=\"text-xs text-slate-500\">RETURN_SEALED reverses the exact ingredient snapshot. WASTE/CONSUMED keep fired stock consumed. Manager approvals are added with the administration/security patch.</p><button disabled={disabled||!voidReason.trim()} className={primary} onClick={()=>void voidOrder()}>Void order</button></div></Modal>}",
       "status": "unverified",
@@ -31180,9 +31504,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/runtime/web/WebPosView.tsx:143:807",
+      "id": "src/runtime/web/WebPosView.tsx:185:807",
       "file": "src/runtime/web/WebPosView.tsx",
-      "line": 143,
+      "line": 185,
       "kind": "onClick",
       "source": "{voiding&&activeOrder&&<Modal title=\"Void order\" onClose={()=>setVoiding(false)}><div className=\"space-y-3\"><label className=\"block text-sm\">Reason<textarea className={field} value={voidReason} onChange={e=>setVoidReason(e.target.value)}/></label><label className=\"block text-sm\">Fired-stock disposition<select className={field} value={voidDisposition} onChange={e=>setVoidDisposition(e.target.value)}><option>WASTE</option><option>CONSUMED</option><option>RETURN_SEALED</option><option>MANAGER_ADJUSTMENT</option></select></label><p className=\"text-xs text-slate-500\">RETURN_SEALED reverses the exact ingredient snapshot. WASTE/CONSUMED keep fired stock consumed. Manager approvals are added with the administration/security patch.</p><button disabled={disabled||!voidReason.trim()} className={primary} onClick={()=>void voidOrder()}>Void order</button></div></Modal>}",
       "status": "unverified",
@@ -31192,9 +31516,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/runtime/web/WebPosView.tsx:147:413",
+      "id": "src/runtime/web/WebPosView.tsx:189:413",
       "file": "src/runtime/web/WebPosView.tsx",
-      "line": 147,
+      "line": 189,
       "kind": "button",
       "source": "const Modal=({title,onClose,children}:{title:string;onClose:()=>void;children:React.ReactNode})=><div className=\"fixed inset-0 z-50 overflow-y-auto bg-black/70 p-4\"><section role=\"dialog\" aria-modal=\"true\" aria-label={title} className=\"mx-auto my-8 max-w-xl rounded-xl border border-slate-700 bg-slate-900 p-5\"><div className=\"mb-4 flex items-center justify-between\"><h3 className=\"text-lg font-bold\">{title}</h3><button className={button} onClick={onClose}>Close</button></div>{children}</section></div>;",
       "status": "unverified",
@@ -31204,9 +31528,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/runtime/web/WebPosView.tsx:147:440",
+      "id": "src/runtime/web/WebPosView.tsx:189:440",
       "file": "src/runtime/web/WebPosView.tsx",
-      "line": 147,
+      "line": 189,
       "kind": "onClick",
       "source": "const Modal=({title,onClose,children}:{title:string;onClose:()=>void;children:React.ReactNode})=><div className=\"fixed inset-0 z-50 overflow-y-auto bg-black/70 p-4\"><section role=\"dialog\" aria-modal=\"true\" aria-label={title} className=\"mx-auto my-8 max-w-xl rounded-xl border border-slate-700 bg-slate-900 p-5\"><div className=\"mb-4 flex items-center justify-between\"><h3 className=\"text-lg font-bold\">{title}</h3><button className={button} onClick={onClose}>Close</button></div>{children}</section></div>;",
       "status": "unverified",

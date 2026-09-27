@@ -14,7 +14,9 @@ test.describe('transactional browser with PostgreSQL',()=>{
   docker(['run','--rm','-d','--name',container,'-e','POSTGRES_HOST_AUTH_METHOD=trust','postgres:18.6-bookworm']);running=true;
   let databaseReady=false;
   for(let i=0;i<60;i++){
-   if(spawnSync('docker',['exec',container,'psql','-U','postgres','-Atqc','select 1'],{stdio:'ignore'}).status===0){databaseReady=true;break}
+   const logs=spawnSync('docker',['logs',container],{encoding:'utf8'});
+   const initialized=`${logs.stdout||''}${logs.stderr||''}`.includes('PostgreSQL init process complete; ready for start up.');
+   if(initialized&&spawnSync('docker',['exec',container,'psql','-U','postgres','-Atqc','select 1'],{stdio:'ignore'}).status===0){databaseReady=true;break}
    await new Promise(r=>setTimeout(r,1000));
   }
   if(!databaseReady)throw new Error('Disposable PostgreSQL did not accept SQL connections within 60 seconds.');
@@ -108,5 +110,17 @@ test.describe('transactional browser with PostgreSQL',()=>{
   expect(sql("select count(*) from servos_v2.records where collection='payments' and data->>'method'='CASH' and data->>'amountMinor'='1250';").trim()).toBe('1');
   expect(sql("select count(*) from servos_v2.records where collection='receiptDocuments' and data->>'paidMinor'='1250' and data->>'balanceMinor'='0';").trim()).toBe('1');
   expect(sql("select count(*) from servos_v2.records where collection='journalEntries' and data->>'sourceType'='PAYMENT' and data->>'totalDebitMinor'=data->>'totalCreditMinor';").trim()).toBe('1');
+  await page.getByRole('button',{name:'Refund',exact:true}).click();
+  const refundDialog=page.getByRole('dialog');
+  await refundDialog.getByLabel('Refund amount in KES').fill('2.50');
+  await refundDialog.getByLabel('Reason').fill('Browser test partial refund');
+  await refundDialog.getByRole('button',{name:'Record refund'}).click();
+  await expect.poll(()=>sql("select count(*) from servos_v2.records where collection='refunds' and data->>'amountMinor'='250';").trim()).toBe('1');
+  await page.getByRole('button',{name:'Finance',exact:true}).click();
+  await page.getByRole('button',{name:'Close till',exact:true}).click();
+  await expect.poll(()=>sql("select data->>'status' from servos_v2.records where collection='tillSessions' and data->>'status'='CLOSED';").trim()).toBe('CLOSED');
+  await page.getByRole('button',{name:'Generate close-day snapshot',exact:true}).click();
+  await expect.poll(()=>sql("select count(*) from servos_v2.records where collection='closeDayReports' and data->'sales'->>'refundsMinor'='250';").trim()).toBe('1');
+  expect(sql("select data->'cash'->>'varianceMinor' from servos_v2.records where collection='closeDayReports';").trim()).toBe('0');
  });
 });
