@@ -3,7 +3,7 @@ import {Barcode,Boxes,ClipboardCheck,CreditCard,PackageCheck,Plus,Truck} from 'l
 import {barcodeEquals,useBarcodeScanner} from '../../hooks/useBarcodeScanner';
 import {allowed,type BusinessRecord,type WebSession} from './session';
 
-type CommandFn=(operation:string,collection:string,id:string,payload:Record<string,unknown>)=>Promise<void>;
+type CommandFn=(operation:string,collection:string,id:string,payload:Record<string,unknown>)=>Promise<unknown>;
 type DraftLine={
   lineId:string;
   treatment:'STOCK'|'EXPENSE'|'ASSET';
@@ -74,6 +74,7 @@ export function WebProcurementView({
   const [receiptInvoice,setReceiptInvoice]=useState('');
   const [receiptDeliveryNote,setReceiptDeliveryNote]=useState('');
   const [receiptNotes,setReceiptNotes]=useState('');
+  const [receiptApprovalToken,setReceiptApprovalToken]=useState('');
   const [scanCode,setScanCode]=useState('');
 
   const [matching,setMatching]=useState<BusinessRecord|null>(null);
@@ -144,7 +145,7 @@ export function WebProcurementView({
     setReceiving(order);
     setReceiptLocation(locations[0]?.id||'');
     setReceiptDraft({});
-    setReceiptInvoice('');setReceiptDeliveryNote('');setReceiptNotes('');setScanCode('');
+    setReceiptInvoice('');setReceiptDeliveryNote('');setReceiptNotes('');setReceiptApprovalToken('');setScanCode('');
   };
 
   const applyScan=(raw:string)=>{
@@ -181,7 +182,7 @@ export function WebProcurementView({
     await command('purchaseOrder.receive','purchaseOrders',receiving.id,{
       purchaseOrderId:receiving.id,
       ...(lines.some((received:any)=>{const line=(order.items||[]).find((x:any)=>x.lineId===received.lineId);return line?.treatment==='STOCK'})?{locationId:receiptLocation}:{}),
-      supplierInvoiceNumber:receiptInvoice.trim(),deliveryNote:receiptDeliveryNote.trim(),notes:receiptNotes.trim(),lines
+      supplierInvoiceNumber:receiptInvoice.trim(),deliveryNote:receiptDeliveryNote.trim(),notes:receiptNotes.trim(),lines,...(receiptApprovalToken.trim()?{approvalToken:receiptApprovalToken.trim()}: {})
     });
     setReceiving(null);
   };
@@ -306,6 +307,7 @@ export function WebProcurementView({
       {(data(receiving)?.items||[]).some((line:any)=>line.treatment==='STOCK')&&<><label className="block text-sm">Receiving stock location<select className={field} value={receiptLocation} onChange={e=>setReceiptLocation(e.target.value)}>{locations.map(location=><option key={location.id} value={location.id}>{String(data(location)?.name)}</option>)}</select></label><label className="block text-sm"><Barcode className="mr-1 inline h-4 w-4"/>Scan stock barcode / SKU<input data-barcode-capture="true" className={field} value={scanCode} onChange={e=>setScanCode(e.target.value)}/></label><button className={button} disabled={!scanCode.trim()} onClick={()=>applyScan(scanCode)}>Apply typed scan</button></>}
       <Input label="Supplier invoice reference (optional until matching)" value={receiptInvoice} set={setReceiptInvoice}/>
       <Input label="Delivery note" value={receiptDeliveryNote} set={setReceiptDeliveryNote}/>
+      <Input label="Manager approval token (required only when receiving above approved quantities)" value={receiptApprovalToken} set={setReceiptApprovalToken}/>
       <Input label="Receipt notes" value={receiptNotes} set={setReceiptNotes}/>
       <button disabled={disabled} className={primary} onClick={()=>void postReceipt()}>Post GRN atomically</button>
     </div></Modal>}

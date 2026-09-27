@@ -31,6 +31,22 @@ create table servos_v2.manager_approvals(
 );
 create table servos_v2.manager_approval_uses(token uuid primary key references servos_v2.manager_approvals(token),used_by uuid not null references auth.users(id),used_at timestamptz not null default now());
 
+create function servos_v2.require_manager_approval(token uuid,permission text,target text,initiator uuid)
+returns uuid language plpgsql set search_path='' as $$
+declare approval servos_v2.manager_approvals;
+begin
+ select * into approval from servos_v2.manager_approvals a
+ where a.token=$1 and a.permission=$2 and a.target=$3 and a.initiator_id=$4 and a.expires_at>now()
+ for update;
+ if not found then raise exception 'APPROVAL_INVALID: expired, used, wrong initiator, action, or target';end if;
+ if not exists(select 1 from servos_v2.staff_profiles s where s.auth_user_id=approval.approver_id and s.active and s.role in ('Admin','Manager')) then
+  raise exception 'APPROVAL_INVALID: expired, used, wrong initiator, action, or target';
+ end if;
+ insert into servos_v2.manager_approval_uses(token,used_by) values(approval.token,initiator) on conflict do nothing;
+ if not found then raise exception 'APPROVAL_INVALID: expired or already used';end if;
+ return approval.approver_id;
+end$$;
+
 create function servos_v2.canonical_permissions()
 returns text[] language sql immutable set search_path='' as $$
  select array[
@@ -62,6 +78,7 @@ begin
   when 'Custom' then array['business.view','help.view','records.view']
   else null end;
  if base is null or extras is null or not extras <@ all_permissions then raise exception 'VALIDATION_FAILED: unknown role or non-canonical permission';end if;
+ base:=array(select distinct p from unnest(base||array['devices.register','records.view']) p order by p);
  if role_name='Admin' and cardinality(extras)>0 then raise exception 'VALIDATION_FAILED: Admin permissions are fixed';end if;
  if role_name='Custom' then return array(select distinct p from unnest(base||extras) p order by p);end if;
  if not extras <@ base then raise exception 'PERMISSION_DENIED: permission exceeds role profile';end if;
@@ -104,17 +121,19 @@ begin
   if op='staff.create' and found then raise exception 'DUPLICATE_REFERENCE: staff identity';end if;
   if op<>'staff.create' and not found then raise exception 'VALIDATION_FAILED: staff profile missing';end if;
   if target=who and op in ('staff.deactivate','staff.update') and (op='staff.deactivate' or p ? 'role' or p ? 'active') then raise exception 'VALIDATION_FAILED: cannot change your own administrative identity';end if;
+  if op<>'staff.create' then
+   select version into current_version from servos_v2.records where collection='employees' and id=staff.staff_id;
+   select (v->>'version')::bigint into expected from jsonb_array_elements(command->'expectedVersions') v where v->>'collection'='employees' and v->>'id'=staff.staff_id;
+   if expected is null or expected<>current_version then raise exception 'VERSION_CONFLICT: reload staff profile';end if;
+  end if;
   staff_key:=coalesce(nullif(p->>'staffId',''),staff.staff_id);staff_name:=coalesce(nullif(trim(p->>'name'),''),staff.name);
   role_name:=coalesce(p->>'role',staff.role,'Server');extras:=case when p ? 'extraPermissions' then array(select jsonb_array_elements_text(p->'extraPermissions')) else coalesce(staff.extra_permissions,'{}') end;
   outlets:=case when p ? 'outletIds' then array(select jsonb_array_elements_text(p->'outletIds')) else coalesce(staff.outlet_ids,'{}') end;
   areas:=case when p ? 'serviceAreas' then array(select jsonb_array_elements_text(p->'serviceAreas')) else coalesce(staff.service_areas,'{}') end;
   if op='staff.create' then staff_key:=servos_v2.required_text(p,'staffId');staff_name:=servos_v2.required_text(p,'name');
-  elsif op='staff.update' then
-   select version into current_version from servos_v2.records where collection='employees' and id=staff.staff_id;
-   select (v->>'version')::bigint into expected from jsonb_array_elements(command->'expectedVersions') v where v->>'collection'='employees' and v->>'id'=staff.staff_id;
-   if expected is null or expected<>current_version then raise exception 'VERSION_CONFLICT: reload staff profile';end if;
   end if;
-  if role_name='Admin' and (not (select '*'=any(permissions) from servos_v2.members where user_id=who) or not (p ? 'role' and p->>'role'='Admin')) then raise exception 'PERMISSION_DENIED: only an existing Admin may assign Admin';end if;
+  if role_name='Admin' and (not exists(select 1 from servos_v2.staff_profiles where auth_user_id=who and active and role='Admin') or not (p ? 'role' and p->>'role'='Admin')) then raise exception 'PERMISSION_DENIED: only an existing Admin may assign Admin';end if;
+  if op='staff.update' and staff_key<>staff.staff_id then raise exception 'VALIDATION_FAILED: staff identity is immutable';end if;
   if staff.role='Admin' and staff.active and (op='staff.deactivate' or role_name<>'Admin' or p->>'active'='false') and (select count(*) from servos_v2.staff_profiles where active and role='Admin')<=1 then raise exception 'VALIDATION_FAILED: cannot remove the final active Admin';end if;
   grants:=servos_v2.role_permissions(role_name,extras);
   if not grants <@ (select permissions from servos_v2.members where user_id=who) and not (select '*'=any(permissions) from servos_v2.members where user_id=who) then raise exception 'PERMISSION_DENIED: cannot grant permissions the actor does not hold';end if;
@@ -135,8 +154,10 @@ begin
   if not exists(select 1 from servos_v2.staff_profiles where auth_user_id=who and active and role in ('Admin','Manager')) then raise exception 'PERMISSION_DENIED: active Manager or Admin required';end if;
   if p->>'permission' not in (select unnest(servos_v2.canonical_permissions())) or nullif(trim(p->>'target'),'') is null then raise exception 'VALIDATION_FAILED: canonical permission and target required';end if;
   if not exists(select 1 from servos_v2.members where user_id=target and active) then raise exception 'VALIDATION_FAILED: active initiator required';end if;
-  insert into servos_v2.manager_approvals(token,initiator_id,approver_id,permission,target,expires_at) values(extensions.gen_random_uuid(),target,who,p->>'permission',p->>'target',now()+interval '5 minutes') returning token into approval_token;
-  return jsonb_build_array(jsonb_build_object('collection','managerApprovals','id',approval_token,'version',1,'data',jsonb_build_object('id',approval_token,'initiatorId',target,'approverId',who,'permission',p->>'permission','target',p->>'target','expiresAt',now()+interval '5 minutes')));
+  approval_token:=nullif(p->>'approvalToken','')::uuid;
+  if approval_token is null then raise exception 'VALIDATION_FAILED: client-generated one-time approval token required';end if;
+  insert into servos_v2.manager_approvals(token,initiator_id,approver_id,permission,target,expires_at) values(approval_token,target,who,p->>'permission',p->>'target',now()+interval '5 minutes');
+  return '[]'::jsonb;
  else raise exception 'PROTOCOL_UNSUPPORTED: staff/device operation';
  end if;
 end$$;
@@ -155,10 +176,9 @@ create function servos_v2.can_read_collection(collection_name text)
 returns boolean language plpgsql stable set search_path='' as $$
 declare grants text[];
 begin
- if collection_name not in ('deviceEvents','managerApprovals') then return servos_v2.can_read_collection_before_staff(collection_name);end if;
+ if collection_name<>'deviceEvents' then return servos_v2.can_read_collection_before_staff(collection_name);end if;
  select permissions into grants from servos_v2.members where user_id=auth.uid() and active;
- if collection_name='deviceEvents' then return grants is not null and ('*'=any(grants) or grants&&array['devices.manage','audit.view']);end if;
- return grants is not null and ('*'=any(grants) or grants&&array['staff.view','audit.view']);
+ return grants is not null and ('*'=any(grants) or grants&&array['devices.manage','audit.view']);
 end$$;
 
 create function public.servos_v2_list_devices() returns jsonb language plpgsql security definer set search_path='' as $$
@@ -171,19 +191,8 @@ create function servos_v2.touch_device_seen() returns trigger language plpgsql s
 begin update servos_v2.devices set last_seen_at=now() where id=new.device_id;return new;end$$;
 create trigger commands_update_device_seen after insert on servos_v2.commands for each row execute function servos_v2.touch_device_seen();
 
-create function public.servos_v2_use_manager_approval(token uuid,permission text,target text) returns jsonb language plpgsql security definer set search_path='' as $$
-declare who uuid:=auth.uid();approval servos_v2.manager_approvals;
-begin
- if who is null or not exists(select 1 from servos_v2.members where user_id=who and active) then raise exception 'PERMISSION_DENIED';end if;
- select * into approval from servos_v2.manager_approvals a where a.token=token and a.permission=permission and a.target=target and a.initiator_id=who and a.expires_at>now() for update;
- if not found then raise exception 'APPROVAL_INVALID: expired, used, wrong initiator, action, or target';end if;
- insert into servos_v2.manager_approval_uses(token,used_by) values(token,who) on conflict do nothing;
- if not found then raise exception 'APPROVAL_INVALID: expired, used, wrong initiator, action, or target';end if;
- return jsonb_build_object('approved',true,'approvalId',approval.token,'approverId',approval.approver_id,'initiatorId',approval.initiator_id,'permission',approval.permission,'target',approval.target,'usedAt',now());
-end$$;
-
 create trigger approval_use_immutable before update or delete on servos_v2.manager_approval_uses for each row execute function servos_v2.immutable();
 
-revoke all on function public.servos_v2_list_devices(),public.servos_v2_use_manager_approval(uuid,text,text),servos_v2.can_read_collection(text),servos_v2.dispatch(jsonb) from public,anon;
-grant execute on function public.servos_v2_list_devices(),public.servos_v2_use_manager_approval(uuid,text,text) to authenticated;
+revoke all on function servos_v2.require_manager_approval(uuid,text,text,uuid),public.servos_v2_list_devices(),servos_v2.can_read_collection(text),servos_v2.dispatch(jsonb) from public,anon,authenticated;
+grant execute on function public.servos_v2_list_devices() to authenticated;
 commit;

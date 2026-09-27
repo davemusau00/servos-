@@ -86,6 +86,12 @@ Do not change a status to deployment verified unless the complete packaged-devic
 
 ## Verification update — 2026-09-27
 
+### Staff, devices and approvals — 2026-09-28
+
+`node scripts/test-supabase.mjs --expansion` passed the legacy and expansion migrations 001-016, all domain suites, `tests/supabase/staff-devices.sql`, and the real two-connection room booking race. The new SQL suite uses disposable PostgreSQL/Auth substitutes. It verifies canonical permission profiles, Auth-bound staff creation and role synchronization, denied Server-to-Admin escalation, device list/revoke, and command denial after revocation. Approval tests reject wrong action, target, initiator, expiry and replay; procurement over-receipt consumes the scoped approval in its transaction and records the approver on its GRN. These checks do not prove hosted Auth invitations, credential recovery, shared physical terminal accounts, or a production policy configuration.
+
+`npm run lint`, `npm test` (70 tests before the new staff source regression), and `npm run audit:ui` passed during implementation. The full `npm run verify` will be reported after its current-tree run. No hosted migrations, credentials, or production controls were changed. Browser approval tokens are retained in the current IndexedDB command payload until the queued command is acknowledged; encrypting/protecting that sensitive local data is pending.
+
 ### Staged POS settlement, refunds and close-day
 
 Against the current tree, `npm run verify` passed the production build and lint, all 70 Node tests, all 16 desktop/mobile browser cases, all 55 native domain tests, the UI interaction inventory (2,738 controls/handlers/routes), and documentation checks (40 guides/15 core documents). Browser transaction tests exercised till open, online cash settlement, refund and close-day report through the disposable PostgreSQL web bridge. They are local staged acceptance, not hosted Supabase or production browser evidence. The production build reports a 808.12 kB main JavaScript chunk above the configured 500 kB warning threshold; Rust emits two pre-existing unused-assignment warnings.

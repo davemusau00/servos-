@@ -77,3 +77,18 @@ test('staged refunds and close-day snapshots preserve immutable financial histor
   const acceptance=readFileSync('tests/supabase/pos.sql','utf8');
   for(const invariant of ['Over-refund','Close-day sales or refund totals','Close-day tender totals','Close-day report was mutable'])assert.ok(acceptance.includes(invariant),invariant);
 });
+
+test('staged staff administration binds Auth identities and consumes scoped approvals on the procurement transaction',()=>{
+  const migration=readFileSync('supabase/expansion/016_staff_devices_approvals.sql','utf8');
+  const procurement=readFileSync('supabase/expansion/012_procurement.sql','utf8');
+  const view=readFileSync('src/runtime/web/WebStaffAdminView.tsx','utf8');
+  const workspace=readFileSync('src/runtime/web/WebBusinessApp.tsx','utf8');
+  assert.match(migration,/STAGED V2 ONLY/);
+  assert.doesNotMatch(migration,/update\s+servos_v2\.control\s+set\s+enabled\s*=\s*true/i);
+  for(const marker of ['servos_v2.canonical_permissions','servos_v2.role_permissions','staff_profiles','manager_approval_uses','devices.manage','last_seen_at','VERSION_CONFLICT','cannot remove the final active Admin'])assert.ok(migration.includes(marker),marker);
+  assert.match(procurement,/require_manager_approval\(\(p->>'approvalToken'\)::uuid,'procurement\.over_receive',p->>'purchaseOrderId',who\)/);
+  for(const marker of ['staff.create','staff.update','staff.deactivate','managerApproval.issue','device.revoke','Existing Auth user ID','Issue five-minute one-time approval'])assert.ok(view.includes(marker),marker);
+  assert.match(workspace,/WebStaffAdminView/);
+  const acceptance=readFileSync('tests/supabase/staff-devices.sql','utf8');
+  for(const invariant of ['Staff role escalation was not denied','wrong target','wrong initiator','wrong action','Expired approval was accepted','Approval was reusable','Revoked device command was accepted'])assert.ok(acceptance.includes(invariant),invariant);
+});

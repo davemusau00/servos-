@@ -38,6 +38,7 @@ declare
 
  old_cost bigint; next_cost bigint; unit_price bigint; line_total bigint; subtotal bigint:=0;
  stock_value bigint:=0; asset_value bigint:=0; expense_value bigint:=0; accepted_total bigint:=0;
+ approval_by uuid;
  invoice_total bigint; payable_total bigint; amount bigint; due bigint; paid bigint; remaining bigint;
  ordinal integer;
 
@@ -291,7 +292,7 @@ begin
   end loop;
 
   if over_received then
-   perform servos_v2.require_any_permission(array['procurement.over_receive']);
+   approval_by:=servos_v2.require_manager_approval((p->>'approvalToken')::uuid,'procurement.over_receive',p->>'purchaseOrderId',who);
   end if;
 
   if needs_location then
@@ -335,6 +336,7 @@ begin
       'stockMinor',stock_value,'assetMinor',asset_value,'expenseMinor',expense_value
    ),
    'status','POSTED','receivedAt',now(),'receivedBy',who
+   ,'overReceiptApprovedBy',approval_by
   );
 
   changes:=changes||servos_v2.put_record('goodsReceipts',key,receipt);
