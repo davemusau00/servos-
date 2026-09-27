@@ -1,25 +1,49 @@
 # ServOS
 
-Single-business hospitality operations for one installed POS terminal, with local SQLite storage and a Supabase remote replica. The React UI is retained inside Tauri for Windows, Linux and Android.
+ServOS is a single-business hospitality POS and operations system. **The installed Tauri terminal and its SQLite database remain the live operational authority.** Supabase receives ordered terminal uploads and serves constrained manager reads and requests. Staged PostgreSQL v2 commands and the Vercel client are disabled by default; they are not a second production writer. The browser preview is not for trading.
 
-**This is an implementation in progress, not a deployment-ready release.** See [current release state](docs/CURRENT_RELEASE_STATE.md) for implemented commands, verification evidence and outstanding work. The browser preview contains demonstration data and must not be used for trading.
+This repository is source under active implementation, not a release declaration. Check [current release state](docs/CURRENT_RELEASE_STATE.md), [test evidence](docs/TEST_EVIDENCE.md), and the [expansion handoff](docs/EXPANSION_HANDOFF.md) before making operational claims.
 
-## Development
+## Supported targets
 
-Use Node.js and npm. Run `npm ci`, `npm run lint`, `npm run build`, and `npm test`. Run `npm run dev` for the explicitly labelled UI preview. `npm run audit:ui` regenerates the static interaction inventory.
+The installed app uses Tauri and has Windows, Linux, and Android build paths. Windows is the currently rehearsed packaging target; fresh-device, Linux, and Android acceptance is tracked separately. The web client is staged for Vercel Preview and is not enabled for business transactions.
 
-`npm run test:browser` checks desktop and narrow browser layouts. With Docker running, `npm run test:cloud` verifies migrations and SQL policies in disposable PostgreSQL without touching the configured project. See the [runbook](docs/DEPLOYMENT_RUNBOOK.md) for test limitations and native test options.
+## Developer setup
 
-Native development additionally requires Rust and the platform's Tauri prerequisites. Use `npm run native:dev`, `npm run test:native`, and `npm run native:build`. Android additionally requires its SDK/NDK and `npm run tauri -- android init` before platform testing.
+Prerequisites: Git, Node.js/npm, Rust/Cargo for native work, and the platform-specific Tauri build prerequisites. Windows packaging also uses Visual Studio C++ Build Tools, WebView2, Bash for the repository packaging script, and NSIS. Android builds additionally require Android SDK/NDK. Docker is needed for the disposable PostgreSQL/Supabase harness. See [deployment and recovery](docs/DEPLOYMENT_RUNBOOK.md), [setup guide](docs/ONBOARDING_AND_SETUP.md), and [database/migration notes](docs/PRODUCTION_UPGRADE_PATCH_PLAN.md).
 
-Copy .env.example to .env.local and configure the dedicated business Supabase project. Never place privileged server keys in frontend environment variables. Initial terminal enrollment requires an owner account; enrolled staff subsequently use local PINs offline.
+```powershell
+npm ci
+Copy-Item .env.example .env.local
+npm run lint
+npm run build
+npm test
+```
 
-## Windows POS terminal
+Configure only the public Supabase URL and publishable key in `.env.local`. Keep `VITE_ENABLE_WEB_V2=false`; never put service-role keys, database passwords, terminal secrets, or signing keys in Vite variables. The example also keeps demo/offline switches disabled. See [.env.example](.env.example) and [web staging runbook](docs/WEB_V2_STAGING_RUNBOOK.md).
 
-Follow the [Windows deployment and recovery runbook](docs/DEPLOYMENT_RUNBOOK.md#build-a-windows-installer). Build the NSIS installer on a Windows build computer with `bash scripts/deploy-windows-pos.sh --package`. The cashier terminal does not need Bash, Node, Rust or C++ Build Tools; copy the setup executable, its SHA-256 sidecar and PowerShell install helper to it.
+## Run and validate
 
-Install the XP-80T driver and configure the USB queue separately. The setup helpers do not create business records, enroll the terminal, configure a payment gateway, or claim successful printer output. Complete the real Intake → enrollment → Setup → Go Live flow and XP-80T paper acceptance before live sales. Standard Windows 10 support ended in October 2025; confirm the terminal's ESU/LTSC status before using it for business.
+```powershell
+npm run dev                 # browser preview; not a trading terminal
+npm run native:dev          # Tauri terminal
+npm run test:browser        # Playwright desktop/mobile checks
+npm run test:native         # Rust domain tests
+npm run test:desktop        # Tauri Rust library tests
+npm run test:cloud          # disposable PostgreSQL protocol tests
+npm run audit:ui            # static control inventory, not acceptance
+npm run docs:check
+npm run verify              # source, browser, native-container, UI and docs gates
+```
 
-## Documentation
+The cloud test harness creates a disposable local PostgreSQL environment; it does not migrate or verify the configured Supabase business project. A passing source or browser suite does not establish live sync, packaged-device operation, or physical printer output. Details and recovery steps are in [test evidence](docs/TEST_EVIDENCE.md).
 
-Start with [the documentation index](docs/README.md). No real payment gateway, fiscal submission, bank disbursement, messaging or device adapter is represented as configured. M-Pesa is manually confirmed by receipt code and reconciled separately.
+## Windows terminal and staging
+
+Build the Windows installer on a Windows build host with `bash scripts/deploy-windows-pos.sh --package`. Follow the [Windows installer and recovery runbook](docs/DEPLOYMENT_RUNBOOK.md#build-a-windows-installer) and [physical acceptance checklist](docs/BAR_PRODUCTION_ACCEPTANCE.md). Install the XP-80T driver/queue separately and verify actual paper output; packaging does not enroll or configure a business terminal.
+
+Use a separate non-production Supabase project and Vercel Preview configuration for v2 rehearsal. Apply staged migrations only to disposable/staging infrastructure. Never activate browser business writes while the legacy snapshot uploader can also write. The cutover and rollback boundaries are in [web v2 staging](docs/WEB_V2_STAGING_RUNBOOK.md) and [deployment runbook](docs/DEPLOYMENT_RUNBOOK.md).
+
+## Operations and design references
+
+Start at the [documentation index](docs/README.md). See [architecture](docs/SYSTEM_ARCHITECTURE.md), [permissions](docs/RBAC_AND_PERMISSIONS.md), [business workflows](docs/MODULE_WORKFLOWS.md), [receipt specification](docs/RECEIPT_SPEC.md), [room and folio contracts](docs/EXPANSION_WORKFLOWS.md), and [expansion acceptance](docs/EXPANSION_ACCEPTANCE.md). M-Pesa is cashier-confirmed and reconciled from evidence; this app does not claim provider settlement, fiscal submission, bank disbursement, or messaging unless an actual configured integration reports it.

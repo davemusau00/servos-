@@ -83,3 +83,21 @@ npm run docs:check
 ```
 
 Do not change a status to deployment verified unless the complete packaged-device rehearsal in [BAR_PRODUCTION_ACCEPTANCE.md](BAR_PRODUCTION_ACCEPTANCE.md) also passes.
+
+## Verification update — 2026-09-27
+
+The controlled room CSV UPDATE defect is fixed in the native import planner. Planning keeps the staged row separate and removes the create-only `initialStatus` field from the actual room UPDATE command. `room_csv_imports_apply_through_native_room_commands` now covers stage → plan → apply for create and update, verifies the planned UPDATE omits `initialStatus`, changes floor/wing, and preserves existing housekeeping and maintenance state.
+
+Executed against the final source:
+
+- `npm run lint` — passed.
+- `npm test` — 68 passed.
+- `cargo test --manifest-path native-tests/Cargo.toml` — 55 passed.
+- `cargo test --manifest-path src-tauri/Cargo.toml --lib` — 55 passed.
+- `npm run verify` — passed: production Vite build, Node suite, browser suite (12 passed, 2 PostgreSQL-backed browser cases skipped because no staging browser session is configured), native container suite (55 passed), UI inventory, and documentation checks.
+- `node scripts/test-supabase.mjs --expansion` — passed migrations 001–013 and all disposable PostgreSQL suites, including the real two-connection room booking race.
+- `git diff --check` — passed.
+
+The production build still reports a main JavaScript chunk above 500 kB. PostgreSQL tests used disposable local infrastructure, not the configured business Supabase project. No v2 activation, live migration, fresh-device rehearsal, or physical acceptance was performed by these checks. A Windows Tauri release executable compiled, but `npm run native:build` exited 1 during MSI bundling because Tauri could not resolve/download its WiX bundle tool (`No such host is known`, OS error 11001). This is an environment/network packaging failure, not installer acceptance.
+
+Windows packaging follow-up: `npm run native:build` compiled the optimized `servos.exe`, then failed before producing the MSI because Tauri attempted to download WiX and DNS resolution failed (`No such host is known`, OS error 11001). Re-run packaging on a host with the required WiX toolchain available; a compiled executable is not an installer or terminal acceptance.

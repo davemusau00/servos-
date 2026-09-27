@@ -4187,7 +4187,13 @@ fn import_plan_row_record(
         }
         let same=existing.as_ref().is_some_and(|prior|import_patch_matches(prior,&desired));
         let action=if same{"NO_CHANGE"}else if version.is_some(){"UPDATE"}else{"CREATE"};
-        one(action,Some(operation),Some(collection),Some(&target_id),version,Some(json!({"id":target_id,"data":payload_data})),
+        // Keep the staged row's create intent intact for audit, but omit the
+        // create-only initial state from the actual versioned update command.
+        let mut command_data=payload_data;
+        if template_key=="rooms"&&action=="UPDATE" {
+            if let Some(fields)=command_data.as_object_mut(){fields.remove("initialStatus");}
+        }
+        one(action,Some(operation),Some(collection),Some(&target_id),version,Some(json!({"id":target_id,"data":command_data})),
             if same{"Current room-domain record already matches the staged fields".into()}else if version.is_some(){"Versioned room-domain update".into()}else{"Create through the native rooms domain".into()},
             Some(namespace),Some(&external_id));
         return Ok(steps);

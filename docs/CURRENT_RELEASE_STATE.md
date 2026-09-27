@@ -66,3 +66,11 @@ Dependency-independent checks are recorded in [TEST_EVIDENCE.md](TEST_EVIDENCE.m
 - encrypted/rotated remote backups and verified replacement-terminal restore remain beyond the current local backup implementation.
 
 No claim of **deployment verified** should be made until [BAR_PRODUCTION_ACCEPTANCE.md](BAR_PRODUCTION_ACCEPTANCE.md) is completed on the target hardware.
+
+## 2026-09-27 source continuation
+
+Fixed the controlled room CSV UPDATE contract: `initialStatus` remains in the staged import representation for CREATE intent/audit, but the planner omits it from the versioned UPDATE command. The native regression exercises stage, plan, and apply, including state preservation. `npm run verify`, both 55-test Rust suites, and the disposable PostgreSQL expansion suite passed; details and exclusions are in [test evidence](TEST_EVIDENCE.md).
+
+The README now starts with the active single-terminal authority and disabled v2 status and documents developer commands and their evidence limits. The implementation remains incomplete: signed offline grants, web/desktop domain integration, full shared multi-device acceptance, migration rehearsal, production cutover, and packaged target acceptance remain outstanding. No live project was changed.
+
+The release executable compiled on this Windows host, but the installer bundle step failed because Tauri could not resolve its WiX download host. Installer creation and target-machine acceptance remain open; see [test evidence](TEST_EVIDENCE.md).
