@@ -6,8 +6,8 @@ alter table servos_v2.control add column receipt_sequence bigint not null defaul
 
 create or replace function servos_v2.protect_ledger_records() returns trigger language plpgsql set search_path='' as $$
 begin
- if old.collection in ('journalEntries','folioEntries','assetEvents','stayEvents','stayExtensions','stockMovements','receiptDocuments','payments','cashMovements') then raise exception 'Immutable business history';end if;
- if tg_op='UPDATE' and new.collection in ('journalEntries','folioEntries','assetEvents','stayEvents','stayExtensions','stockMovements','receiptDocuments','payments','cashMovements') then raise exception 'Immutable business history';end if;
+ if old.collection in ('journalEntries','folioEntries','assetEvents','stayEvents','stayExtensions','stockMovements','receiptDocuments','payments','goodsReceipts','supplierPayments','cashMovements') then raise exception 'Immutable business history';end if;
+ if tg_op='UPDATE' and new.collection in ('journalEntries','folioEntries','assetEvents','stayEvents','stayExtensions','stockMovements','receiptDocuments','payments','goodsReceipts','supplierPayments','cashMovements') then raise exception 'Immutable business history';end if;
  return case when tg_op='DELETE' then old else new end;
 end$$;
 

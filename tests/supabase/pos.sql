@@ -136,7 +136,8 @@ do $$declare o jsonb;s jsonb;receipt jsonb;begin
  if jsonb_array_length(receipt->'paymentIds')<>2 or receipt->>'balanceMinor'<>'0' then raise exception 'Receipt snapshot omitted split settlement';end if;
  if (select count(*) from servos_v2.records where collection='payments' and data->>'orderId'='tab-1')<>2 then raise exception 'Split did not persist two tender records';end if;
  if exists(select 1 from servos_v2.records where collection='journalEntries' and data->>'sourceType'='PAYMENT' and data->>'totalDebitMinor'<>data->>'totalCreditMinor') then raise exception 'POS payment journal is unbalanced';end if;
- if (servos_v2.read_record('tillSessions','shift-1')->>'expectedCashMinor')::bigint<>23000 then raise exception 'Cash tender/change drawer total is wrong';end if;
+ if (servos_v2.read_record('tillSessions','shift-1')->>'expectedCashMinor')::bigint<>21000 then raise exception 'Cash drawer total is wrong';end if;
+ if (select data->>'changeMinor' from servos_v2.records where collection='payments' and data->>'orderId'='tab-1' and data->>'method'='CASH')<>'2000' then raise exception 'Cash change snapshot is wrong';end if;
  if exists(select 1 from servos_v2.records where collection='payments' and data->>'method'='MPESA' and data->>'confirmation'<>'MANUALLY_CONFIRMED') then raise exception 'M-Pesa was represented as provider initiated';end if;
 end$$;
 
