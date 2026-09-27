@@ -109,6 +109,39 @@ export interface ReconciliationReport {
   records: ReconciliationRecordResult[];
 }
 
+// SERVOS_PATCH_10_TERMINAL_ACCEPTANCE
+export interface TerminalAcceptanceEvidence {
+  id: string;
+  details: Record<string, unknown>;
+  actorId: string;
+  actorName: string;
+  occurredAt: string;
+}
+export interface TerminalAcceptanceStatus {
+  mode: 'TERMINAL_ACCEPTANCE';
+  generatedAt: string;
+  facts: {
+    schemaVersion: number;
+    quickCheck: string;
+    installationStage: InstallationStage;
+    terminalId: string | null;
+    cloudConfigured: boolean;
+    lastSync: string | null;
+    lastBackup: string | null;
+    outboxPending: number;
+    openTills: number;
+    unresolvedPrinterJobs: number;
+  };
+  expectations: { printer: boolean; scanner: boolean; cashDrawer: boolean };
+  requiredEvidence: string[];
+  evidence: Record<string, TerminalAcceptanceEvidence>;
+  restart: { pending: boolean; canConfirm: boolean; startedAt: string | null };
+  blockers: string[];
+  readyToFinalize: boolean;
+  accepted: boolean;
+  acceptedAt: string | null;
+}
+
 export type PrinterJobState = 'SENT' | 'QUEUED' | 'DELIVERY_UNCERTAIN' | 'SENDING' | 'OS_DIALOG' | 'MANUAL';
 export interface PrinterJobResult { jobId?: string; orderId?: string; state: PrinterJobState; message?: string; createdAt?: string }
 export interface IntakeBusinessIdentity {

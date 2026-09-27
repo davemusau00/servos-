@@ -865,6 +865,32 @@ fn classified_asset_quantity_requires_whole_units_and_commissioning_is_live_only
     assert!(blocked.contains("Complete business setup"));
 }
 
+// SERVOS_PATCH_10_TERMINAL_ACCEPTANCE
+#[test]
+fn terminal_acceptance_evidence_is_local_immutable_and_schema_v9() {
+    let (_dir,db,s)=setup();
+    let schema:i64=db.query_row("PRAGMA user_version",[],|r|r.get(0)).unwrap();
+    assert_eq!(schema,9);
+    let before:(i64,i64,i64)=db.query_row(
+        "SELECT (SELECT COUNT(*) FROM records),(SELECT COUNT(*) FROM outbox),(SELECT COUNT(*) FROM commands)",
+        [],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?))
+    ).unwrap();
+    db.execute(
+        "INSERT INTO terminal_acceptance_evidence(id,kind,details,actor_id,actor_name,occurred_at) VALUES(?,?,?,?,?,?)",
+        rusqlite::params!["acceptance-test","SCANNER_INPUT",r#"{"rawValueStored":false,"codeLength":8}"#,s.staff_id,s.name,"2026-09-27T00:00:00Z"]
+    ).unwrap();
+    let after:(i64,i64,i64)=db.query_row(
+        "SELECT (SELECT COUNT(*) FROM records),(SELECT COUNT(*) FROM outbox),(SELECT COUNT(*) FROM commands)",
+        [],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?))
+    ).unwrap();
+    assert_eq!(before,after);
+    assert!(db.execute("UPDATE terminal_acceptance_evidence SET kind='OTHER' WHERE id='acceptance-test'",[]).is_err());
+    assert!(db.execute("DELETE FROM terminal_acceptance_evidence WHERE id='acceptance-test'",[]).is_err());
+    let details:String=db.query_row("SELECT details FROM terminal_acceptance_evidence WHERE id='acceptance-test'",[],|r|r.get(0)).unwrap();
+    assert!(!details.contains("12345678"));
+    assert!(details.contains(r#""rawValueStored":false"#));
+}
+
 #[test]
 fn audit_cannot_be_modified() {
     let (_, db, _) = setup();

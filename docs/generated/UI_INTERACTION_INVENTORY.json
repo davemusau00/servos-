@@ -1,7 +1,7 @@
 {
   "generatedBy": "npm run audit:ui",
   "scope": "Static controls, handlers and route cases; runtime card and modal review still required",
-  "count": 2424,
+  "count": 2446,
   "interactions": [
     {
       "id": "src/App.tsx:97:12",
@@ -21016,9 +21016,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:46:708",
+      "id": "src/native/NativeOperationsViews.tsx:47:708",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 46,
+      "line": 47,
       "kind": "button",
       "source": "<div className=\"space-y-2\">{receipts.map(r=><div key={r.id} className=\"flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900 p-3\"><div><b>{r.code}</b> - {r.account}<div className=\"text-xs text-slate-500\">Received {money(r.receivedAmount)} - allocated {money(r.allocatedAmount)} - {shortDate(r.receivedAt)}</div></div><div className=\"flex items-center gap-2\"><span className={r.reconciliationStatus.startsWith('RECONCILED')?'text-emerald-300':r.reconciliationStatus==='DISCREPANCY'?'text-rose-300':'text-amber-300'}>{r.reconciliationStatus}</span>{!r.reconciliationStatus.startsWith('RECONCILED')&&!discrepancies.some(d=>d.receiptId===r.id&&d.status==='OPEN')&&<button className={buttonClass} onClick={()=>openReceipt(r)}>Review statement</button>}</div></div>)}</div>",
       "status": "unverified",
@@ -21028,9 +21028,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:46:740",
+      "id": "src/native/NativeOperationsViews.tsx:47:740",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 46,
+      "line": 47,
       "kind": "onClick",
       "source": "<div className=\"space-y-2\">{receipts.map(r=><div key={r.id} className=\"flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900 p-3\"><div><b>{r.code}</b> - {r.account}<div className=\"text-xs text-slate-500\">Received {money(r.receivedAmount)} - allocated {money(r.allocatedAmount)} - {shortDate(r.receivedAt)}</div></div><div className=\"flex items-center gap-2\"><span className={r.reconciliationStatus.startsWith('RECONCILED')?'text-emerald-300':r.reconciliationStatus==='DISCREPANCY'?'text-rose-300':'text-amber-300'}>{r.reconciliationStatus}</span>{!r.reconciliationStatus.startsWith('RECONCILED')&&!discrepancies.some(d=>d.receiptId===r.id&&d.status==='OPEN')&&<button className={buttonClass} onClick={()=>openReceipt(r)}>Review statement</button>}</div></div>)}</div>",
       "status": "unverified",
@@ -21040,9 +21040,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:48:555",
+      "id": "src/native/NativeOperationsViews.tsx:49:555",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 48,
+      "line": 49,
       "kind": "button",
       "source": "<div className=\"space-y-2\">{discrepancies.map(d=><article key={d.id} className=\"rounded-xl border border-rose-900/60 bg-rose-950/20 p-3\"><div className=\"flex flex-wrap items-center justify-between gap-3\"><div><b>{d.receiptCode}</b> - {d.account}<div className=\"text-sm\">Receipt {money(d.receivedAmount)} - statement {money(d.statementAmount)} - variance {money(d.variance)}</div><div className=\"text-xs text-slate-400\">{d.statementReference} - {d.reason} - {d.status}{d.resolution?` - ${d.outcome}: ${d.resolution}`:''}</div></div>{d.status==='OPEN'&&<button className={buttonClass} onClick={()=>{setResolving(d);setOutcome('STATEMENT_ERROR');setResolution('');setError('')}}>Resolve</button>}</div></article>)}{discrepancies.length===0&&<p className=\"text-sm text-slate-500\">No statement discrepancies recorded.</p>}</div>",
       "status": "unverified",
@@ -21052,9 +21052,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:48:587",
+      "id": "src/native/NativeOperationsViews.tsx:49:587",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 48,
+      "line": 49,
       "kind": "onClick",
       "source": "<div className=\"space-y-2\">{discrepancies.map(d=><article key={d.id} className=\"rounded-xl border border-rose-900/60 bg-rose-950/20 p-3\"><div className=\"flex flex-wrap items-center justify-between gap-3\"><div><b>{d.receiptCode}</b> - {d.account}<div className=\"text-sm\">Receipt {money(d.receivedAmount)} - statement {money(d.statementAmount)} - variance {money(d.variance)}</div><div className=\"text-xs text-slate-400\">{d.statementReference} - {d.reason} - {d.status}{d.resolution?` - ${d.outcome}: ${d.resolution}`:''}</div></div>{d.status==='OPEN'&&<button className={buttonClass} onClick={()=>{setResolving(d);setOutcome('STATEMENT_ERROR');setResolution('');setError('')}}>Resolve</button>}</div></article>)}{discrepancies.length===0&&<p className=\"text-sm text-slate-500\">No statement discrepancies recorded.</p>}</div>",
       "status": "unverified",
@@ -21064,9 +21064,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:49:307",
+      "id": "src/native/NativeOperationsViews.tsx:50:307",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 49,
+      "line": 50,
       "kind": "input",
       "source": "{current&&<ActionDialog title={`Review ${current.code}`} onClose={()=>setCurrent(null)}><div className=\"space-y-3\"><p className=\"text-sm text-slate-400\">Receipt amount: {money(current.receivedAmount)}. A mismatch creates a separate audit record and needs a manager resolution.</p><label>Statement amount<input className={fieldClass} type=\"number\" min=\"0\" step=\"0.01\" value={statementAmount} onChange={e=>setStatementAmount(e.target.value)}/></label><label>Statement reference<input className={fieldClass} value={reference} onChange={e=>setReference(e.target.value)}/></label><label>Review notes / discrepancy reason<textarea className={fieldClass} value={notes} onChange={e=>setNotes(e.target.value)}/></label>{error&&<p role=\"alert\" className=\"text-rose-300\">{error}</p>}<div className=\"flex flex-wrap gap-2\"><button className={primaryButtonClass} disabled={busy||!reference.trim()||!notes.trim()||Number(statementAmount)!==Number(current.receivedAmount)&&currentDiscrepancy?.outcome!=='ACCEPTED_VARIANCE'} onClick={()=>void recordReview(false)}>{currentDiscrepancy?.outcome==='ACCEPTED_VARIANCE'?'Reconcile accepted variance':'Reconcile matching amount'}</button><button className={buttonClass} disabled={busy||!reference.trim()||!notes.trim()||Number(statementAmount)===Number(current.receivedAmount)||!!currentDiscrepancy} onClick={()=>void recordReview(true)}>Record discrepancy</button></div></div></ActionDialog>}",
       "status": "unverified",
@@ -21076,9 +21076,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:49:395",
+      "id": "src/native/NativeOperationsViews.tsx:50:395",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 49,
+      "line": 50,
       "kind": "onChange",
       "source": "{current&&<ActionDialog title={`Review ${current.code}`} onClose={()=>setCurrent(null)}><div className=\"space-y-3\"><p className=\"text-sm text-slate-400\">Receipt amount: {money(current.receivedAmount)}. A mismatch creates a separate audit record and needs a manager resolution.</p><label>Statement amount<input className={fieldClass} type=\"number\" min=\"0\" step=\"0.01\" value={statementAmount} onChange={e=>setStatementAmount(e.target.value)}/></label><label>Statement reference<input className={fieldClass} value={reference} onChange={e=>setReference(e.target.value)}/></label><label>Review notes / discrepancy reason<textarea className={fieldClass} value={notes} onChange={e=>setNotes(e.target.value)}/></label>{error&&<p role=\"alert\" className=\"text-rose-300\">{error}</p>}<div className=\"flex flex-wrap gap-2\"><button className={primaryButtonClass} disabled={busy||!reference.trim()||!notes.trim()||Number(statementAmount)!==Number(current.receivedAmount)&&currentDiscrepancy?.outcome!=='ACCEPTED_VARIANCE'} onClick={()=>void recordReview(false)}>{currentDiscrepancy?.outcome==='ACCEPTED_VARIANCE'?'Reconcile accepted variance':'Reconcile matching amount'}</button><button className={buttonClass} disabled={busy||!reference.trim()||!notes.trim()||Number(statementAmount)===Number(current.receivedAmount)||!!currentDiscrepancy} onClick={()=>void recordReview(true)}>Record discrepancy</button></div></div></ActionDialog>}",
       "status": "unverified",
@@ -21088,9 +21088,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:49:479",
+      "id": "src/native/NativeOperationsViews.tsx:50:479",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 49,
+      "line": 50,
       "kind": "input",
       "source": "{current&&<ActionDialog title={`Review ${current.code}`} onClose={()=>setCurrent(null)}><div className=\"space-y-3\"><p className=\"text-sm text-slate-400\">Receipt amount: {money(current.receivedAmount)}. A mismatch creates a separate audit record and needs a manager resolution.</p><label>Statement amount<input className={fieldClass} type=\"number\" min=\"0\" step=\"0.01\" value={statementAmount} onChange={e=>setStatementAmount(e.target.value)}/></label><label>Statement reference<input className={fieldClass} value={reference} onChange={e=>setReference(e.target.value)}/></label><label>Review notes / discrepancy reason<textarea className={fieldClass} value={notes} onChange={e=>setNotes(e.target.value)}/></label>{error&&<p role=\"alert\" className=\"text-rose-300\">{error}</p>}<div className=\"flex flex-wrap gap-2\"><button className={primaryButtonClass} disabled={busy||!reference.trim()||!notes.trim()||Number(statementAmount)!==Number(current.receivedAmount)&&currentDiscrepancy?.outcome!=='ACCEPTED_VARIANCE'} onClick={()=>void recordReview(false)}>{currentDiscrepancy?.outcome==='ACCEPTED_VARIANCE'?'Reconcile accepted variance':'Reconcile matching amount'}</button><button className={buttonClass} disabled={busy||!reference.trim()||!notes.trim()||Number(statementAmount)===Number(current.receivedAmount)||!!currentDiscrepancy} onClick={()=>void recordReview(true)}>Record discrepancy</button></div></div></ActionDialog>}",
       "status": "unverified",
@@ -21100,9 +21100,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:49:527",
+      "id": "src/native/NativeOperationsViews.tsx:50:527",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 49,
+      "line": 50,
       "kind": "onChange",
       "source": "{current&&<ActionDialog title={`Review ${current.code}`} onClose={()=>setCurrent(null)}><div className=\"space-y-3\"><p className=\"text-sm text-slate-400\">Receipt amount: {money(current.receivedAmount)}. A mismatch creates a separate audit record and needs a manager resolution.</p><label>Statement amount<input className={fieldClass} type=\"number\" min=\"0\" step=\"0.01\" value={statementAmount} onChange={e=>setStatementAmount(e.target.value)}/></label><label>Statement reference<input className={fieldClass} value={reference} onChange={e=>setReference(e.target.value)}/></label><label>Review notes / discrepancy reason<textarea className={fieldClass} value={notes} onChange={e=>setNotes(e.target.value)}/></label>{error&&<p role=\"alert\" className=\"text-rose-300\">{error}</p>}<div className=\"flex flex-wrap gap-2\"><button className={primaryButtonClass} disabled={busy||!reference.trim()||!notes.trim()||Number(statementAmount)!==Number(current.receivedAmount)&&currentDiscrepancy?.outcome!=='ACCEPTED_VARIANCE'} onClick={()=>void recordReview(false)}>{currentDiscrepancy?.outcome==='ACCEPTED_VARIANCE'?'Reconcile accepted variance':'Reconcile matching amount'}</button><button className={buttonClass} disabled={busy||!reference.trim()||!notes.trim()||Number(statementAmount)===Number(current.receivedAmount)||!!currentDiscrepancy} onClick={()=>void recordReview(true)}>Record discrepancy</button></div></div></ActionDialog>}",
       "status": "unverified",
@@ -21112,9 +21112,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:49:619",
+      "id": "src/native/NativeOperationsViews.tsx:50:619",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 49,
+      "line": 50,
       "kind": "textarea",
       "source": "{current&&<ActionDialog title={`Review ${current.code}`} onClose={()=>setCurrent(null)}><div className=\"space-y-3\"><p className=\"text-sm text-slate-400\">Receipt amount: {money(current.receivedAmount)}. A mismatch creates a separate audit record and needs a manager resolution.</p><label>Statement amount<input className={fieldClass} type=\"number\" min=\"0\" step=\"0.01\" value={statementAmount} onChange={e=>setStatementAmount(e.target.value)}/></label><label>Statement reference<input className={fieldClass} value={reference} onChange={e=>setReference(e.target.value)}/></label><label>Review notes / discrepancy reason<textarea className={fieldClass} value={notes} onChange={e=>setNotes(e.target.value)}/></label>{error&&<p role=\"alert\" className=\"text-rose-300\">{error}</p>}<div className=\"flex flex-wrap gap-2\"><button className={primaryButtonClass} disabled={busy||!reference.trim()||!notes.trim()||Number(statementAmount)!==Number(current.receivedAmount)&&currentDiscrepancy?.outcome!=='ACCEPTED_VARIANCE'} onClick={()=>void recordReview(false)}>{currentDiscrepancy?.outcome==='ACCEPTED_VARIANCE'?'Reconcile accepted variance':'Reconcile matching amount'}</button><button className={buttonClass} disabled={busy||!reference.trim()||!notes.trim()||Number(statementAmount)===Number(current.receivedAmount)||!!currentDiscrepancy} onClick={()=>void recordReview(true)}>Record discrepancy</button></div></div></ActionDialog>}",
       "status": "unverified",
@@ -21124,9 +21124,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:49:666",
+      "id": "src/native/NativeOperationsViews.tsx:50:666",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 49,
+      "line": 50,
       "kind": "onChange",
       "source": "{current&&<ActionDialog title={`Review ${current.code}`} onClose={()=>setCurrent(null)}><div className=\"space-y-3\"><p className=\"text-sm text-slate-400\">Receipt amount: {money(current.receivedAmount)}. A mismatch creates a separate audit record and needs a manager resolution.</p><label>Statement amount<input className={fieldClass} type=\"number\" min=\"0\" step=\"0.01\" value={statementAmount} onChange={e=>setStatementAmount(e.target.value)}/></label><label>Statement reference<input className={fieldClass} value={reference} onChange={e=>setReference(e.target.value)}/></label><label>Review notes / discrepancy reason<textarea className={fieldClass} value={notes} onChange={e=>setNotes(e.target.value)}/></label>{error&&<p role=\"alert\" className=\"text-rose-300\">{error}</p>}<div className=\"flex flex-wrap gap-2\"><button className={primaryButtonClass} disabled={busy||!reference.trim()||!notes.trim()||Number(statementAmount)!==Number(current.receivedAmount)&&currentDiscrepancy?.outcome!=='ACCEPTED_VARIANCE'} onClick={()=>void recordReview(false)}>{currentDiscrepancy?.outcome==='ACCEPTED_VARIANCE'?'Reconcile accepted variance':'Reconcile matching amount'}</button><button className={buttonClass} disabled={busy||!reference.trim()||!notes.trim()||Number(statementAmount)===Number(current.receivedAmount)||!!currentDiscrepancy} onClick={()=>void recordReview(true)}>Record discrepancy</button></div></div></ActionDialog>}",
       "status": "unverified",
@@ -21136,57 +21136,57 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:49:814",
-      "file": "src/native/NativeOperationsViews.tsx",
-      "line": 49,
-      "kind": "button",
-      "source": "{current&&<ActionDialog title={`Review ${current.code}`} onClose={()=>setCurrent(null)}><div className=\"space-y-3\"><p className=\"text-sm text-slate-400\">Receipt amount: {money(current.receivedAmount)}. A mismatch creates a separate audit record and needs a manager resolution.</p><label>Statement amount<input className={fieldClass} type=\"number\" min=\"0\" step=\"0.01\" value={statementAmount} onChange={e=>setStatementAmount(e.target.value)}/></label><label>Statement reference<input className={fieldClass} value={reference} onChange={e=>setReference(e.target.value)}/></label><label>Review notes / discrepancy reason<textarea className={fieldClass} value={notes} onChange={e=>setNotes(e.target.value)}/></label>{error&&<p role=\"alert\" className=\"text-rose-300\">{error}</p>}<div className=\"flex flex-wrap gap-2\"><button className={primaryButtonClass} disabled={busy||!reference.trim()||!notes.trim()||Number(statementAmount)!==Number(current.receivedAmount)&&currentDiscrepancy?.outcome!=='ACCEPTED_VARIANCE'} onClick={()=>void recordReview(false)}>{currentDiscrepancy?.outcome==='ACCEPTED_VARIANCE'?'Reconcile accepted variance':'Reconcile matching amount'}</button><button className={buttonClass} disabled={busy||!reference.trim()||!notes.trim()||Number(statementAmount)===Number(current.receivedAmount)||!!currentDiscrepancy} onClick={()=>void recordReview(true)}>Record discrepancy</button></div></div></ActionDialog>}",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/native/NativeOperationsViews.tsx:49:1012",
-      "file": "src/native/NativeOperationsViews.tsx",
-      "line": 49,
-      "kind": "onClick",
-      "source": "{current&&<ActionDialog title={`Review ${current.code}`} onClose={()=>setCurrent(null)}><div className=\"space-y-3\"><p className=\"text-sm text-slate-400\">Receipt amount: {money(current.receivedAmount)}. A mismatch creates a separate audit record and needs a manager resolution.</p><label>Statement amount<input className={fieldClass} type=\"number\" min=\"0\" step=\"0.01\" value={statementAmount} onChange={e=>setStatementAmount(e.target.value)}/></label><label>Statement reference<input className={fieldClass} value={reference} onChange={e=>setReference(e.target.value)}/></label><label>Review notes / discrepancy reason<textarea className={fieldClass} value={notes} onChange={e=>setNotes(e.target.value)}/></label>{error&&<p role=\"alert\" className=\"text-rose-300\">{error}</p>}<div className=\"flex flex-wrap gap-2\"><button className={primaryButtonClass} disabled={busy||!reference.trim()||!notes.trim()||Number(statementAmount)!==Number(current.receivedAmount)&&currentDiscrepancy?.outcome!=='ACCEPTED_VARIANCE'} onClick={()=>void recordReview(false)}>{currentDiscrepancy?.outcome==='ACCEPTED_VARIANCE'?'Reconcile accepted variance':'Reconcile matching amount'}</button><button className={buttonClass} disabled={busy||!reference.trim()||!notes.trim()||Number(statementAmount)===Number(current.receivedAmount)||!!currentDiscrepancy} onClick={()=>void recordReview(true)}>Record discrepancy</button></div></div></ActionDialog>}",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/native/NativeOperationsViews.tsx:49:1169",
-      "file": "src/native/NativeOperationsViews.tsx",
-      "line": 49,
-      "kind": "button",
-      "source": "{current&&<ActionDialog title={`Review ${current.code}`} onClose={()=>setCurrent(null)}><div className=\"space-y-3\"><p className=\"text-sm text-slate-400\">Receipt amount: {money(current.receivedAmount)}. A mismatch creates a separate audit record and needs a manager resolution.</p><label>Statement amount<input className={fieldClass} type=\"number\" min=\"0\" step=\"0.01\" value={statementAmount} onChange={e=>setStatementAmount(e.target.value)}/></label><label>Statement reference<input className={fieldClass} value={reference} onChange={e=>setReference(e.target.value)}/></label><label>Review notes / discrepancy reason<textarea className={fieldClass} value={notes} onChange={e=>setNotes(e.target.value)}/></label>{error&&<p role=\"alert\" className=\"text-rose-300\">{error}</p>}<div className=\"flex flex-wrap gap-2\"><button className={primaryButtonClass} disabled={busy||!reference.trim()||!notes.trim()||Number(statementAmount)!==Number(current.receivedAmount)&&currentDiscrepancy?.outcome!=='ACCEPTED_VARIANCE'} onClick={()=>void recordReview(false)}>{currentDiscrepancy?.outcome==='ACCEPTED_VARIANCE'?'Reconcile accepted variance':'Reconcile matching amount'}</button><button className={buttonClass} disabled={busy||!reference.trim()||!notes.trim()||Number(statementAmount)===Number(current.receivedAmount)||!!currentDiscrepancy} onClick={()=>void recordReview(true)}>Record discrepancy</button></div></div></ActionDialog>}",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/native/NativeOperationsViews.tsx:49:1331",
-      "file": "src/native/NativeOperationsViews.tsx",
-      "line": 49,
-      "kind": "onClick",
-      "source": "{current&&<ActionDialog title={`Review ${current.code}`} onClose={()=>setCurrent(null)}><div className=\"space-y-3\"><p className=\"text-sm text-slate-400\">Receipt amount: {money(current.receivedAmount)}. A mismatch creates a separate audit record and needs a manager resolution.</p><label>Statement amount<input className={fieldClass} type=\"number\" min=\"0\" step=\"0.01\" value={statementAmount} onChange={e=>setStatementAmount(e.target.value)}/></label><label>Statement reference<input className={fieldClass} value={reference} onChange={e=>setReference(e.target.value)}/></label><label>Review notes / discrepancy reason<textarea className={fieldClass} value={notes} onChange={e=>setNotes(e.target.value)}/></label>{error&&<p role=\"alert\" className=\"text-rose-300\">{error}</p>}<div className=\"flex flex-wrap gap-2\"><button className={primaryButtonClass} disabled={busy||!reference.trim()||!notes.trim()||Number(statementAmount)!==Number(current.receivedAmount)&&currentDiscrepancy?.outcome!=='ACCEPTED_VARIANCE'} onClick={()=>void recordReview(false)}>{currentDiscrepancy?.outcome==='ACCEPTED_VARIANCE'?'Reconcile accepted variance':'Reconcile matching amount'}</button><button className={buttonClass} disabled={busy||!reference.trim()||!notes.trim()||Number(statementAmount)===Number(current.receivedAmount)||!!currentDiscrepancy} onClick={()=>void recordReview(true)}>Record discrepancy</button></div></div></ActionDialog>}",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/native/NativeOperationsViews.tsx:50:379",
+      "id": "src/native/NativeOperationsViews.tsx:50:814",
       "file": "src/native/NativeOperationsViews.tsx",
       "line": 50,
+      "kind": "button",
+      "source": "{current&&<ActionDialog title={`Review ${current.code}`} onClose={()=>setCurrent(null)}><div className=\"space-y-3\"><p className=\"text-sm text-slate-400\">Receipt amount: {money(current.receivedAmount)}. A mismatch creates a separate audit record and needs a manager resolution.</p><label>Statement amount<input className={fieldClass} type=\"number\" min=\"0\" step=\"0.01\" value={statementAmount} onChange={e=>setStatementAmount(e.target.value)}/></label><label>Statement reference<input className={fieldClass} value={reference} onChange={e=>setReference(e.target.value)}/></label><label>Review notes / discrepancy reason<textarea className={fieldClass} value={notes} onChange={e=>setNotes(e.target.value)}/></label>{error&&<p role=\"alert\" className=\"text-rose-300\">{error}</p>}<div className=\"flex flex-wrap gap-2\"><button className={primaryButtonClass} disabled={busy||!reference.trim()||!notes.trim()||Number(statementAmount)!==Number(current.receivedAmount)&&currentDiscrepancy?.outcome!=='ACCEPTED_VARIANCE'} onClick={()=>void recordReview(false)}>{currentDiscrepancy?.outcome==='ACCEPTED_VARIANCE'?'Reconcile accepted variance':'Reconcile matching amount'}</button><button className={buttonClass} disabled={busy||!reference.trim()||!notes.trim()||Number(statementAmount)===Number(current.receivedAmount)||!!currentDiscrepancy} onClick={()=>void recordReview(true)}>Record discrepancy</button></div></div></ActionDialog>}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/native/NativeOperationsViews.tsx:50:1012",
+      "file": "src/native/NativeOperationsViews.tsx",
+      "line": 50,
+      "kind": "onClick",
+      "source": "{current&&<ActionDialog title={`Review ${current.code}`} onClose={()=>setCurrent(null)}><div className=\"space-y-3\"><p className=\"text-sm text-slate-400\">Receipt amount: {money(current.receivedAmount)}. A mismatch creates a separate audit record and needs a manager resolution.</p><label>Statement amount<input className={fieldClass} type=\"number\" min=\"0\" step=\"0.01\" value={statementAmount} onChange={e=>setStatementAmount(e.target.value)}/></label><label>Statement reference<input className={fieldClass} value={reference} onChange={e=>setReference(e.target.value)}/></label><label>Review notes / discrepancy reason<textarea className={fieldClass} value={notes} onChange={e=>setNotes(e.target.value)}/></label>{error&&<p role=\"alert\" className=\"text-rose-300\">{error}</p>}<div className=\"flex flex-wrap gap-2\"><button className={primaryButtonClass} disabled={busy||!reference.trim()||!notes.trim()||Number(statementAmount)!==Number(current.receivedAmount)&&currentDiscrepancy?.outcome!=='ACCEPTED_VARIANCE'} onClick={()=>void recordReview(false)}>{currentDiscrepancy?.outcome==='ACCEPTED_VARIANCE'?'Reconcile accepted variance':'Reconcile matching amount'}</button><button className={buttonClass} disabled={busy||!reference.trim()||!notes.trim()||Number(statementAmount)===Number(current.receivedAmount)||!!currentDiscrepancy} onClick={()=>void recordReview(true)}>Record discrepancy</button></div></div></ActionDialog>}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/native/NativeOperationsViews.tsx:50:1169",
+      "file": "src/native/NativeOperationsViews.tsx",
+      "line": 50,
+      "kind": "button",
+      "source": "{current&&<ActionDialog title={`Review ${current.code}`} onClose={()=>setCurrent(null)}><div className=\"space-y-3\"><p className=\"text-sm text-slate-400\">Receipt amount: {money(current.receivedAmount)}. A mismatch creates a separate audit record and needs a manager resolution.</p><label>Statement amount<input className={fieldClass} type=\"number\" min=\"0\" step=\"0.01\" value={statementAmount} onChange={e=>setStatementAmount(e.target.value)}/></label><label>Statement reference<input className={fieldClass} value={reference} onChange={e=>setReference(e.target.value)}/></label><label>Review notes / discrepancy reason<textarea className={fieldClass} value={notes} onChange={e=>setNotes(e.target.value)}/></label>{error&&<p role=\"alert\" className=\"text-rose-300\">{error}</p>}<div className=\"flex flex-wrap gap-2\"><button className={primaryButtonClass} disabled={busy||!reference.trim()||!notes.trim()||Number(statementAmount)!==Number(current.receivedAmount)&&currentDiscrepancy?.outcome!=='ACCEPTED_VARIANCE'} onClick={()=>void recordReview(false)}>{currentDiscrepancy?.outcome==='ACCEPTED_VARIANCE'?'Reconcile accepted variance':'Reconcile matching amount'}</button><button className={buttonClass} disabled={busy||!reference.trim()||!notes.trim()||Number(statementAmount)===Number(current.receivedAmount)||!!currentDiscrepancy} onClick={()=>void recordReview(true)}>Record discrepancy</button></div></div></ActionDialog>}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/native/NativeOperationsViews.tsx:50:1331",
+      "file": "src/native/NativeOperationsViews.tsx",
+      "line": 50,
+      "kind": "onClick",
+      "source": "{current&&<ActionDialog title={`Review ${current.code}`} onClose={()=>setCurrent(null)}><div className=\"space-y-3\"><p className=\"text-sm text-slate-400\">Receipt amount: {money(current.receivedAmount)}. A mismatch creates a separate audit record and needs a manager resolution.</p><label>Statement amount<input className={fieldClass} type=\"number\" min=\"0\" step=\"0.01\" value={statementAmount} onChange={e=>setStatementAmount(e.target.value)}/></label><label>Statement reference<input className={fieldClass} value={reference} onChange={e=>setReference(e.target.value)}/></label><label>Review notes / discrepancy reason<textarea className={fieldClass} value={notes} onChange={e=>setNotes(e.target.value)}/></label>{error&&<p role=\"alert\" className=\"text-rose-300\">{error}</p>}<div className=\"flex flex-wrap gap-2\"><button className={primaryButtonClass} disabled={busy||!reference.trim()||!notes.trim()||Number(statementAmount)!==Number(current.receivedAmount)&&currentDiscrepancy?.outcome!=='ACCEPTED_VARIANCE'} onClick={()=>void recordReview(false)}>{currentDiscrepancy?.outcome==='ACCEPTED_VARIANCE'?'Reconcile accepted variance':'Reconcile matching amount'}</button><button className={buttonClass} disabled={busy||!reference.trim()||!notes.trim()||Number(statementAmount)===Number(current.receivedAmount)||!!currentDiscrepancy} onClick={()=>void recordReview(true)}>Record discrepancy</button></div></div></ActionDialog>}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/native/NativeOperationsViews.tsx:51:379",
+      "file": "src/native/NativeOperationsViews.tsx",
+      "line": 51,
       "kind": "select",
       "source": "{resolving&&<ActionDialog title={`Resolve ${resolving.receiptCode} discrepancy`} onClose={()=>setResolving(null)}><div className=\"space-y-3\"><p className=\"text-sm text-slate-400\">Receipt {money(resolving.receivedAmount)} - statement {money(resolving.statementAmount)} - variance {money(resolving.variance)}. Resolution does not alter either recorded amount.</p><label>Outcome<select className={fieldClass} value={outcome} onChange={e=>setOutcome(e.target.value)}><option value=\"STATEMENT_ERROR\">Statement entry was wrong; reconcile the receipt amount</option><option value=\"ACCEPTED_VARIANCE\">Accept the documented statement variance</option></select></label><label>Resolution note<textarea className={fieldClass} value={resolution} onChange={e=>setResolution(e.target.value)}/></label>{error&&<p role=\"alert\" className=\"text-rose-300\">{error}</p>}<button className={primaryButtonClass} disabled={busy||!resolution.trim()} onClick={()=>void resolveDiscrepancy()}>Save resolution</button></div></ActionDialog>}",
       "status": "unverified",
@@ -21196,9 +21196,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:50:426",
+      "id": "src/native/NativeOperationsViews.tsx:51:426",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 50,
+      "line": 51,
       "kind": "onChange",
       "source": "{resolving&&<ActionDialog title={`Resolve ${resolving.receiptCode} discrepancy`} onClose={()=>setResolving(null)}><div className=\"space-y-3\"><p className=\"text-sm text-slate-400\">Receipt {money(resolving.receivedAmount)} - statement {money(resolving.statementAmount)} - variance {money(resolving.variance)}. Resolution does not alter either recorded amount.</p><label>Outcome<select className={fieldClass} value={outcome} onChange={e=>setOutcome(e.target.value)}><option value=\"STATEMENT_ERROR\">Statement entry was wrong; reconcile the receipt amount</option><option value=\"ACCEPTED_VARIANCE\">Accept the documented statement variance</option></select></label><label>Resolution note<textarea className={fieldClass} value={resolution} onChange={e=>setResolution(e.target.value)}/></label>{error&&<p role=\"alert\" className=\"text-rose-300\">{error}</p>}<button className={primaryButtonClass} disabled={busy||!resolution.trim()} onClick={()=>void resolveDiscrepancy()}>Save resolution</button></div></ActionDialog>}",
       "status": "unverified",
@@ -21208,9 +21208,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:50:685",
+      "id": "src/native/NativeOperationsViews.tsx:51:685",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 50,
+      "line": 51,
       "kind": "textarea",
       "source": "{resolving&&<ActionDialog title={`Resolve ${resolving.receiptCode} discrepancy`} onClose={()=>setResolving(null)}><div className=\"space-y-3\"><p className=\"text-sm text-slate-400\">Receipt {money(resolving.receivedAmount)} - statement {money(resolving.statementAmount)} - variance {money(resolving.variance)}. Resolution does not alter either recorded amount.</p><label>Outcome<select className={fieldClass} value={outcome} onChange={e=>setOutcome(e.target.value)}><option value=\"STATEMENT_ERROR\">Statement entry was wrong; reconcile the receipt amount</option><option value=\"ACCEPTED_VARIANCE\">Accept the documented statement variance</option></select></label><label>Resolution note<textarea className={fieldClass} value={resolution} onChange={e=>setResolution(e.target.value)}/></label>{error&&<p role=\"alert\" className=\"text-rose-300\">{error}</p>}<button className={primaryButtonClass} disabled={busy||!resolution.trim()} onClick={()=>void resolveDiscrepancy()}>Save resolution</button></div></ActionDialog>}",
       "status": "unverified",
@@ -21220,9 +21220,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:50:737",
+      "id": "src/native/NativeOperationsViews.tsx:51:737",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 50,
+      "line": 51,
       "kind": "onChange",
       "source": "{resolving&&<ActionDialog title={`Resolve ${resolving.receiptCode} discrepancy`} onClose={()=>setResolving(null)}><div className=\"space-y-3\"><p className=\"text-sm text-slate-400\">Receipt {money(resolving.receivedAmount)} - statement {money(resolving.statementAmount)} - variance {money(resolving.variance)}. Resolution does not alter either recorded amount.</p><label>Outcome<select className={fieldClass} value={outcome} onChange={e=>setOutcome(e.target.value)}><option value=\"STATEMENT_ERROR\">Statement entry was wrong; reconcile the receipt amount</option><option value=\"ACCEPTED_VARIANCE\">Accept the documented statement variance</option></select></label><label>Resolution note<textarea className={fieldClass} value={resolution} onChange={e=>setResolution(e.target.value)}/></label>{error&&<p role=\"alert\" className=\"text-rose-300\">{error}</p>}<button className={primaryButtonClass} disabled={busy||!resolution.trim()} onClick={()=>void resolveDiscrepancy()}>Save resolution</button></div></ActionDialog>}",
       "status": "unverified",
@@ -21232,9 +21232,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:50:852",
+      "id": "src/native/NativeOperationsViews.tsx:51:852",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 50,
+      "line": 51,
       "kind": "button",
       "source": "{resolving&&<ActionDialog title={`Resolve ${resolving.receiptCode} discrepancy`} onClose={()=>setResolving(null)}><div className=\"space-y-3\"><p className=\"text-sm text-slate-400\">Receipt {money(resolving.receivedAmount)} - statement {money(resolving.statementAmount)} - variance {money(resolving.variance)}. Resolution does not alter either recorded amount.</p><label>Outcome<select className={fieldClass} value={outcome} onChange={e=>setOutcome(e.target.value)}><option value=\"STATEMENT_ERROR\">Statement entry was wrong; reconcile the receipt amount</option><option value=\"ACCEPTED_VARIANCE\">Accept the documented statement variance</option></select></label><label>Resolution note<textarea className={fieldClass} value={resolution} onChange={e=>setResolution(e.target.value)}/></label>{error&&<p role=\"alert\" className=\"text-rose-300\">{error}</p>}<button className={primaryButtonClass} disabled={busy||!resolution.trim()} onClick={()=>void resolveDiscrepancy()}>Save resolution</button></div></ActionDialog>}",
       "status": "unverified",
@@ -21244,9 +21244,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:50:927",
+      "id": "src/native/NativeOperationsViews.tsx:51:927",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 50,
+      "line": 51,
       "kind": "onClick",
       "source": "{resolving&&<ActionDialog title={`Resolve ${resolving.receiptCode} discrepancy`} onClose={()=>setResolving(null)}><div className=\"space-y-3\"><p className=\"text-sm text-slate-400\">Receipt {money(resolving.receivedAmount)} - statement {money(resolving.statementAmount)} - variance {money(resolving.variance)}. Resolution does not alter either recorded amount.</p><label>Outcome<select className={fieldClass} value={outcome} onChange={e=>setOutcome(e.target.value)}><option value=\"STATEMENT_ERROR\">Statement entry was wrong; reconcile the receipt amount</option><option value=\"ACCEPTED_VARIANCE\">Accept the documented statement variance</option></select></label><label>Resolution note<textarea className={fieldClass} value={resolution} onChange={e=>setResolution(e.target.value)}/></label>{error&&<p role=\"alert\" className=\"text-rose-300\">{error}</p>}<button className={primaryButtonClass} disabled={busy||!resolution.trim()} onClick={()=>void resolveDiscrepancy()}>Save resolution</button></div></ActionDialog>}",
       "status": "unverified",
@@ -21256,9 +21256,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:54:1586",
+      "id": "src/native/NativeOperationsViews.tsx:55:1586",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 54,
+      "line": 55,
       "kind": "button",
       "source": "export function NativeCloseDayView(){const runtime=useRuntime();const s=runtime.snapshot!;const tills=recordsOf(s,'tillSessions');const open=tills.find(t=>t.status==='OPEN');const closed=tills.filter(t=>t.status==='CLOSED').slice().reverse();const [modal,setModal]=useState<string|null>(null);const [amount,setAmount]=useState(0);const [openingFloat,setOpeningFloat]=useState(Number(recordsOf(s,'tillPolicy')[0]?.defaultOpeningFloat||0));const [reason,setReason]=useState('');const [cashType,setCashType]=useState('OUT');const [approval,setApproval]=useState<{permission:Permission;target:string;run:(t:string)=>Promise<void>}|null>(null);const perms=s.actor.permissions;const protect=(permission:Permission,target:string,fn:(token?:string)=>Promise<void>)=>perms.includes(permission)?void fn():setApproval({permission,target,run:async t=>fn(t)});return <div className=\"h-full overflow-auto bg-slate-950 p-5 text-white\"><div className=\"mb-5\"><h1 className=\"text-2xl font-bold\">Shift & day close</h1><p className=\"text-sm text-slate-400\">Resolve tabs, reconcile, count cash, close, back up and synchronize.</p></div>{open?<div className=\"rounded-2xl border border-amber-700/40 bg-amber-950/20 p-5\"><div className=\"grid gap-3 sm:grid-cols-4\"><Metric label=\"Opening float\" value={money(open.openingFloat)}/><Metric label=\"Cash sales\" value={money(open.cashSalesTotal)}/><Metric label=\"Paid in / out\" value={`${money(open.cashPaidIn)} / ${money(open.cashPaidOut)}`}/><Metric label=\"Expected drawer\" value={money(open.expectedCashInDrawer)}/></div><div className=\"mt-4 flex flex-wrap gap-2\"><button className={buttonClass} onClick={()=>{setAmount(0);setReason('');setModal('MOVEMENT')}}>Paid in / out</button><button className={primaryButtonClass} onClick={()=>{setAmount(Number(open.expectedCashInDrawer));setReason('');setModal('CLOSE')}}>Count & close till</button></div></div>:<div className=\"rounded-xl border border-dashed border-slate-700 p-6 text-slate-400\">No open till. Open one from Business Admin before service.</div>}",
       "status": "unverified",
@@ -21268,9 +21268,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:54:1618",
+      "id": "src/native/NativeOperationsViews.tsx:55:1618",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 54,
+      "line": 55,
       "kind": "onClick",
       "source": "export function NativeCloseDayView(){const runtime=useRuntime();const s=runtime.snapshot!;const tills=recordsOf(s,'tillSessions');const open=tills.find(t=>t.status==='OPEN');const closed=tills.filter(t=>t.status==='CLOSED').slice().reverse();const [modal,setModal]=useState<string|null>(null);const [amount,setAmount]=useState(0);const [openingFloat,setOpeningFloat]=useState(Number(recordsOf(s,'tillPolicy')[0]?.defaultOpeningFloat||0));const [reason,setReason]=useState('');const [cashType,setCashType]=useState('OUT');const [approval,setApproval]=useState<{permission:Permission;target:string;run:(t:string)=>Promise<void>}|null>(null);const perms=s.actor.permissions;const protect=(permission:Permission,target:string,fn:(token?:string)=>Promise<void>)=>perms.includes(permission)?void fn():setApproval({permission,target,run:async t=>fn(t)});return <div className=\"h-full overflow-auto bg-slate-950 p-5 text-white\"><div className=\"mb-5\"><h1 className=\"text-2xl font-bold\">Shift & day close</h1><p className=\"text-sm text-slate-400\">Resolve tabs, reconcile, count cash, close, back up and synchronize.</p></div>{open?<div className=\"rounded-2xl border border-amber-700/40 bg-amber-950/20 p-5\"><div className=\"grid gap-3 sm:grid-cols-4\"><Metric label=\"Opening float\" value={money(open.openingFloat)}/><Metric label=\"Cash sales\" value={money(open.cashSalesTotal)}/><Metric label=\"Paid in / out\" value={`${money(open.cashPaidIn)} / ${money(open.cashPaidOut)}`}/><Metric label=\"Expected drawer\" value={money(open.expectedCashInDrawer)}/></div><div className=\"mt-4 flex flex-wrap gap-2\"><button className={buttonClass} onClick={()=>{setAmount(0);setReason('');setModal('MOVEMENT')}}>Paid in / out</button><button className={primaryButtonClass} onClick={()=>{setAmount(Number(open.expectedCashInDrawer));setReason('');setModal('CLOSE')}}>Count & close till</button></div></div>:<div className=\"rounded-xl border border-dashed border-slate-700 p-6 text-slate-400\">No open till. Open one from Business Admin before service.</div>}",
       "status": "unverified",
@@ -21280,9 +21280,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:54:1704",
+      "id": "src/native/NativeOperationsViews.tsx:55:1704",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 54,
+      "line": 55,
       "kind": "button",
       "source": "export function NativeCloseDayView(){const runtime=useRuntime();const s=runtime.snapshot!;const tills=recordsOf(s,'tillSessions');const open=tills.find(t=>t.status==='OPEN');const closed=tills.filter(t=>t.status==='CLOSED').slice().reverse();const [modal,setModal]=useState<string|null>(null);const [amount,setAmount]=useState(0);const [openingFloat,setOpeningFloat]=useState(Number(recordsOf(s,'tillPolicy')[0]?.defaultOpeningFloat||0));const [reason,setReason]=useState('');const [cashType,setCashType]=useState('OUT');const [approval,setApproval]=useState<{permission:Permission;target:string;run:(t:string)=>Promise<void>}|null>(null);const perms=s.actor.permissions;const protect=(permission:Permission,target:string,fn:(token?:string)=>Promise<void>)=>perms.includes(permission)?void fn():setApproval({permission,target,run:async t=>fn(t)});return <div className=\"h-full overflow-auto bg-slate-950 p-5 text-white\"><div className=\"mb-5\"><h1 className=\"text-2xl font-bold\">Shift & day close</h1><p className=\"text-sm text-slate-400\">Resolve tabs, reconcile, count cash, close, back up and synchronize.</p></div>{open?<div className=\"rounded-2xl border border-amber-700/40 bg-amber-950/20 p-5\"><div className=\"grid gap-3 sm:grid-cols-4\"><Metric label=\"Opening float\" value={money(open.openingFloat)}/><Metric label=\"Cash sales\" value={money(open.cashSalesTotal)}/><Metric label=\"Paid in / out\" value={`${money(open.cashPaidIn)} / ${money(open.cashPaidOut)}`}/><Metric label=\"Expected drawer\" value={money(open.expectedCashInDrawer)}/></div><div className=\"mt-4 flex flex-wrap gap-2\"><button className={buttonClass} onClick={()=>{setAmount(0);setReason('');setModal('MOVEMENT')}}>Paid in / out</button><button className={primaryButtonClass} onClick={()=>{setAmount(Number(open.expectedCashInDrawer));setReason('');setModal('CLOSE')}}>Count & close till</button></div></div>:<div className=\"rounded-xl border border-dashed border-slate-700 p-6 text-slate-400\">No open till. Open one from Business Admin before service.</div>}",
       "status": "unverified",
@@ -21292,9 +21292,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:54:1743",
+      "id": "src/native/NativeOperationsViews.tsx:55:1743",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 54,
+      "line": 55,
       "kind": "onClick",
       "source": "export function NativeCloseDayView(){const runtime=useRuntime();const s=runtime.snapshot!;const tills=recordsOf(s,'tillSessions');const open=tills.find(t=>t.status==='OPEN');const closed=tills.filter(t=>t.status==='CLOSED').slice().reverse();const [modal,setModal]=useState<string|null>(null);const [amount,setAmount]=useState(0);const [openingFloat,setOpeningFloat]=useState(Number(recordsOf(s,'tillPolicy')[0]?.defaultOpeningFloat||0));const [reason,setReason]=useState('');const [cashType,setCashType]=useState('OUT');const [approval,setApproval]=useState<{permission:Permission;target:string;run:(t:string)=>Promise<void>}|null>(null);const perms=s.actor.permissions;const protect=(permission:Permission,target:string,fn:(token?:string)=>Promise<void>)=>perms.includes(permission)?void fn():setApproval({permission,target,run:async t=>fn(t)});return <div className=\"h-full overflow-auto bg-slate-950 p-5 text-white\"><div className=\"mb-5\"><h1 className=\"text-2xl font-bold\">Shift & day close</h1><p className=\"text-sm text-slate-400\">Resolve tabs, reconcile, count cash, close, back up and synchronize.</p></div>{open?<div className=\"rounded-2xl border border-amber-700/40 bg-amber-950/20 p-5\"><div className=\"grid gap-3 sm:grid-cols-4\"><Metric label=\"Opening float\" value={money(open.openingFloat)}/><Metric label=\"Cash sales\" value={money(open.cashSalesTotal)}/><Metric label=\"Paid in / out\" value={`${money(open.cashPaidIn)} / ${money(open.cashPaidOut)}`}/><Metric label=\"Expected drawer\" value={money(open.expectedCashInDrawer)}/></div><div className=\"mt-4 flex flex-wrap gap-2\"><button className={buttonClass} onClick={()=>{setAmount(0);setReason('');setModal('MOVEMENT')}}>Paid in / out</button><button className={primaryButtonClass} onClick={()=>{setAmount(Number(open.expectedCashInDrawer));setReason('');setModal('CLOSE')}}>Count & close till</button></div></div>:<div className=\"rounded-xl border border-dashed border-slate-700 p-6 text-slate-400\">No open till. Open one from Business Admin before service.</div>}",
       "status": "unverified",
@@ -21304,81 +21304,81 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:55:43",
-      "file": "src/native/NativeOperationsViews.tsx",
-      "line": 55,
-      "kind": "button",
-      "source": "<div className=\"mt-6 flex flex-wrap gap-2\"><button className={buttonClass} onClick={()=>void runtime.backup()}>Create backup</button><button className={buttonClass} onClick={()=>void runtime.sync()}>Synchronize</button></div><h2 className=\"mb-2 mt-7 font-bold\">Closed shifts</h2>{closed.map(t=><div key={t.id} className=\"mb-2 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900 p-3\"><div><b>{shortDate(t.closedAt)}</b><div className=\"text-xs text-slate-500\">Cash variance {money(t.cashVariance)} · counted {money(t.countedCashAtClose)}</div></div><button className={buttonClass} onClick={()=>void runtime.command('closeDay.generate',{tillId:t.id})}>Generate close-day report</button></div>)}",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/native/NativeOperationsViews.tsx:55:75",
-      "file": "src/native/NativeOperationsViews.tsx",
-      "line": 55,
-      "kind": "onClick",
-      "source": "<div className=\"mt-6 flex flex-wrap gap-2\"><button className={buttonClass} onClick={()=>void runtime.backup()}>Create backup</button><button className={buttonClass} onClick={()=>void runtime.sync()}>Synchronize</button></div><h2 className=\"mb-2 mt-7 font-bold\">Closed shifts</h2>{closed.map(t=><div key={t.id} className=\"mb-2 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900 p-3\"><div><b>{shortDate(t.closedAt)}</b><div className=\"text-xs text-slate-500\">Cash variance {money(t.cashVariance)} · counted {money(t.countedCashAtClose)}</div></div><button className={buttonClass} onClick={()=>void runtime.command('closeDay.generate',{tillId:t.id})}>Generate close-day report</button></div>)}",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/native/NativeOperationsViews.tsx:55:133",
-      "file": "src/native/NativeOperationsViews.tsx",
-      "line": 55,
-      "kind": "button",
-      "source": "<div className=\"mt-6 flex flex-wrap gap-2\"><button className={buttonClass} onClick={()=>void runtime.backup()}>Create backup</button><button className={buttonClass} onClick={()=>void runtime.sync()}>Synchronize</button></div><h2 className=\"mb-2 mt-7 font-bold\">Closed shifts</h2>{closed.map(t=><div key={t.id} className=\"mb-2 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900 p-3\"><div><b>{shortDate(t.closedAt)}</b><div className=\"text-xs text-slate-500\">Cash variance {money(t.cashVariance)} · counted {money(t.countedCashAtClose)}</div></div><button className={buttonClass} onClick={()=>void runtime.command('closeDay.generate',{tillId:t.id})}>Generate close-day report</button></div>)}",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/native/NativeOperationsViews.tsx:55:165",
-      "file": "src/native/NativeOperationsViews.tsx",
-      "line": 55,
-      "kind": "onClick",
-      "source": "<div className=\"mt-6 flex flex-wrap gap-2\"><button className={buttonClass} onClick={()=>void runtime.backup()}>Create backup</button><button className={buttonClass} onClick={()=>void runtime.sync()}>Synchronize</button></div><h2 className=\"mb-2 mt-7 font-bold\">Closed shifts</h2>{closed.map(t=><div key={t.id} className=\"mb-2 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900 p-3\"><div><b>{shortDate(t.closedAt)}</b><div className=\"text-xs text-slate-500\">Cash variance {money(t.cashVariance)} · counted {money(t.countedCashAtClose)}</div></div><button className={buttonClass} onClick={()=>void runtime.command('closeDay.generate',{tillId:t.id})}>Generate close-day report</button></div>)}",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/native/NativeOperationsViews.tsx:55:593",
-      "file": "src/native/NativeOperationsViews.tsx",
-      "line": 55,
-      "kind": "button",
-      "source": "<div className=\"mt-6 flex flex-wrap gap-2\"><button className={buttonClass} onClick={()=>void runtime.backup()}>Create backup</button><button className={buttonClass} onClick={()=>void runtime.sync()}>Synchronize</button></div><h2 className=\"mb-2 mt-7 font-bold\">Closed shifts</h2>{closed.map(t=><div key={t.id} className=\"mb-2 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900 p-3\"><div><b>{shortDate(t.closedAt)}</b><div className=\"text-xs text-slate-500\">Cash variance {money(t.cashVariance)} · counted {money(t.countedCashAtClose)}</div></div><button className={buttonClass} onClick={()=>void runtime.command('closeDay.generate',{tillId:t.id})}>Generate close-day report</button></div>)}",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/native/NativeOperationsViews.tsx:55:625",
-      "file": "src/native/NativeOperationsViews.tsx",
-      "line": 55,
-      "kind": "onClick",
-      "source": "<div className=\"mt-6 flex flex-wrap gap-2\"><button className={buttonClass} onClick={()=>void runtime.backup()}>Create backup</button><button className={buttonClass} onClick={()=>void runtime.sync()}>Synchronize</button></div><h2 className=\"mb-2 mt-7 font-bold\">Closed shifts</h2>{closed.map(t=><div key={t.id} className=\"mb-2 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900 p-3\"><div><b>{shortDate(t.closedAt)}</b><div className=\"text-xs text-slate-500\">Cash variance {money(t.cashVariance)} · counted {money(t.countedCashAtClose)}</div></div><button className={buttonClass} onClick={()=>void runtime.command('closeDay.generate',{tillId:t.id})}>Generate close-day report</button></div>)}",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/native/NativeOperationsViews.tsx:56:124",
+      "id": "src/native/NativeOperationsViews.tsx:56:43",
       "file": "src/native/NativeOperationsViews.tsx",
       "line": 56,
+      "kind": "button",
+      "source": "<div className=\"mt-6 flex flex-wrap gap-2\"><button className={buttonClass} onClick={()=>void runtime.backup()}>Create backup</button><button className={buttonClass} onClick={()=>void runtime.sync()}>Synchronize</button></div><h2 className=\"mb-2 mt-7 font-bold\">Closed shifts</h2>{closed.map(t=><div key={t.id} className=\"mb-2 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900 p-3\"><div><b>{shortDate(t.closedAt)}</b><div className=\"text-xs text-slate-500\">Cash variance {money(t.cashVariance)} · counted {money(t.countedCashAtClose)}</div></div><button className={buttonClass} onClick={()=>void runtime.command('closeDay.generate',{tillId:t.id})}>Generate close-day report</button></div>)}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/native/NativeOperationsViews.tsx:56:75",
+      "file": "src/native/NativeOperationsViews.tsx",
+      "line": 56,
+      "kind": "onClick",
+      "source": "<div className=\"mt-6 flex flex-wrap gap-2\"><button className={buttonClass} onClick={()=>void runtime.backup()}>Create backup</button><button className={buttonClass} onClick={()=>void runtime.sync()}>Synchronize</button></div><h2 className=\"mb-2 mt-7 font-bold\">Closed shifts</h2>{closed.map(t=><div key={t.id} className=\"mb-2 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900 p-3\"><div><b>{shortDate(t.closedAt)}</b><div className=\"text-xs text-slate-500\">Cash variance {money(t.cashVariance)} · counted {money(t.countedCashAtClose)}</div></div><button className={buttonClass} onClick={()=>void runtime.command('closeDay.generate',{tillId:t.id})}>Generate close-day report</button></div>)}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/native/NativeOperationsViews.tsx:56:133",
+      "file": "src/native/NativeOperationsViews.tsx",
+      "line": 56,
+      "kind": "button",
+      "source": "<div className=\"mt-6 flex flex-wrap gap-2\"><button className={buttonClass} onClick={()=>void runtime.backup()}>Create backup</button><button className={buttonClass} onClick={()=>void runtime.sync()}>Synchronize</button></div><h2 className=\"mb-2 mt-7 font-bold\">Closed shifts</h2>{closed.map(t=><div key={t.id} className=\"mb-2 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900 p-3\"><div><b>{shortDate(t.closedAt)}</b><div className=\"text-xs text-slate-500\">Cash variance {money(t.cashVariance)} · counted {money(t.countedCashAtClose)}</div></div><button className={buttonClass} onClick={()=>void runtime.command('closeDay.generate',{tillId:t.id})}>Generate close-day report</button></div>)}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/native/NativeOperationsViews.tsx:56:165",
+      "file": "src/native/NativeOperationsViews.tsx",
+      "line": 56,
+      "kind": "onClick",
+      "source": "<div className=\"mt-6 flex flex-wrap gap-2\"><button className={buttonClass} onClick={()=>void runtime.backup()}>Create backup</button><button className={buttonClass} onClick={()=>void runtime.sync()}>Synchronize</button></div><h2 className=\"mb-2 mt-7 font-bold\">Closed shifts</h2>{closed.map(t=><div key={t.id} className=\"mb-2 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900 p-3\"><div><b>{shortDate(t.closedAt)}</b><div className=\"text-xs text-slate-500\">Cash variance {money(t.cashVariance)} · counted {money(t.countedCashAtClose)}</div></div><button className={buttonClass} onClick={()=>void runtime.command('closeDay.generate',{tillId:t.id})}>Generate close-day report</button></div>)}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/native/NativeOperationsViews.tsx:56:593",
+      "file": "src/native/NativeOperationsViews.tsx",
+      "line": 56,
+      "kind": "button",
+      "source": "<div className=\"mt-6 flex flex-wrap gap-2\"><button className={buttonClass} onClick={()=>void runtime.backup()}>Create backup</button><button className={buttonClass} onClick={()=>void runtime.sync()}>Synchronize</button></div><h2 className=\"mb-2 mt-7 font-bold\">Closed shifts</h2>{closed.map(t=><div key={t.id} className=\"mb-2 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900 p-3\"><div><b>{shortDate(t.closedAt)}</b><div className=\"text-xs text-slate-500\">Cash variance {money(t.cashVariance)} · counted {money(t.countedCashAtClose)}</div></div><button className={buttonClass} onClick={()=>void runtime.command('closeDay.generate',{tillId:t.id})}>Generate close-day report</button></div>)}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/native/NativeOperationsViews.tsx:56:625",
+      "file": "src/native/NativeOperationsViews.tsx",
+      "line": 56,
+      "kind": "onClick",
+      "source": "<div className=\"mt-6 flex flex-wrap gap-2\"><button className={buttonClass} onClick={()=>void runtime.backup()}>Create backup</button><button className={buttonClass} onClick={()=>void runtime.sync()}>Synchronize</button></div><h2 className=\"mb-2 mt-7 font-bold\">Closed shifts</h2>{closed.map(t=><div key={t.id} className=\"mb-2 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900 p-3\"><div><b>{shortDate(t.closedAt)}</b><div className=\"text-xs text-slate-500\">Cash variance {money(t.cashVariance)} · counted {money(t.countedCashAtClose)}</div></div><button className={buttonClass} onClick={()=>void runtime.command('closeDay.generate',{tillId:t.id})}>Generate close-day report</button></div>)}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/native/NativeOperationsViews.tsx:57:124",
+      "file": "src/native/NativeOperationsViews.tsx",
+      "line": 57,
       "kind": "select",
       "source": "{modal==='MOVEMENT'&&open&&<ActionDialog title=\"Cash paid in / out\" onClose={()=>setModal(null)}><div className=\"space-y-3\"><select className={fieldClass} value={cashType} onChange={e=>setCashType(e.target.value)}><option value=\"IN\">Paid in / float top-up</option><option value=\"OUT\">Paid out / cash drop</option></select><input className={fieldClass} type=\"number\" min=\"0.01\" value={amount} onChange={e=>setAmount(Number(e.target.value))}/><textarea className={fieldClass} placeholder=\"Reason\" value={reason} onChange={e=>setReason(e.target.value)}/><button className={primaryButtonClass} onClick={()=>protect('till.cash_movement',open.id,async token=>{await runtime.command('till.cashMovement',{tillId:open.id,type:cashType,amount,reason,approvalToken:token});setModal(null)})}>Record movement</button></div></ActionDialog>}",
       "status": "unverified",
@@ -21388,9 +21388,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:56:172",
+      "id": "src/native/NativeOperationsViews.tsx:57:172",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 56,
+      "line": 57,
       "kind": "onChange",
       "source": "{modal==='MOVEMENT'&&open&&<ActionDialog title=\"Cash paid in / out\" onClose={()=>setModal(null)}><div className=\"space-y-3\"><select className={fieldClass} value={cashType} onChange={e=>setCashType(e.target.value)}><option value=\"IN\">Paid in / float top-up</option><option value=\"OUT\">Paid out / cash drop</option></select><input className={fieldClass} type=\"number\" min=\"0.01\" value={amount} onChange={e=>setAmount(Number(e.target.value))}/><textarea className={fieldClass} placeholder=\"Reason\" value={reason} onChange={e=>setReason(e.target.value)}/><button className={primaryButtonClass} onClick={()=>protect('till.cash_movement',open.id,async token=>{await runtime.command('till.cashMovement',{tillId:open.id,type:cashType,amount,reason,approvalToken:token});setModal(null)})}>Record movement</button></div></ActionDialog>}",
       "status": "unverified",
@@ -21400,9 +21400,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:56:322",
+      "id": "src/native/NativeOperationsViews.tsx:57:322",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 56,
+      "line": 57,
       "kind": "input",
       "source": "{modal==='MOVEMENT'&&open&&<ActionDialog title=\"Cash paid in / out\" onClose={()=>setModal(null)}><div className=\"space-y-3\"><select className={fieldClass} value={cashType} onChange={e=>setCashType(e.target.value)}><option value=\"IN\">Paid in / float top-up</option><option value=\"OUT\">Paid out / cash drop</option></select><input className={fieldClass} type=\"number\" min=\"0.01\" value={amount} onChange={e=>setAmount(Number(e.target.value))}/><textarea className={fieldClass} placeholder=\"Reason\" value={reason} onChange={e=>setReason(e.target.value)}/><button className={primaryButtonClass} onClick={()=>protect('till.cash_movement',open.id,async token=>{await runtime.command('till.cashMovement',{tillId:open.id,type:cashType,amount,reason,approvalToken:token});setModal(null)})}>Record movement</button></div></ActionDialog>}",
       "status": "unverified",
@@ -21412,9 +21412,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:56:392",
+      "id": "src/native/NativeOperationsViews.tsx:57:392",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 56,
+      "line": 57,
       "kind": "onChange",
       "source": "{modal==='MOVEMENT'&&open&&<ActionDialog title=\"Cash paid in / out\" onClose={()=>setModal(null)}><div className=\"space-y-3\"><select className={fieldClass} value={cashType} onChange={e=>setCashType(e.target.value)}><option value=\"IN\">Paid in / float top-up</option><option value=\"OUT\">Paid out / cash drop</option></select><input className={fieldClass} type=\"number\" min=\"0.01\" value={amount} onChange={e=>setAmount(Number(e.target.value))}/><textarea className={fieldClass} placeholder=\"Reason\" value={reason} onChange={e=>setReason(e.target.value)}/><button className={primaryButtonClass} onClick={()=>protect('till.cash_movement',open.id,async token=>{await runtime.command('till.cashMovement',{tillId:open.id,type:cashType,amount,reason,approvalToken:token});setModal(null)})}>Record movement</button></div></ActionDialog>}",
       "status": "unverified",
@@ -21424,9 +21424,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:56:441",
+      "id": "src/native/NativeOperationsViews.tsx:57:441",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 56,
+      "line": 57,
       "kind": "textarea",
       "source": "{modal==='MOVEMENT'&&open&&<ActionDialog title=\"Cash paid in / out\" onClose={()=>setModal(null)}><div className=\"space-y-3\"><select className={fieldClass} value={cashType} onChange={e=>setCashType(e.target.value)}><option value=\"IN\">Paid in / float top-up</option><option value=\"OUT\">Paid out / cash drop</option></select><input className={fieldClass} type=\"number\" min=\"0.01\" value={amount} onChange={e=>setAmount(Number(e.target.value))}/><textarea className={fieldClass} placeholder=\"Reason\" value={reason} onChange={e=>setReason(e.target.value)}/><button className={primaryButtonClass} onClick={()=>protect('till.cash_movement',open.id,async token=>{await runtime.command('till.cashMovement',{tillId:open.id,type:cashType,amount,reason,approvalToken:token});setModal(null)})}>Record movement</button></div></ActionDialog>}",
       "status": "unverified",
@@ -21436,9 +21436,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:56:510",
+      "id": "src/native/NativeOperationsViews.tsx:57:510",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 56,
+      "line": 57,
       "kind": "onChange",
       "source": "{modal==='MOVEMENT'&&open&&<ActionDialog title=\"Cash paid in / out\" onClose={()=>setModal(null)}><div className=\"space-y-3\"><select className={fieldClass} value={cashType} onChange={e=>setCashType(e.target.value)}><option value=\"IN\">Paid in / float top-up</option><option value=\"OUT\">Paid out / cash drop</option></select><input className={fieldClass} type=\"number\" min=\"0.01\" value={amount} onChange={e=>setAmount(Number(e.target.value))}/><textarea className={fieldClass} placeholder=\"Reason\" value={reason} onChange={e=>setReason(e.target.value)}/><button className={primaryButtonClass} onClick={()=>protect('till.cash_movement',open.id,async token=>{await runtime.command('till.cashMovement',{tillId:open.id,type:cashType,amount,reason,approvalToken:token});setModal(null)})}>Record movement</button></div></ActionDialog>}",
       "status": "unverified",
@@ -21448,9 +21448,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:56:551",
+      "id": "src/native/NativeOperationsViews.tsx:57:551",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 56,
+      "line": 57,
       "kind": "button",
       "source": "{modal==='MOVEMENT'&&open&&<ActionDialog title=\"Cash paid in / out\" onClose={()=>setModal(null)}><div className=\"space-y-3\"><select className={fieldClass} value={cashType} onChange={e=>setCashType(e.target.value)}><option value=\"IN\">Paid in / float top-up</option><option value=\"OUT\">Paid out / cash drop</option></select><input className={fieldClass} type=\"number\" min=\"0.01\" value={amount} onChange={e=>setAmount(Number(e.target.value))}/><textarea className={fieldClass} placeholder=\"Reason\" value={reason} onChange={e=>setReason(e.target.value)}/><button className={primaryButtonClass} onClick={()=>protect('till.cash_movement',open.id,async token=>{await runtime.command('till.cashMovement',{tillId:open.id,type:cashType,amount,reason,approvalToken:token});setModal(null)})}>Record movement</button></div></ActionDialog>}",
       "status": "unverified",
@@ -21460,9 +21460,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:56:590",
+      "id": "src/native/NativeOperationsViews.tsx:57:590",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 56,
+      "line": 57,
       "kind": "onClick",
       "source": "{modal==='MOVEMENT'&&open&&<ActionDialog title=\"Cash paid in / out\" onClose={()=>setModal(null)}><div className=\"space-y-3\"><select className={fieldClass} value={cashType} onChange={e=>setCashType(e.target.value)}><option value=\"IN\">Paid in / float top-up</option><option value=\"OUT\">Paid out / cash drop</option></select><input className={fieldClass} type=\"number\" min=\"0.01\" value={amount} onChange={e=>setAmount(Number(e.target.value))}/><textarea className={fieldClass} placeholder=\"Reason\" value={reason} onChange={e=>setReason(e.target.value)}/><button className={primaryButtonClass} onClick={()=>protect('till.cash_movement',open.id,async token=>{await runtime.command('till.cashMovement',{tillId:open.id,type:cashType,amount,reason,approvalToken:token});setModal(null)})}>Record movement</button></div></ActionDialog>}",
       "status": "unverified",
@@ -21472,9 +21472,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:57:263",
+      "id": "src/native/NativeOperationsViews.tsx:58:263",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 57,
+      "line": 58,
       "kind": "input",
       "source": "{modal==='CLOSE'&&open&&<ActionDialog title=\"Blind drawer count\" onClose={()=>setModal(null)}><div className=\"space-y-3\"><p className=\"text-sm text-slate-400\">Enter the actual physical cash. ServOS compares it to the expected drawer in the native transaction.</p><input className={fieldClass} type=\"number\" min=\"0\" value={amount} onChange={e=>setAmount(Number(e.target.value))}/><textarea className={fieldClass} placeholder=\"Variance reason if count differs\" value={reason} onChange={e=>setReason(e.target.value)}/><button className={primaryButtonClass} onClick={()=>{const doClose=async(token?:string)=>{await runtime.command('till.close',{tillId:open.id,countedCash:amount,reason,approvalToken:token});setModal(null)};if(Number(amount)===Number(open.expectedCashInDrawer))void doClose();else protect('till.override_variance',open.id,doClose)}}>Reconcile & close</button></div></ActionDialog>}",
       "status": "unverified",
@@ -21484,9 +21484,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:57:330",
+      "id": "src/native/NativeOperationsViews.tsx:58:330",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 57,
+      "line": 58,
       "kind": "onChange",
       "source": "{modal==='CLOSE'&&open&&<ActionDialog title=\"Blind drawer count\" onClose={()=>setModal(null)}><div className=\"space-y-3\"><p className=\"text-sm text-slate-400\">Enter the actual physical cash. ServOS compares it to the expected drawer in the native transaction.</p><input className={fieldClass} type=\"number\" min=\"0\" value={amount} onChange={e=>setAmount(Number(e.target.value))}/><textarea className={fieldClass} placeholder=\"Variance reason if count differs\" value={reason} onChange={e=>setReason(e.target.value)}/><button className={primaryButtonClass} onClick={()=>{const doClose=async(token?:string)=>{await runtime.command('till.close',{tillId:open.id,countedCash:amount,reason,approvalToken:token});setModal(null)};if(Number(amount)===Number(open.expectedCashInDrawer))void doClose();else protect('till.override_variance',open.id,doClose)}}>Reconcile & close</button></div></ActionDialog>}",
       "status": "unverified",
@@ -21496,9 +21496,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:57:379",
+      "id": "src/native/NativeOperationsViews.tsx:58:379",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 57,
+      "line": 58,
       "kind": "textarea",
       "source": "{modal==='CLOSE'&&open&&<ActionDialog title=\"Blind drawer count\" onClose={()=>setModal(null)}><div className=\"space-y-3\"><p className=\"text-sm text-slate-400\">Enter the actual physical cash. ServOS compares it to the expected drawer in the native transaction.</p><input className={fieldClass} type=\"number\" min=\"0\" value={amount} onChange={e=>setAmount(Number(e.target.value))}/><textarea className={fieldClass} placeholder=\"Variance reason if count differs\" value={reason} onChange={e=>setReason(e.target.value)}/><button className={primaryButtonClass} onClick={()=>{const doClose=async(token?:string)=>{await runtime.command('till.close',{tillId:open.id,countedCash:amount,reason,approvalToken:token});setModal(null)};if(Number(amount)===Number(open.expectedCashInDrawer))void doClose();else protect('till.override_variance',open.id,doClose)}}>Reconcile & close</button></div></ActionDialog>}",
       "status": "unverified",
@@ -21508,9 +21508,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:57:474",
+      "id": "src/native/NativeOperationsViews.tsx:58:474",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 57,
+      "line": 58,
       "kind": "onChange",
       "source": "{modal==='CLOSE'&&open&&<ActionDialog title=\"Blind drawer count\" onClose={()=>setModal(null)}><div className=\"space-y-3\"><p className=\"text-sm text-slate-400\">Enter the actual physical cash. ServOS compares it to the expected drawer in the native transaction.</p><input className={fieldClass} type=\"number\" min=\"0\" value={amount} onChange={e=>setAmount(Number(e.target.value))}/><textarea className={fieldClass} placeholder=\"Variance reason if count differs\" value={reason} onChange={e=>setReason(e.target.value)}/><button className={primaryButtonClass} onClick={()=>{const doClose=async(token?:string)=>{await runtime.command('till.close',{tillId:open.id,countedCash:amount,reason,approvalToken:token});setModal(null)};if(Number(amount)===Number(open.expectedCashInDrawer))void doClose();else protect('till.override_variance',open.id,doClose)}}>Reconcile & close</button></div></ActionDialog>}",
       "status": "unverified",
@@ -21520,9 +21520,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:57:515",
+      "id": "src/native/NativeOperationsViews.tsx:58:515",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 57,
+      "line": 58,
       "kind": "button",
       "source": "{modal==='CLOSE'&&open&&<ActionDialog title=\"Blind drawer count\" onClose={()=>setModal(null)}><div className=\"space-y-3\"><p className=\"text-sm text-slate-400\">Enter the actual physical cash. ServOS compares it to the expected drawer in the native transaction.</p><input className={fieldClass} type=\"number\" min=\"0\" value={amount} onChange={e=>setAmount(Number(e.target.value))}/><textarea className={fieldClass} placeholder=\"Variance reason if count differs\" value={reason} onChange={e=>setReason(e.target.value)}/><button className={primaryButtonClass} onClick={()=>{const doClose=async(token?:string)=>{await runtime.command('till.close',{tillId:open.id,countedCash:amount,reason,approvalToken:token});setModal(null)};if(Number(amount)===Number(open.expectedCashInDrawer))void doClose();else protect('till.override_variance',open.id,doClose)}}>Reconcile & close</button></div></ActionDialog>}",
       "status": "unverified",
@@ -21532,9 +21532,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:57:554",
+      "id": "src/native/NativeOperationsViews.tsx:58:554",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 57,
+      "line": 58,
       "kind": "onClick",
       "source": "{modal==='CLOSE'&&open&&<ActionDialog title=\"Blind drawer count\" onClose={()=>setModal(null)}><div className=\"space-y-3\"><p className=\"text-sm text-slate-400\">Enter the actual physical cash. ServOS compares it to the expected drawer in the native transaction.</p><input className={fieldClass} type=\"number\" min=\"0\" value={amount} onChange={e=>setAmount(Number(e.target.value))}/><textarea className={fieldClass} placeholder=\"Variance reason if count differs\" value={reason} onChange={e=>setReason(e.target.value)}/><button className={primaryButtonClass} onClick={()=>{const doClose=async(token?:string)=>{await runtime.command('till.close',{tillId:open.id,countedCash:amount,reason,approvalToken:token});setModal(null)};if(Number(amount)===Number(open.expectedCashInDrawer))void doClose();else protect('till.override_variance',open.id,doClose)}}>Reconcile & close</button></div></ActionDialog>}",
       "status": "unverified",
@@ -21544,9 +21544,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:62:1111",
+      "id": "src/native/NativeOperationsViews.tsx:63:1111",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 62,
+      "line": 63,
       "kind": "button",
       "source": "export function NativeAdminView(){const runtime=useRuntime();const s=runtime.snapshot!;const perms=s.actor.permissions;const staff=runtime.status?.staff||[];const till=recordsOf(s,'tillSessions').find(t=>t.status==='OPEN');const policy=recordsOf(s,'tillPolicy')[0]||{};const [modal,setModal]=useState<string|null>(null);const [form,setForm]=useState({name:'',jobTitle:'Bartender',role:'Server',pin:'',staffId:'',newRole:'Server',float:Number(policy.defaultOpeningFloat||0)});const [approval,setApproval]=useState<{permission:Permission;target?:string;run:(t:string)=>Promise<void>}|null>(null);const protect=(permission:Permission,target:string|undefined,fn:(token?:string)=>Promise<void>)=>perms.includes(permission)?void fn():setApproval({permission,target,run:async t=>fn(t)});return <div className=\"h-full overflow-auto bg-slate-950 p-5 text-white\"><div className=\"flex flex-wrap justify-between gap-3\"><div><h1 className=\"text-2xl font-bold\">Business Admin</h1><p className=\"text-sm text-slate-400\">{s.actor.name} · {s.actor.role} · terminal {s.terminalId?.slice(0,8)}</p></div><div className=\"flex gap-2\"><button className={buttonClass} onClick={()=>void runtime.sync()}>Sync ({s.pendingCount})</button><button className={buttonClass} onClick={()=>void runtime.backup()}>Backup</button><button className={buttonClass} onClick={()=>void runtime.lock()}>Change staff / lock</button></div></div>",
       "status": "unverified",
@@ -21556,9 +21556,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:62:1143",
+      "id": "src/native/NativeOperationsViews.tsx:63:1143",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 62,
+      "line": 63,
       "kind": "onClick",
       "source": "export function NativeAdminView(){const runtime=useRuntime();const s=runtime.snapshot!;const perms=s.actor.permissions;const staff=runtime.status?.staff||[];const till=recordsOf(s,'tillSessions').find(t=>t.status==='OPEN');const policy=recordsOf(s,'tillPolicy')[0]||{};const [modal,setModal]=useState<string|null>(null);const [form,setForm]=useState({name:'',jobTitle:'Bartender',role:'Server',pin:'',staffId:'',newRole:'Server',float:Number(policy.defaultOpeningFloat||0)});const [approval,setApproval]=useState<{permission:Permission;target?:string;run:(t:string)=>Promise<void>}|null>(null);const protect=(permission:Permission,target:string|undefined,fn:(token?:string)=>Promise<void>)=>perms.includes(permission)?void fn():setApproval({permission,target,run:async t=>fn(t)});return <div className=\"h-full overflow-auto bg-slate-950 p-5 text-white\"><div className=\"flex flex-wrap justify-between gap-3\"><div><h1 className=\"text-2xl font-bold\">Business Admin</h1><p className=\"text-sm text-slate-400\">{s.actor.name} · {s.actor.role} · terminal {s.terminalId?.slice(0,8)}</p></div><div className=\"flex gap-2\"><button className={buttonClass} onClick={()=>void runtime.sync()}>Sync ({s.pendingCount})</button><button className={buttonClass} onClick={()=>void runtime.backup()}>Backup</button><button className={buttonClass} onClick={()=>void runtime.lock()}>Change staff / lock</button></div></div>",
       "status": "unverified",
@@ -21568,9 +21568,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:62:1209",
+      "id": "src/native/NativeOperationsViews.tsx:63:1209",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 62,
+      "line": 63,
       "kind": "button",
       "source": "export function NativeAdminView(){const runtime=useRuntime();const s=runtime.snapshot!;const perms=s.actor.permissions;const staff=runtime.status?.staff||[];const till=recordsOf(s,'tillSessions').find(t=>t.status==='OPEN');const policy=recordsOf(s,'tillPolicy')[0]||{};const [modal,setModal]=useState<string|null>(null);const [form,setForm]=useState({name:'',jobTitle:'Bartender',role:'Server',pin:'',staffId:'',newRole:'Server',float:Number(policy.defaultOpeningFloat||0)});const [approval,setApproval]=useState<{permission:Permission;target?:string;run:(t:string)=>Promise<void>}|null>(null);const protect=(permission:Permission,target:string|undefined,fn:(token?:string)=>Promise<void>)=>perms.includes(permission)?void fn():setApproval({permission,target,run:async t=>fn(t)});return <div className=\"h-full overflow-auto bg-slate-950 p-5 text-white\"><div className=\"flex flex-wrap justify-between gap-3\"><div><h1 className=\"text-2xl font-bold\">Business Admin</h1><p className=\"text-sm text-slate-400\">{s.actor.name} · {s.actor.role} · terminal {s.terminalId?.slice(0,8)}</p></div><div className=\"flex gap-2\"><button className={buttonClass} onClick={()=>void runtime.sync()}>Sync ({s.pendingCount})</button><button className={buttonClass} onClick={()=>void runtime.backup()}>Backup</button><button className={buttonClass} onClick={()=>void runtime.lock()}>Change staff / lock</button></div></div>",
       "status": "unverified",
@@ -21580,9 +21580,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:62:1241",
+      "id": "src/native/NativeOperationsViews.tsx:63:1241",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 62,
+      "line": 63,
       "kind": "onClick",
       "source": "export function NativeAdminView(){const runtime=useRuntime();const s=runtime.snapshot!;const perms=s.actor.permissions;const staff=runtime.status?.staff||[];const till=recordsOf(s,'tillSessions').find(t=>t.status==='OPEN');const policy=recordsOf(s,'tillPolicy')[0]||{};const [modal,setModal]=useState<string|null>(null);const [form,setForm]=useState({name:'',jobTitle:'Bartender',role:'Server',pin:'',staffId:'',newRole:'Server',float:Number(policy.defaultOpeningFloat||0)});const [approval,setApproval]=useState<{permission:Permission;target?:string;run:(t:string)=>Promise<void>}|null>(null);const protect=(permission:Permission,target:string|undefined,fn:(token?:string)=>Promise<void>)=>perms.includes(permission)?void fn():setApproval({permission,target,run:async t=>fn(t)});return <div className=\"h-full overflow-auto bg-slate-950 p-5 text-white\"><div className=\"flex flex-wrap justify-between gap-3\"><div><h1 className=\"text-2xl font-bold\">Business Admin</h1><p className=\"text-sm text-slate-400\">{s.actor.name} · {s.actor.role} · terminal {s.terminalId?.slice(0,8)}</p></div><div className=\"flex gap-2\"><button className={buttonClass} onClick={()=>void runtime.sync()}>Sync ({s.pendingCount})</button><button className={buttonClass} onClick={()=>void runtime.backup()}>Backup</button><button className={buttonClass} onClick={()=>void runtime.lock()}>Change staff / lock</button></div></div>",
       "status": "unverified",
@@ -21592,9 +21592,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:62:1292",
+      "id": "src/native/NativeOperationsViews.tsx:63:1292",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 62,
+      "line": 63,
       "kind": "button",
       "source": "export function NativeAdminView(){const runtime=useRuntime();const s=runtime.snapshot!;const perms=s.actor.permissions;const staff=runtime.status?.staff||[];const till=recordsOf(s,'tillSessions').find(t=>t.status==='OPEN');const policy=recordsOf(s,'tillPolicy')[0]||{};const [modal,setModal]=useState<string|null>(null);const [form,setForm]=useState({name:'',jobTitle:'Bartender',role:'Server',pin:'',staffId:'',newRole:'Server',float:Number(policy.defaultOpeningFloat||0)});const [approval,setApproval]=useState<{permission:Permission;target?:string;run:(t:string)=>Promise<void>}|null>(null);const protect=(permission:Permission,target:string|undefined,fn:(token?:string)=>Promise<void>)=>perms.includes(permission)?void fn():setApproval({permission,target,run:async t=>fn(t)});return <div className=\"h-full overflow-auto bg-slate-950 p-5 text-white\"><div className=\"flex flex-wrap justify-between gap-3\"><div><h1 className=\"text-2xl font-bold\">Business Admin</h1><p className=\"text-sm text-slate-400\">{s.actor.name} · {s.actor.role} · terminal {s.terminalId?.slice(0,8)}</p></div><div className=\"flex gap-2\"><button className={buttonClass} onClick={()=>void runtime.sync()}>Sync ({s.pendingCount})</button><button className={buttonClass} onClick={()=>void runtime.backup()}>Backup</button><button className={buttonClass} onClick={()=>void runtime.lock()}>Change staff / lock</button></div></div>",
       "status": "unverified",
@@ -21604,9 +21604,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:62:1324",
+      "id": "src/native/NativeOperationsViews.tsx:63:1324",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 62,
+      "line": 63,
       "kind": "onClick",
       "source": "export function NativeAdminView(){const runtime=useRuntime();const s=runtime.snapshot!;const perms=s.actor.permissions;const staff=runtime.status?.staff||[];const till=recordsOf(s,'tillSessions').find(t=>t.status==='OPEN');const policy=recordsOf(s,'tillPolicy')[0]||{};const [modal,setModal]=useState<string|null>(null);const [form,setForm]=useState({name:'',jobTitle:'Bartender',role:'Server',pin:'',staffId:'',newRole:'Server',float:Number(policy.defaultOpeningFloat||0)});const [approval,setApproval]=useState<{permission:Permission;target?:string;run:(t:string)=>Promise<void>}|null>(null);const protect=(permission:Permission,target:string|undefined,fn:(token?:string)=>Promise<void>)=>perms.includes(permission)?void fn():setApproval({permission,target,run:async t=>fn(t)});return <div className=\"h-full overflow-auto bg-slate-950 p-5 text-white\"><div className=\"flex flex-wrap justify-between gap-3\"><div><h1 className=\"text-2xl font-bold\">Business Admin</h1><p className=\"text-sm text-slate-400\">{s.actor.name} · {s.actor.role} · terminal {s.terminalId?.slice(0,8)}</p></div><div className=\"flex gap-2\"><button className={buttonClass} onClick={()=>void runtime.sync()}>Sync ({s.pendingCount})</button><button className={buttonClass} onClick={()=>void runtime.backup()}>Backup</button><button className={buttonClass} onClick={()=>void runtime.lock()}>Change staff / lock</button></div></div>",
       "status": "unverified",
@@ -21616,9 +21616,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:64:314",
+      "id": "src/native/NativeOperationsViews.tsx:65:314",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 64,
+      "line": 65,
       "kind": "input",
       "source": "<section className=\"mt-5 rounded-2xl border border-slate-800 bg-slate-900 p-4\"><h2 className=\"font-bold\">Till</h2>{till?<p className=\"mt-2 text-sm text-slate-400\">Open by {till.employeeName}. Expected drawer {money(till.expectedCashInDrawer)}. Close it from Shift & Day Close.</p>:<div className=\"mt-3 flex gap-3\"><input className={fieldClass+' max-w-xs'} type=\"number\" min=\"0\" value={form.float} onChange={e=>setForm({...form,float:Number(e.target.value)})}/><button className={primaryButtonClass} onClick={()=>void runtime.command('till.open',{floatAmount:form.float})}>Open till</button></div>}</section>",
       "status": "unverified",
@@ -21628,9 +21628,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:64:397",
+      "id": "src/native/NativeOperationsViews.tsx:65:397",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 64,
+      "line": 65,
       "kind": "onChange",
       "source": "<section className=\"mt-5 rounded-2xl border border-slate-800 bg-slate-900 p-4\"><h2 className=\"font-bold\">Till</h2>{till?<p className=\"mt-2 text-sm text-slate-400\">Open by {till.employeeName}. Expected drawer {money(till.expectedCashInDrawer)}. Close it from Shift & Day Close.</p>:<div className=\"mt-3 flex gap-3\"><input className={fieldClass+' max-w-xs'} type=\"number\" min=\"0\" value={form.float} onChange={e=>setForm({...form,float:Number(e.target.value)})}/><button className={primaryButtonClass} onClick={()=>void runtime.command('till.open',{floatAmount:form.float})}>Open till</button></div>}</section>",
       "status": "unverified",
@@ -21640,9 +21640,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:64:460",
+      "id": "src/native/NativeOperationsViews.tsx:65:460",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 64,
+      "line": 65,
       "kind": "button",
       "source": "<section className=\"mt-5 rounded-2xl border border-slate-800 bg-slate-900 p-4\"><h2 className=\"font-bold\">Till</h2>{till?<p className=\"mt-2 text-sm text-slate-400\">Open by {till.employeeName}. Expected drawer {money(till.expectedCashInDrawer)}. Close it from Shift & Day Close.</p>:<div className=\"mt-3 flex gap-3\"><input className={fieldClass+' max-w-xs'} type=\"number\" min=\"0\" value={form.float} onChange={e=>setForm({...form,float:Number(e.target.value)})}/><button className={primaryButtonClass} onClick={()=>void runtime.command('till.open',{floatAmount:form.float})}>Open till</button></div>}</section>",
       "status": "unverified",
@@ -21652,9 +21652,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:64:499",
+      "id": "src/native/NativeOperationsViews.tsx:65:499",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 64,
+      "line": 65,
       "kind": "onClick",
       "source": "<section className=\"mt-5 rounded-2xl border border-slate-800 bg-slate-900 p-4\"><h2 className=\"font-bold\">Till</h2>{till?<p className=\"mt-2 text-sm text-slate-400\">Open by {till.employeeName}. Expected drawer {money(till.expectedCashInDrawer)}. Close it from Shift & Day Close.</p>:<div className=\"mt-3 flex gap-3\"><input className={fieldClass+' max-w-xs'} type=\"number\" min=\"0\" value={form.float} onChange={e=>setForm({...form,float:Number(e.target.value)})}/><button className={primaryButtonClass} onClick={()=>void runtime.command('till.open',{floatAmount:form.float})}>Open till</button></div>}</section>",
       "status": "unverified",
@@ -21664,9 +21664,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:65:299",
+      "id": "src/native/NativeOperationsViews.tsx:66:299",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 65,
+      "line": 66,
       "kind": "button",
       "source": "<section className=\"mt-5 rounded-2xl border border-slate-800 bg-slate-900 p-4\"><div className=\"flex justify-between\"><div><h2 className=\"font-bold\">Staff access</h2><p className=\"text-xs text-slate-500\">Authority comes from each person's local PIN session.</p></div>{perms.includes('staff.create')&&<button className={buttonClass} onClick={()=>setModal('CREATE')}>Add staff</button>}</div><div className=\"mt-3 space-y-2\">{staff.map(x=><div key={x.id} className=\"flex flex-wrap items-center justify-between gap-2 rounded-xl bg-slate-950 p-3\"><div><b>{x.name}</b><div className=\"text-xs text-slate-500\">{x.role}</div></div><div className=\"flex gap-1\">{perms.includes('staff.reset_pin')&&<button className={buttonClass} onClick={()=>{setForm({...form,staffId:x.id,pin:''});setModal('PIN')}}>Reset PIN</button>}{perms.includes('staff.change_role')&&<button className={buttonClass} onClick={()=>{setForm({...form,staffId:x.id,newRole:x.role});setModal('ROLE')}}>Role</button>}{perms.includes('staff.deactivate')&&x.id!==s.actor.id&&<button className={buttonClass} onClick={()=>protect('staff.deactivate',x.id,async token=>{await runtime.command('staff.deactivate',{staffId:x.id,approvalToken:token})})}>Deactivate</button>}</div></div>)}</div></section>",
       "status": "unverified",
@@ -21676,9 +21676,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:65:331",
+      "id": "src/native/NativeOperationsViews.tsx:66:331",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 65,
+      "line": 66,
       "kind": "onClick",
       "source": "<section className=\"mt-5 rounded-2xl border border-slate-800 bg-slate-900 p-4\"><div className=\"flex justify-between\"><div><h2 className=\"font-bold\">Staff access</h2><p className=\"text-xs text-slate-500\">Authority comes from each person's local PIN session.</p></div>{perms.includes('staff.create')&&<button className={buttonClass} onClick={()=>setModal('CREATE')}>Add staff</button>}</div><div className=\"mt-3 space-y-2\">{staff.map(x=><div key={x.id} className=\"flex flex-wrap items-center justify-between gap-2 rounded-xl bg-slate-950 p-3\"><div><b>{x.name}</b><div className=\"text-xs text-slate-500\">{x.role}</div></div><div className=\"flex gap-1\">{perms.includes('staff.reset_pin')&&<button className={buttonClass} onClick={()=>{setForm({...form,staffId:x.id,pin:''});setModal('PIN')}}>Reset PIN</button>}{perms.includes('staff.change_role')&&<button className={buttonClass} onClick={()=>{setForm({...form,staffId:x.id,newRole:x.role});setModal('ROLE')}}>Role</button>}{perms.includes('staff.deactivate')&&x.id!==s.actor.id&&<button className={buttonClass} onClick={()=>protect('staff.deactivate',x.id,async token=>{await runtime.command('staff.deactivate',{staffId:x.id,approvalToken:token})})}>Deactivate</button>}</div></div>)}</div></section>",
       "status": "unverified",
@@ -21688,9 +21688,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:65:685",
+      "id": "src/native/NativeOperationsViews.tsx:66:685",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 65,
+      "line": 66,
       "kind": "button",
       "source": "<section className=\"mt-5 rounded-2xl border border-slate-800 bg-slate-900 p-4\"><div className=\"flex justify-between\"><div><h2 className=\"font-bold\">Staff access</h2><p className=\"text-xs text-slate-500\">Authority comes from each person's local PIN session.</p></div>{perms.includes('staff.create')&&<button className={buttonClass} onClick={()=>setModal('CREATE')}>Add staff</button>}</div><div className=\"mt-3 space-y-2\">{staff.map(x=><div key={x.id} className=\"flex flex-wrap items-center justify-between gap-2 rounded-xl bg-slate-950 p-3\"><div><b>{x.name}</b><div className=\"text-xs text-slate-500\">{x.role}</div></div><div className=\"flex gap-1\">{perms.includes('staff.reset_pin')&&<button className={buttonClass} onClick={()=>{setForm({...form,staffId:x.id,pin:''});setModal('PIN')}}>Reset PIN</button>}{perms.includes('staff.change_role')&&<button className={buttonClass} onClick={()=>{setForm({...form,staffId:x.id,newRole:x.role});setModal('ROLE')}}>Role</button>}{perms.includes('staff.deactivate')&&x.id!==s.actor.id&&<button className={buttonClass} onClick={()=>protect('staff.deactivate',x.id,async token=>{await runtime.command('staff.deactivate',{staffId:x.id,approvalToken:token})})}>Deactivate</button>}</div></div>)}</div></section>",
       "status": "unverified",
@@ -21700,9 +21700,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:65:717",
+      "id": "src/native/NativeOperationsViews.tsx:66:717",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 65,
+      "line": 66,
       "kind": "onClick",
       "source": "<section className=\"mt-5 rounded-2xl border border-slate-800 bg-slate-900 p-4\"><div className=\"flex justify-between\"><div><h2 className=\"font-bold\">Staff access</h2><p className=\"text-xs text-slate-500\">Authority comes from each person's local PIN session.</p></div>{perms.includes('staff.create')&&<button className={buttonClass} onClick={()=>setModal('CREATE')}>Add staff</button>}</div><div className=\"mt-3 space-y-2\">{staff.map(x=><div key={x.id} className=\"flex flex-wrap items-center justify-between gap-2 rounded-xl bg-slate-950 p-3\"><div><b>{x.name}</b><div className=\"text-xs text-slate-500\">{x.role}</div></div><div className=\"flex gap-1\">{perms.includes('staff.reset_pin')&&<button className={buttonClass} onClick={()=>{setForm({...form,staffId:x.id,pin:''});setModal('PIN')}}>Reset PIN</button>}{perms.includes('staff.change_role')&&<button className={buttonClass} onClick={()=>{setForm({...form,staffId:x.id,newRole:x.role});setModal('ROLE')}}>Role</button>}{perms.includes('staff.deactivate')&&x.id!==s.actor.id&&<button className={buttonClass} onClick={()=>protect('staff.deactivate',x.id,async token=>{await runtime.command('staff.deactivate',{staffId:x.id,approvalToken:token})})}>Deactivate</button>}</div></div>)}</div></section>",
       "status": "unverified",
@@ -21712,9 +21712,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:65:845",
+      "id": "src/native/NativeOperationsViews.tsx:66:845",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 65,
+      "line": 66,
       "kind": "button",
       "source": "<section className=\"mt-5 rounded-2xl border border-slate-800 bg-slate-900 p-4\"><div className=\"flex justify-between\"><div><h2 className=\"font-bold\">Staff access</h2><p className=\"text-xs text-slate-500\">Authority comes from each person's local PIN session.</p></div>{perms.includes('staff.create')&&<button className={buttonClass} onClick={()=>setModal('CREATE')}>Add staff</button>}</div><div className=\"mt-3 space-y-2\">{staff.map(x=><div key={x.id} className=\"flex flex-wrap items-center justify-between gap-2 rounded-xl bg-slate-950 p-3\"><div><b>{x.name}</b><div className=\"text-xs text-slate-500\">{x.role}</div></div><div className=\"flex gap-1\">{perms.includes('staff.reset_pin')&&<button className={buttonClass} onClick={()=>{setForm({...form,staffId:x.id,pin:''});setModal('PIN')}}>Reset PIN</button>}{perms.includes('staff.change_role')&&<button className={buttonClass} onClick={()=>{setForm({...form,staffId:x.id,newRole:x.role});setModal('ROLE')}}>Role</button>}{perms.includes('staff.deactivate')&&x.id!==s.actor.id&&<button className={buttonClass} onClick={()=>protect('staff.deactivate',x.id,async token=>{await runtime.command('staff.deactivate',{staffId:x.id,approvalToken:token})})}>Deactivate</button>}</div></div>)}</div></section>",
       "status": "unverified",
@@ -21724,9 +21724,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:65:877",
+      "id": "src/native/NativeOperationsViews.tsx:66:877",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 65,
+      "line": 66,
       "kind": "onClick",
       "source": "<section className=\"mt-5 rounded-2xl border border-slate-800 bg-slate-900 p-4\"><div className=\"flex justify-between\"><div><h2 className=\"font-bold\">Staff access</h2><p className=\"text-xs text-slate-500\">Authority comes from each person's local PIN session.</p></div>{perms.includes('staff.create')&&<button className={buttonClass} onClick={()=>setModal('CREATE')}>Add staff</button>}</div><div className=\"mt-3 space-y-2\">{staff.map(x=><div key={x.id} className=\"flex flex-wrap items-center justify-between gap-2 rounded-xl bg-slate-950 p-3\"><div><b>{x.name}</b><div className=\"text-xs text-slate-500\">{x.role}</div></div><div className=\"flex gap-1\">{perms.includes('staff.reset_pin')&&<button className={buttonClass} onClick={()=>{setForm({...form,staffId:x.id,pin:''});setModal('PIN')}}>Reset PIN</button>}{perms.includes('staff.change_role')&&<button className={buttonClass} onClick={()=>{setForm({...form,staffId:x.id,newRole:x.role});setModal('ROLE')}}>Role</button>}{perms.includes('staff.deactivate')&&x.id!==s.actor.id&&<button className={buttonClass} onClick={()=>protect('staff.deactivate',x.id,async token=>{await runtime.command('staff.deactivate',{staffId:x.id,approvalToken:token})})}>Deactivate</button>}</div></div>)}</div></section>",
       "status": "unverified",
@@ -21736,9 +21736,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:65:1027",
+      "id": "src/native/NativeOperationsViews.tsx:66:1027",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 65,
+      "line": 66,
       "kind": "button",
       "source": "<section className=\"mt-5 rounded-2xl border border-slate-800 bg-slate-900 p-4\"><div className=\"flex justify-between\"><div><h2 className=\"font-bold\">Staff access</h2><p className=\"text-xs text-slate-500\">Authority comes from each person's local PIN session.</p></div>{perms.includes('staff.create')&&<button className={buttonClass} onClick={()=>setModal('CREATE')}>Add staff</button>}</div><div className=\"mt-3 space-y-2\">{staff.map(x=><div key={x.id} className=\"flex flex-wrap items-center justify-between gap-2 rounded-xl bg-slate-950 p-3\"><div><b>{x.name}</b><div className=\"text-xs text-slate-500\">{x.role}</div></div><div className=\"flex gap-1\">{perms.includes('staff.reset_pin')&&<button className={buttonClass} onClick={()=>{setForm({...form,staffId:x.id,pin:''});setModal('PIN')}}>Reset PIN</button>}{perms.includes('staff.change_role')&&<button className={buttonClass} onClick={()=>{setForm({...form,staffId:x.id,newRole:x.role});setModal('ROLE')}}>Role</button>}{perms.includes('staff.deactivate')&&x.id!==s.actor.id&&<button className={buttonClass} onClick={()=>protect('staff.deactivate',x.id,async token=>{await runtime.command('staff.deactivate',{staffId:x.id,approvalToken:token})})}>Deactivate</button>}</div></div>)}</div></section>",
       "status": "unverified",
@@ -21748,9 +21748,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:65:1059",
+      "id": "src/native/NativeOperationsViews.tsx:66:1059",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 65,
+      "line": 66,
       "kind": "onClick",
       "source": "<section className=\"mt-5 rounded-2xl border border-slate-800 bg-slate-900 p-4\"><div className=\"flex justify-between\"><div><h2 className=\"font-bold\">Staff access</h2><p className=\"text-xs text-slate-500\">Authority comes from each person's local PIN session.</p></div>{perms.includes('staff.create')&&<button className={buttonClass} onClick={()=>setModal('CREATE')}>Add staff</button>}</div><div className=\"mt-3 space-y-2\">{staff.map(x=><div key={x.id} className=\"flex flex-wrap items-center justify-between gap-2 rounded-xl bg-slate-950 p-3\"><div><b>{x.name}</b><div className=\"text-xs text-slate-500\">{x.role}</div></div><div className=\"flex gap-1\">{perms.includes('staff.reset_pin')&&<button className={buttonClass} onClick={()=>{setForm({...form,staffId:x.id,pin:''});setModal('PIN')}}>Reset PIN</button>}{perms.includes('staff.change_role')&&<button className={buttonClass} onClick={()=>{setForm({...form,staffId:x.id,newRole:x.role});setModal('ROLE')}}>Role</button>}{perms.includes('staff.deactivate')&&x.id!==s.actor.id&&<button className={buttonClass} onClick={()=>protect('staff.deactivate',x.id,async token=>{await runtime.command('staff.deactivate',{staffId:x.id,approvalToken:token})})}>Deactivate</button>}</div></div>)}</div></section>",
       "status": "unverified",
@@ -21760,9 +21760,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:69:118",
+      "id": "src/native/NativeOperationsViews.tsx:71:118",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 69,
+      "line": 71,
       "kind": "input",
       "source": "{modal==='CREATE'&&<ActionDialog title=\"Create staff account\" onClose={()=>setModal(null)}><div className=\"space-y-3\"><input className={fieldClass} placeholder=\"Name\" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/><input className={fieldClass} placeholder=\"Job title\" value={form.jobTitle} onChange={e=>setForm({...form,jobTitle:e.target.value})}/><select className={fieldClass} value={form.role} onChange={e=>setForm({...form,role:e.target.value})}><option>Server</option><option>Manager</option>{s.actor.role==='Admin'&&<option>Admin</option>}</select><input className={fieldClass} type=\"password\" inputMode=\"numeric\" placeholder=\"PIN\" value={form.pin} onChange={e=>setForm({...form,pin:e.target.value.replace(/\\D/g,'').slice(0,12)})}/><button className={primaryButtonClass} onClick={()=>void runtime.command('staff.create',{name:form.name,jobTitle:form.jobTitle,role:form.role,pin:form.pin}).then(()=>setModal(null))}>Create</button></div></ActionDialog>}",
       "status": "unverified",
@@ -21772,9 +21772,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:69:185",
+      "id": "src/native/NativeOperationsViews.tsx:71:185",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 69,
+      "line": 71,
       "kind": "onChange",
       "source": "{modal==='CREATE'&&<ActionDialog title=\"Create staff account\" onClose={()=>setModal(null)}><div className=\"space-y-3\"><input className={fieldClass} placeholder=\"Name\" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/><input className={fieldClass} placeholder=\"Job title\" value={form.jobTitle} onChange={e=>setForm({...form,jobTitle:e.target.value})}/><select className={fieldClass} value={form.role} onChange={e=>setForm({...form,role:e.target.value})}><option>Server</option><option>Manager</option>{s.actor.role==='Admin'&&<option>Admin</option>}</select><input className={fieldClass} type=\"password\" inputMode=\"numeric\" placeholder=\"PIN\" value={form.pin} onChange={e=>setForm({...form,pin:e.target.value.replace(/\\D/g,'').slice(0,12)})}/><button className={primaryButtonClass} onClick={()=>void runtime.command('staff.create',{name:form.name,jobTitle:form.jobTitle,role:form.role,pin:form.pin}).then(()=>setModal(null))}>Create</button></div></ActionDialog>}",
       "status": "unverified",
@@ -21784,9 +21784,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:69:239",
+      "id": "src/native/NativeOperationsViews.tsx:71:239",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 69,
+      "line": 71,
       "kind": "input",
       "source": "{modal==='CREATE'&&<ActionDialog title=\"Create staff account\" onClose={()=>setModal(null)}><div className=\"space-y-3\"><input className={fieldClass} placeholder=\"Name\" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/><input className={fieldClass} placeholder=\"Job title\" value={form.jobTitle} onChange={e=>setForm({...form,jobTitle:e.target.value})}/><select className={fieldClass} value={form.role} onChange={e=>setForm({...form,role:e.target.value})}><option>Server</option><option>Manager</option>{s.actor.role==='Admin'&&<option>Admin</option>}</select><input className={fieldClass} type=\"password\" inputMode=\"numeric\" placeholder=\"PIN\" value={form.pin} onChange={e=>setForm({...form,pin:e.target.value.replace(/\\D/g,'').slice(0,12)})}/><button className={primaryButtonClass} onClick={()=>void runtime.command('staff.create',{name:form.name,jobTitle:form.jobTitle,role:form.role,pin:form.pin}).then(()=>setModal(null))}>Create</button></div></ActionDialog>}",
       "status": "unverified",
@@ -21796,9 +21796,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:69:315",
+      "id": "src/native/NativeOperationsViews.tsx:71:315",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 69,
+      "line": 71,
       "kind": "onChange",
       "source": "{modal==='CREATE'&&<ActionDialog title=\"Create staff account\" onClose={()=>setModal(null)}><div className=\"space-y-3\"><input className={fieldClass} placeholder=\"Name\" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/><input className={fieldClass} placeholder=\"Job title\" value={form.jobTitle} onChange={e=>setForm({...form,jobTitle:e.target.value})}/><select className={fieldClass} value={form.role} onChange={e=>setForm({...form,role:e.target.value})}><option>Server</option><option>Manager</option>{s.actor.role==='Admin'&&<option>Admin</option>}</select><input className={fieldClass} type=\"password\" inputMode=\"numeric\" placeholder=\"PIN\" value={form.pin} onChange={e=>setForm({...form,pin:e.target.value.replace(/\\D/g,'').slice(0,12)})}/><button className={primaryButtonClass} onClick={()=>void runtime.command('staff.create',{name:form.name,jobTitle:form.jobTitle,role:form.role,pin:form.pin}).then(()=>setModal(null))}>Create</button></div></ActionDialog>}",
       "status": "unverified",
@@ -21808,9 +21808,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:69:373",
+      "id": "src/native/NativeOperationsViews.tsx:71:373",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 69,
+      "line": 71,
       "kind": "select",
       "source": "{modal==='CREATE'&&<ActionDialog title=\"Create staff account\" onClose={()=>setModal(null)}><div className=\"space-y-3\"><input className={fieldClass} placeholder=\"Name\" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/><input className={fieldClass} placeholder=\"Job title\" value={form.jobTitle} onChange={e=>setForm({...form,jobTitle:e.target.value})}/><select className={fieldClass} value={form.role} onChange={e=>setForm({...form,role:e.target.value})}><option>Server</option><option>Manager</option>{s.actor.role==='Admin'&&<option>Admin</option>}</select><input className={fieldClass} type=\"password\" inputMode=\"numeric\" placeholder=\"PIN\" value={form.pin} onChange={e=>setForm({...form,pin:e.target.value.replace(/\\D/g,'').slice(0,12)})}/><button className={primaryButtonClass} onClick={()=>void runtime.command('staff.create',{name:form.name,jobTitle:form.jobTitle,role:form.role,pin:form.pin}).then(()=>setModal(null))}>Create</button></div></ActionDialog>}",
       "status": "unverified",
@@ -21820,117 +21820,117 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:69:422",
-      "file": "src/native/NativeOperationsViews.tsx",
-      "line": 69,
-      "kind": "onChange",
-      "source": "{modal==='CREATE'&&<ActionDialog title=\"Create staff account\" onClose={()=>setModal(null)}><div className=\"space-y-3\"><input className={fieldClass} placeholder=\"Name\" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/><input className={fieldClass} placeholder=\"Job title\" value={form.jobTitle} onChange={e=>setForm({...form,jobTitle:e.target.value})}/><select className={fieldClass} value={form.role} onChange={e=>setForm({...form,role:e.target.value})}><option>Server</option><option>Manager</option>{s.actor.role==='Admin'&&<option>Admin</option>}</select><input className={fieldClass} type=\"password\" inputMode=\"numeric\" placeholder=\"PIN\" value={form.pin} onChange={e=>setForm({...form,pin:e.target.value.replace(/\\D/g,'').slice(0,12)})}/><button className={primaryButtonClass} onClick={()=>void runtime.command('staff.create',{name:form.name,jobTitle:form.jobTitle,role:form.role,pin:form.pin}).then(()=>setModal(null))}>Create</button></div></ActionDialog>}",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/native/NativeOperationsViews.tsx:69:579",
-      "file": "src/native/NativeOperationsViews.tsx",
-      "line": 69,
-      "kind": "input",
-      "source": "{modal==='CREATE'&&<ActionDialog title=\"Create staff account\" onClose={()=>setModal(null)}><div className=\"space-y-3\"><input className={fieldClass} placeholder=\"Name\" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/><input className={fieldClass} placeholder=\"Job title\" value={form.jobTitle} onChange={e=>setForm({...form,jobTitle:e.target.value})}/><select className={fieldClass} value={form.role} onChange={e=>setForm({...form,role:e.target.value})}><option>Server</option><option>Manager</option>{s.actor.role==='Admin'&&<option>Admin</option>}</select><input className={fieldClass} type=\"password\" inputMode=\"numeric\" placeholder=\"PIN\" value={form.pin} onChange={e=>setForm({...form,pin:e.target.value.replace(/\\D/g,'').slice(0,12)})}/><button className={primaryButtonClass} onClick={()=>void runtime.command('staff.create',{name:form.name,jobTitle:form.jobTitle,role:form.role,pin:form.pin}).then(()=>setModal(null))}>Create</button></div></ActionDialog>}",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/native/NativeOperationsViews.tsx:69:680",
-      "file": "src/native/NativeOperationsViews.tsx",
-      "line": 69,
-      "kind": "onChange",
-      "source": "{modal==='CREATE'&&<ActionDialog title=\"Create staff account\" onClose={()=>setModal(null)}><div className=\"space-y-3\"><input className={fieldClass} placeholder=\"Name\" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/><input className={fieldClass} placeholder=\"Job title\" value={form.jobTitle} onChange={e=>setForm({...form,jobTitle:e.target.value})}/><select className={fieldClass} value={form.role} onChange={e=>setForm({...form,role:e.target.value})}><option>Server</option><option>Manager</option>{s.actor.role==='Admin'&&<option>Admin</option>}</select><input className={fieldClass} type=\"password\" inputMode=\"numeric\" placeholder=\"PIN\" value={form.pin} onChange={e=>setForm({...form,pin:e.target.value.replace(/\\D/g,'').slice(0,12)})}/><button className={primaryButtonClass} onClick={()=>void runtime.command('staff.create',{name:form.name,jobTitle:form.jobTitle,role:form.role,pin:form.pin}).then(()=>setModal(null))}>Create</button></div></ActionDialog>}",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/native/NativeOperationsViews.tsx:69:763",
-      "file": "src/native/NativeOperationsViews.tsx",
-      "line": 69,
-      "kind": "button",
-      "source": "{modal==='CREATE'&&<ActionDialog title=\"Create staff account\" onClose={()=>setModal(null)}><div className=\"space-y-3\"><input className={fieldClass} placeholder=\"Name\" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/><input className={fieldClass} placeholder=\"Job title\" value={form.jobTitle} onChange={e=>setForm({...form,jobTitle:e.target.value})}/><select className={fieldClass} value={form.role} onChange={e=>setForm({...form,role:e.target.value})}><option>Server</option><option>Manager</option>{s.actor.role==='Admin'&&<option>Admin</option>}</select><input className={fieldClass} type=\"password\" inputMode=\"numeric\" placeholder=\"PIN\" value={form.pin} onChange={e=>setForm({...form,pin:e.target.value.replace(/\\D/g,'').slice(0,12)})}/><button className={primaryButtonClass} onClick={()=>void runtime.command('staff.create',{name:form.name,jobTitle:form.jobTitle,role:form.role,pin:form.pin}).then(()=>setModal(null))}>Create</button></div></ActionDialog>}",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/native/NativeOperationsViews.tsx:69:802",
-      "file": "src/native/NativeOperationsViews.tsx",
-      "line": 69,
-      "kind": "onClick",
-      "source": "{modal==='CREATE'&&<ActionDialog title=\"Create staff account\" onClose={()=>setModal(null)}><div className=\"space-y-3\"><input className={fieldClass} placeholder=\"Name\" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/><input className={fieldClass} placeholder=\"Job title\" value={form.jobTitle} onChange={e=>setForm({...form,jobTitle:e.target.value})}/><select className={fieldClass} value={form.role} onChange={e=>setForm({...form,role:e.target.value})}><option>Server</option><option>Manager</option>{s.actor.role==='Admin'&&<option>Admin</option>}</select><input className={fieldClass} type=\"password\" inputMode=\"numeric\" placeholder=\"PIN\" value={form.pin} onChange={e=>setForm({...form,pin:e.target.value.replace(/\\D/g,'').slice(0,12)})}/><button className={primaryButtonClass} onClick={()=>void runtime.command('staff.create',{name:form.name,jobTitle:form.jobTitle,role:form.role,pin:form.pin}).then(()=>setModal(null))}>Create</button></div></ActionDialog>}",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/native/NativeOperationsViews.tsx:70:110",
-      "file": "src/native/NativeOperationsViews.tsx",
-      "line": 70,
-      "kind": "input",
-      "source": "{modal==='PIN'&&<ActionDialog title=\"Reset staff PIN\" onClose={()=>setModal(null)}><div className=\"space-y-3\"><input className={fieldClass} type=\"password\" inputMode=\"numeric\" placeholder=\"New PIN\" value={form.pin} onChange={e=>setForm({...form,pin:e.target.value.replace(/\\D/g,'').slice(0,12)})}/><button className={primaryButtonClass} onClick={()=>protect('staff.reset_pin',form.staffId,async token=>{await runtime.command('staff.resetPin',{staffId:form.staffId,pin:form.pin,approvalToken:token});setModal(null)})}>Reset PIN</button></div></ActionDialog>}",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/native/NativeOperationsViews.tsx:70:215",
-      "file": "src/native/NativeOperationsViews.tsx",
-      "line": 70,
-      "kind": "onChange",
-      "source": "{modal==='PIN'&&<ActionDialog title=\"Reset staff PIN\" onClose={()=>setModal(null)}><div className=\"space-y-3\"><input className={fieldClass} type=\"password\" inputMode=\"numeric\" placeholder=\"New PIN\" value={form.pin} onChange={e=>setForm({...form,pin:e.target.value.replace(/\\D/g,'').slice(0,12)})}/><button className={primaryButtonClass} onClick={()=>protect('staff.reset_pin',form.staffId,async token=>{await runtime.command('staff.resetPin',{staffId:form.staffId,pin:form.pin,approvalToken:token});setModal(null)})}>Reset PIN</button></div></ActionDialog>}",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/native/NativeOperationsViews.tsx:70:298",
-      "file": "src/native/NativeOperationsViews.tsx",
-      "line": 70,
-      "kind": "button",
-      "source": "{modal==='PIN'&&<ActionDialog title=\"Reset staff PIN\" onClose={()=>setModal(null)}><div className=\"space-y-3\"><input className={fieldClass} type=\"password\" inputMode=\"numeric\" placeholder=\"New PIN\" value={form.pin} onChange={e=>setForm({...form,pin:e.target.value.replace(/\\D/g,'').slice(0,12)})}/><button className={primaryButtonClass} onClick={()=>protect('staff.reset_pin',form.staffId,async token=>{await runtime.command('staff.resetPin',{staffId:form.staffId,pin:form.pin,approvalToken:token});setModal(null)})}>Reset PIN</button></div></ActionDialog>}",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/native/NativeOperationsViews.tsx:70:337",
-      "file": "src/native/NativeOperationsViews.tsx",
-      "line": 70,
-      "kind": "onClick",
-      "source": "{modal==='PIN'&&<ActionDialog title=\"Reset staff PIN\" onClose={()=>setModal(null)}><div className=\"space-y-3\"><input className={fieldClass} type=\"password\" inputMode=\"numeric\" placeholder=\"New PIN\" value={form.pin} onChange={e=>setForm({...form,pin:e.target.value.replace(/\\D/g,'').slice(0,12)})}/><button className={primaryButtonClass} onClick={()=>protect('staff.reset_pin',form.staffId,async token=>{await runtime.command('staff.resetPin',{staffId:form.staffId,pin:form.pin,approvalToken:token});setModal(null)})}>Reset PIN</button></div></ActionDialog>}",
-      "status": "unverified",
-      "permission": "requires workflow review",
-      "persistence": "requires workflow review",
-      "offline": "requires workflow review",
-      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
-    },
-    {
-      "id": "src/native/NativeOperationsViews.tsx:71:114",
+      "id": "src/native/NativeOperationsViews.tsx:71:422",
       "file": "src/native/NativeOperationsViews.tsx",
       "line": 71,
+      "kind": "onChange",
+      "source": "{modal==='CREATE'&&<ActionDialog title=\"Create staff account\" onClose={()=>setModal(null)}><div className=\"space-y-3\"><input className={fieldClass} placeholder=\"Name\" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/><input className={fieldClass} placeholder=\"Job title\" value={form.jobTitle} onChange={e=>setForm({...form,jobTitle:e.target.value})}/><select className={fieldClass} value={form.role} onChange={e=>setForm({...form,role:e.target.value})}><option>Server</option><option>Manager</option>{s.actor.role==='Admin'&&<option>Admin</option>}</select><input className={fieldClass} type=\"password\" inputMode=\"numeric\" placeholder=\"PIN\" value={form.pin} onChange={e=>setForm({...form,pin:e.target.value.replace(/\\D/g,'').slice(0,12)})}/><button className={primaryButtonClass} onClick={()=>void runtime.command('staff.create',{name:form.name,jobTitle:form.jobTitle,role:form.role,pin:form.pin}).then(()=>setModal(null))}>Create</button></div></ActionDialog>}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/native/NativeOperationsViews.tsx:71:579",
+      "file": "src/native/NativeOperationsViews.tsx",
+      "line": 71,
+      "kind": "input",
+      "source": "{modal==='CREATE'&&<ActionDialog title=\"Create staff account\" onClose={()=>setModal(null)}><div className=\"space-y-3\"><input className={fieldClass} placeholder=\"Name\" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/><input className={fieldClass} placeholder=\"Job title\" value={form.jobTitle} onChange={e=>setForm({...form,jobTitle:e.target.value})}/><select className={fieldClass} value={form.role} onChange={e=>setForm({...form,role:e.target.value})}><option>Server</option><option>Manager</option>{s.actor.role==='Admin'&&<option>Admin</option>}</select><input className={fieldClass} type=\"password\" inputMode=\"numeric\" placeholder=\"PIN\" value={form.pin} onChange={e=>setForm({...form,pin:e.target.value.replace(/\\D/g,'').slice(0,12)})}/><button className={primaryButtonClass} onClick={()=>void runtime.command('staff.create',{name:form.name,jobTitle:form.jobTitle,role:form.role,pin:form.pin}).then(()=>setModal(null))}>Create</button></div></ActionDialog>}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/native/NativeOperationsViews.tsx:71:680",
+      "file": "src/native/NativeOperationsViews.tsx",
+      "line": 71,
+      "kind": "onChange",
+      "source": "{modal==='CREATE'&&<ActionDialog title=\"Create staff account\" onClose={()=>setModal(null)}><div className=\"space-y-3\"><input className={fieldClass} placeholder=\"Name\" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/><input className={fieldClass} placeholder=\"Job title\" value={form.jobTitle} onChange={e=>setForm({...form,jobTitle:e.target.value})}/><select className={fieldClass} value={form.role} onChange={e=>setForm({...form,role:e.target.value})}><option>Server</option><option>Manager</option>{s.actor.role==='Admin'&&<option>Admin</option>}</select><input className={fieldClass} type=\"password\" inputMode=\"numeric\" placeholder=\"PIN\" value={form.pin} onChange={e=>setForm({...form,pin:e.target.value.replace(/\\D/g,'').slice(0,12)})}/><button className={primaryButtonClass} onClick={()=>void runtime.command('staff.create',{name:form.name,jobTitle:form.jobTitle,role:form.role,pin:form.pin}).then(()=>setModal(null))}>Create</button></div></ActionDialog>}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/native/NativeOperationsViews.tsx:71:763",
+      "file": "src/native/NativeOperationsViews.tsx",
+      "line": 71,
+      "kind": "button",
+      "source": "{modal==='CREATE'&&<ActionDialog title=\"Create staff account\" onClose={()=>setModal(null)}><div className=\"space-y-3\"><input className={fieldClass} placeholder=\"Name\" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/><input className={fieldClass} placeholder=\"Job title\" value={form.jobTitle} onChange={e=>setForm({...form,jobTitle:e.target.value})}/><select className={fieldClass} value={form.role} onChange={e=>setForm({...form,role:e.target.value})}><option>Server</option><option>Manager</option>{s.actor.role==='Admin'&&<option>Admin</option>}</select><input className={fieldClass} type=\"password\" inputMode=\"numeric\" placeholder=\"PIN\" value={form.pin} onChange={e=>setForm({...form,pin:e.target.value.replace(/\\D/g,'').slice(0,12)})}/><button className={primaryButtonClass} onClick={()=>void runtime.command('staff.create',{name:form.name,jobTitle:form.jobTitle,role:form.role,pin:form.pin}).then(()=>setModal(null))}>Create</button></div></ActionDialog>}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/native/NativeOperationsViews.tsx:71:802",
+      "file": "src/native/NativeOperationsViews.tsx",
+      "line": 71,
+      "kind": "onClick",
+      "source": "{modal==='CREATE'&&<ActionDialog title=\"Create staff account\" onClose={()=>setModal(null)}><div className=\"space-y-3\"><input className={fieldClass} placeholder=\"Name\" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/><input className={fieldClass} placeholder=\"Job title\" value={form.jobTitle} onChange={e=>setForm({...form,jobTitle:e.target.value})}/><select className={fieldClass} value={form.role} onChange={e=>setForm({...form,role:e.target.value})}><option>Server</option><option>Manager</option>{s.actor.role==='Admin'&&<option>Admin</option>}</select><input className={fieldClass} type=\"password\" inputMode=\"numeric\" placeholder=\"PIN\" value={form.pin} onChange={e=>setForm({...form,pin:e.target.value.replace(/\\D/g,'').slice(0,12)})}/><button className={primaryButtonClass} onClick={()=>void runtime.command('staff.create',{name:form.name,jobTitle:form.jobTitle,role:form.role,pin:form.pin}).then(()=>setModal(null))}>Create</button></div></ActionDialog>}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/native/NativeOperationsViews.tsx:72:110",
+      "file": "src/native/NativeOperationsViews.tsx",
+      "line": 72,
+      "kind": "input",
+      "source": "{modal==='PIN'&&<ActionDialog title=\"Reset staff PIN\" onClose={()=>setModal(null)}><div className=\"space-y-3\"><input className={fieldClass} type=\"password\" inputMode=\"numeric\" placeholder=\"New PIN\" value={form.pin} onChange={e=>setForm({...form,pin:e.target.value.replace(/\\D/g,'').slice(0,12)})}/><button className={primaryButtonClass} onClick={()=>protect('staff.reset_pin',form.staffId,async token=>{await runtime.command('staff.resetPin',{staffId:form.staffId,pin:form.pin,approvalToken:token});setModal(null)})}>Reset PIN</button></div></ActionDialog>}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/native/NativeOperationsViews.tsx:72:215",
+      "file": "src/native/NativeOperationsViews.tsx",
+      "line": 72,
+      "kind": "onChange",
+      "source": "{modal==='PIN'&&<ActionDialog title=\"Reset staff PIN\" onClose={()=>setModal(null)}><div className=\"space-y-3\"><input className={fieldClass} type=\"password\" inputMode=\"numeric\" placeholder=\"New PIN\" value={form.pin} onChange={e=>setForm({...form,pin:e.target.value.replace(/\\D/g,'').slice(0,12)})}/><button className={primaryButtonClass} onClick={()=>protect('staff.reset_pin',form.staffId,async token=>{await runtime.command('staff.resetPin',{staffId:form.staffId,pin:form.pin,approvalToken:token});setModal(null)})}>Reset PIN</button></div></ActionDialog>}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/native/NativeOperationsViews.tsx:72:298",
+      "file": "src/native/NativeOperationsViews.tsx",
+      "line": 72,
+      "kind": "button",
+      "source": "{modal==='PIN'&&<ActionDialog title=\"Reset staff PIN\" onClose={()=>setModal(null)}><div className=\"space-y-3\"><input className={fieldClass} type=\"password\" inputMode=\"numeric\" placeholder=\"New PIN\" value={form.pin} onChange={e=>setForm({...form,pin:e.target.value.replace(/\\D/g,'').slice(0,12)})}/><button className={primaryButtonClass} onClick={()=>protect('staff.reset_pin',form.staffId,async token=>{await runtime.command('staff.resetPin',{staffId:form.staffId,pin:form.pin,approvalToken:token});setModal(null)})}>Reset PIN</button></div></ActionDialog>}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/native/NativeOperationsViews.tsx:72:337",
+      "file": "src/native/NativeOperationsViews.tsx",
+      "line": 72,
+      "kind": "onClick",
+      "source": "{modal==='PIN'&&<ActionDialog title=\"Reset staff PIN\" onClose={()=>setModal(null)}><div className=\"space-y-3\"><input className={fieldClass} type=\"password\" inputMode=\"numeric\" placeholder=\"New PIN\" value={form.pin} onChange={e=>setForm({...form,pin:e.target.value.replace(/\\D/g,'').slice(0,12)})}/><button className={primaryButtonClass} onClick={()=>protect('staff.reset_pin',form.staffId,async token=>{await runtime.command('staff.resetPin',{staffId:form.staffId,pin:form.pin,approvalToken:token});setModal(null)})}>Reset PIN</button></div></ActionDialog>}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/native/NativeOperationsViews.tsx:73:114",
+      "file": "src/native/NativeOperationsViews.tsx",
+      "line": 73,
       "kind": "select",
       "source": "{modal==='ROLE'&&<ActionDialog title=\"Change access role\" onClose={()=>setModal(null)}><div className=\"space-y-3\"><select className={fieldClass} value={form.newRole} onChange={e=>setForm({...form,newRole:e.target.value})}><option>Server</option><option>Manager</option><option>Admin</option></select><button className={primaryButtonClass} onClick={()=>void runtime.command('staff.changeRole',{staffId:form.staffId,role:form.newRole}).then(()=>setModal(null))}>Change role</button></div></ActionDialog>}",
       "status": "unverified",
@@ -21940,9 +21940,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:71:166",
+      "id": "src/native/NativeOperationsViews.tsx:73:166",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 71,
+      "line": 73,
       "kind": "onChange",
       "source": "{modal==='ROLE'&&<ActionDialog title=\"Change access role\" onClose={()=>setModal(null)}><div className=\"space-y-3\"><select className={fieldClass} value={form.newRole} onChange={e=>setForm({...form,newRole:e.target.value})}><option>Server</option><option>Manager</option><option>Admin</option></select><button className={primaryButtonClass} onClick={()=>void runtime.command('staff.changeRole',{staffId:form.staffId,role:form.newRole}).then(()=>setModal(null))}>Change role</button></div></ActionDialog>}",
       "status": "unverified",
@@ -21952,9 +21952,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:71:300",
+      "id": "src/native/NativeOperationsViews.tsx:73:300",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 71,
+      "line": 73,
       "kind": "button",
       "source": "{modal==='ROLE'&&<ActionDialog title=\"Change access role\" onClose={()=>setModal(null)}><div className=\"space-y-3\"><select className={fieldClass} value={form.newRole} onChange={e=>setForm({...form,newRole:e.target.value})}><option>Server</option><option>Manager</option><option>Admin</option></select><button className={primaryButtonClass} onClick={()=>void runtime.command('staff.changeRole',{staffId:form.staffId,role:form.newRole}).then(()=>setModal(null))}>Change role</button></div></ActionDialog>}",
       "status": "unverified",
@@ -21964,9 +21964,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:71:339",
+      "id": "src/native/NativeOperationsViews.tsx:73:339",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 71,
+      "line": 73,
       "kind": "onClick",
       "source": "{modal==='ROLE'&&<ActionDialog title=\"Change access role\" onClose={()=>setModal(null)}><div className=\"space-y-3\"><select className={fieldClass} value={form.newRole} onChange={e=>setForm({...form,newRole:e.target.value})}><option>Server</option><option>Manager</option><option>Admin</option></select><button className={primaryButtonClass} onClick={()=>void runtime.command('staff.changeRole',{staffId:form.staffId,role:form.newRole}).then(()=>setModal(null))}>Change role</button></div></ActionDialog>}",
       "status": "unverified",
@@ -21976,9 +21976,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:74:1206",
+      "id": "src/native/NativeOperationsViews.tsx:76:1206",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 74,
+      "line": 76,
       "kind": "button",
       "source": "export function NativeRefundsView(){const runtime=useRuntime();const s=runtime.snapshot!;const payments=recordsOf(s,'payments').slice().reverse();const [current,setCurrent]=useState<any>(null);const [amount,setAmount]=useState(0);const [reason,setReason]=useState('');const [externalReference,setExternal]=useState('');const [approval,setApproval]=useState<{permission:Permission;target:string;run:(t:string)=>Promise<void>}|null>(null);const perms=s.actor.permissions;const refund=async(token?:string)=>{await runtime.command('payment.refund',{paymentId:current.id,amount,reason,externalReference,approvalToken:token});setCurrent(null)};return <div className=\"h-full overflow-auto bg-slate-950 p-5 text-white\"><h1 className=\"text-2xl font-bold\">Payments & refunds</h1><p className=\"mb-5 text-sm text-slate-400\">Refunds reverse money and accounting. Ingredient stock is not automatically restored.</p>{payments.map(p=><div key={p.id} className=\"mb-2 flex items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900 p-3\"><div><b>{p.tenderType} · {money(p.amount)}</b><div className=\"text-xs text-slate-500\">{p.referenceNumber} · {shortDate(p.occurredAt)} · {p.cashierName}</div></div><button className={buttonClass} onClick={()=>{setCurrent(p);setAmount(Number(p.amount));setReason('');setExternal('')}}>Refund</button></div>)}{current&&<ActionDialog title=\"Refund payment\" onClose={()=>setCurrent(null)}><div className=\"space-y-3\"><input className={fieldClass} type=\"number\" min=\"0.01\" max={current.amount} value={amount} onChange={e=>setAmount(Number(e.target.value))}/><textarea className={fieldClass} placeholder=\"Reason\" value={reason} onChange={e=>setReason(e.target.value)}/>{current.tenderType!=='CASH'&&<input className={fieldClass} placeholder=\"External reversal / refund reference\" value={externalReference} onChange={e=>setExternal(e.target.value)}/>}<button className={primaryButtonClass} onClick={()=>perms.includes('order.refund')?void refund():setApproval({permission:'order.refund',target:current.id,run:async t=>refund(t)})}>Post refund</button></div></ActionDialog>}{approval&&<ManagerApprovalDialog permission={approval.permission} target={approval.target} onClose={()=>setApproval(null)} onApproved={approval.run}/>}</div>}",
       "status": "unverified",
@@ -21988,9 +21988,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:74:1238",
+      "id": "src/native/NativeOperationsViews.tsx:76:1238",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 74,
+      "line": 76,
       "kind": "onClick",
       "source": "export function NativeRefundsView(){const runtime=useRuntime();const s=runtime.snapshot!;const payments=recordsOf(s,'payments').slice().reverse();const [current,setCurrent]=useState<any>(null);const [amount,setAmount]=useState(0);const [reason,setReason]=useState('');const [externalReference,setExternal]=useState('');const [approval,setApproval]=useState<{permission:Permission;target:string;run:(t:string)=>Promise<void>}|null>(null);const perms=s.actor.permissions;const refund=async(token?:string)=>{await runtime.command('payment.refund',{paymentId:current.id,amount,reason,externalReference,approvalToken:token});setCurrent(null)};return <div className=\"h-full overflow-auto bg-slate-950 p-5 text-white\"><h1 className=\"text-2xl font-bold\">Payments & refunds</h1><p className=\"mb-5 text-sm text-slate-400\">Refunds reverse money and accounting. Ingredient stock is not automatically restored.</p>{payments.map(p=><div key={p.id} className=\"mb-2 flex items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900 p-3\"><div><b>{p.tenderType} · {money(p.amount)}</b><div className=\"text-xs text-slate-500\">{p.referenceNumber} · {shortDate(p.occurredAt)} · {p.cashierName}</div></div><button className={buttonClass} onClick={()=>{setCurrent(p);setAmount(Number(p.amount));setReason('');setExternal('')}}>Refund</button></div>)}{current&&<ActionDialog title=\"Refund payment\" onClose={()=>setCurrent(null)}><div className=\"space-y-3\"><input className={fieldClass} type=\"number\" min=\"0.01\" max={current.amount} value={amount} onChange={e=>setAmount(Number(e.target.value))}/><textarea className={fieldClass} placeholder=\"Reason\" value={reason} onChange={e=>setReason(e.target.value)}/>{current.tenderType!=='CASH'&&<input className={fieldClass} placeholder=\"External reversal / refund reference\" value={externalReference} onChange={e=>setExternal(e.target.value)}/>}<button className={primaryButtonClass} onClick={()=>perms.includes('order.refund')?void refund():setApproval({permission:'order.refund',target:current.id,run:async t=>refund(t)})}>Post refund</button></div></ActionDialog>}{approval&&<ManagerApprovalDialog permission={approval.permission} target={approval.target} onClose={()=>setApproval(null)} onApproved={approval.run}/>}</div>}",
       "status": "unverified",
@@ -22000,9 +22000,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:74:1454",
+      "id": "src/native/NativeOperationsViews.tsx:76:1454",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 74,
+      "line": 76,
       "kind": "input",
       "source": "export function NativeRefundsView(){const runtime=useRuntime();const s=runtime.snapshot!;const payments=recordsOf(s,'payments').slice().reverse();const [current,setCurrent]=useState<any>(null);const [amount,setAmount]=useState(0);const [reason,setReason]=useState('');const [externalReference,setExternal]=useState('');const [approval,setApproval]=useState<{permission:Permission;target:string;run:(t:string)=>Promise<void>}|null>(null);const perms=s.actor.permissions;const refund=async(token?:string)=>{await runtime.command('payment.refund',{paymentId:current.id,amount,reason,externalReference,approvalToken:token});setCurrent(null)};return <div className=\"h-full overflow-auto bg-slate-950 p-5 text-white\"><h1 className=\"text-2xl font-bold\">Payments & refunds</h1><p className=\"mb-5 text-sm text-slate-400\">Refunds reverse money and accounting. Ingredient stock is not automatically restored.</p>{payments.map(p=><div key={p.id} className=\"mb-2 flex items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900 p-3\"><div><b>{p.tenderType} · {money(p.amount)}</b><div className=\"text-xs text-slate-500\">{p.referenceNumber} · {shortDate(p.occurredAt)} · {p.cashierName}</div></div><button className={buttonClass} onClick={()=>{setCurrent(p);setAmount(Number(p.amount));setReason('');setExternal('')}}>Refund</button></div>)}{current&&<ActionDialog title=\"Refund payment\" onClose={()=>setCurrent(null)}><div className=\"space-y-3\"><input className={fieldClass} type=\"number\" min=\"0.01\" max={current.amount} value={amount} onChange={e=>setAmount(Number(e.target.value))}/><textarea className={fieldClass} placeholder=\"Reason\" value={reason} onChange={e=>setReason(e.target.value)}/>{current.tenderType!=='CASH'&&<input className={fieldClass} placeholder=\"External reversal / refund reference\" value={externalReference} onChange={e=>setExternal(e.target.value)}/>}<button className={primaryButtonClass} onClick={()=>perms.includes('order.refund')?void refund():setApproval({permission:'order.refund',target:current.id,run:async t=>refund(t)})}>Post refund</button></div></ActionDialog>}{approval&&<ManagerApprovalDialog permission={approval.permission} target={approval.target} onClose={()=>setApproval(null)} onApproved={approval.run}/>}</div>}",
       "status": "unverified",
@@ -22012,9 +22012,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:74:1545",
+      "id": "src/native/NativeOperationsViews.tsx:76:1545",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 74,
+      "line": 76,
       "kind": "onChange",
       "source": "export function NativeRefundsView(){const runtime=useRuntime();const s=runtime.snapshot!;const payments=recordsOf(s,'payments').slice().reverse();const [current,setCurrent]=useState<any>(null);const [amount,setAmount]=useState(0);const [reason,setReason]=useState('');const [externalReference,setExternal]=useState('');const [approval,setApproval]=useState<{permission:Permission;target:string;run:(t:string)=>Promise<void>}|null>(null);const perms=s.actor.permissions;const refund=async(token?:string)=>{await runtime.command('payment.refund',{paymentId:current.id,amount,reason,externalReference,approvalToken:token});setCurrent(null)};return <div className=\"h-full overflow-auto bg-slate-950 p-5 text-white\"><h1 className=\"text-2xl font-bold\">Payments & refunds</h1><p className=\"mb-5 text-sm text-slate-400\">Refunds reverse money and accounting. Ingredient stock is not automatically restored.</p>{payments.map(p=><div key={p.id} className=\"mb-2 flex items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900 p-3\"><div><b>{p.tenderType} · {money(p.amount)}</b><div className=\"text-xs text-slate-500\">{p.referenceNumber} · {shortDate(p.occurredAt)} · {p.cashierName}</div></div><button className={buttonClass} onClick={()=>{setCurrent(p);setAmount(Number(p.amount));setReason('');setExternal('')}}>Refund</button></div>)}{current&&<ActionDialog title=\"Refund payment\" onClose={()=>setCurrent(null)}><div className=\"space-y-3\"><input className={fieldClass} type=\"number\" min=\"0.01\" max={current.amount} value={amount} onChange={e=>setAmount(Number(e.target.value))}/><textarea className={fieldClass} placeholder=\"Reason\" value={reason} onChange={e=>setReason(e.target.value)}/>{current.tenderType!=='CASH'&&<input className={fieldClass} placeholder=\"External reversal / refund reference\" value={externalReference} onChange={e=>setExternal(e.target.value)}/>}<button className={primaryButtonClass} onClick={()=>perms.includes('order.refund')?void refund():setApproval({permission:'order.refund',target:current.id,run:async t=>refund(t)})}>Post refund</button></div></ActionDialog>}{approval&&<ManagerApprovalDialog permission={approval.permission} target={approval.target} onClose={()=>setApproval(null)} onApproved={approval.run}/>}</div>}",
       "status": "unverified",
@@ -22024,9 +22024,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:74:1594",
+      "id": "src/native/NativeOperationsViews.tsx:76:1594",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 74,
+      "line": 76,
       "kind": "textarea",
       "source": "export function NativeRefundsView(){const runtime=useRuntime();const s=runtime.snapshot!;const payments=recordsOf(s,'payments').slice().reverse();const [current,setCurrent]=useState<any>(null);const [amount,setAmount]=useState(0);const [reason,setReason]=useState('');const [externalReference,setExternal]=useState('');const [approval,setApproval]=useState<{permission:Permission;target:string;run:(t:string)=>Promise<void>}|null>(null);const perms=s.actor.permissions;const refund=async(token?:string)=>{await runtime.command('payment.refund',{paymentId:current.id,amount,reason,externalReference,approvalToken:token});setCurrent(null)};return <div className=\"h-full overflow-auto bg-slate-950 p-5 text-white\"><h1 className=\"text-2xl font-bold\">Payments & refunds</h1><p className=\"mb-5 text-sm text-slate-400\">Refunds reverse money and accounting. Ingredient stock is not automatically restored.</p>{payments.map(p=><div key={p.id} className=\"mb-2 flex items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900 p-3\"><div><b>{p.tenderType} · {money(p.amount)}</b><div className=\"text-xs text-slate-500\">{p.referenceNumber} · {shortDate(p.occurredAt)} · {p.cashierName}</div></div><button className={buttonClass} onClick={()=>{setCurrent(p);setAmount(Number(p.amount));setReason('');setExternal('')}}>Refund</button></div>)}{current&&<ActionDialog title=\"Refund payment\" onClose={()=>setCurrent(null)}><div className=\"space-y-3\"><input className={fieldClass} type=\"number\" min=\"0.01\" max={current.amount} value={amount} onChange={e=>setAmount(Number(e.target.value))}/><textarea className={fieldClass} placeholder=\"Reason\" value={reason} onChange={e=>setReason(e.target.value)}/>{current.tenderType!=='CASH'&&<input className={fieldClass} placeholder=\"External reversal / refund reference\" value={externalReference} onChange={e=>setExternal(e.target.value)}/>}<button className={primaryButtonClass} onClick={()=>perms.includes('order.refund')?void refund():setApproval({permission:'order.refund',target:current.id,run:async t=>refund(t)})}>Post refund</button></div></ActionDialog>}{approval&&<ManagerApprovalDialog permission={approval.permission} target={approval.target} onClose={()=>setApproval(null)} onApproved={approval.run}/>}</div>}",
       "status": "unverified",
@@ -22036,9 +22036,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:74:1663",
+      "id": "src/native/NativeOperationsViews.tsx:76:1663",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 74,
+      "line": 76,
       "kind": "onChange",
       "source": "export function NativeRefundsView(){const runtime=useRuntime();const s=runtime.snapshot!;const payments=recordsOf(s,'payments').slice().reverse();const [current,setCurrent]=useState<any>(null);const [amount,setAmount]=useState(0);const [reason,setReason]=useState('');const [externalReference,setExternal]=useState('');const [approval,setApproval]=useState<{permission:Permission;target:string;run:(t:string)=>Promise<void>}|null>(null);const perms=s.actor.permissions;const refund=async(token?:string)=>{await runtime.command('payment.refund',{paymentId:current.id,amount,reason,externalReference,approvalToken:token});setCurrent(null)};return <div className=\"h-full overflow-auto bg-slate-950 p-5 text-white\"><h1 className=\"text-2xl font-bold\">Payments & refunds</h1><p className=\"mb-5 text-sm text-slate-400\">Refunds reverse money and accounting. Ingredient stock is not automatically restored.</p>{payments.map(p=><div key={p.id} className=\"mb-2 flex items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900 p-3\"><div><b>{p.tenderType} · {money(p.amount)}</b><div className=\"text-xs text-slate-500\">{p.referenceNumber} · {shortDate(p.occurredAt)} · {p.cashierName}</div></div><button className={buttonClass} onClick={()=>{setCurrent(p);setAmount(Number(p.amount));setReason('');setExternal('')}}>Refund</button></div>)}{current&&<ActionDialog title=\"Refund payment\" onClose={()=>setCurrent(null)}><div className=\"space-y-3\"><input className={fieldClass} type=\"number\" min=\"0.01\" max={current.amount} value={amount} onChange={e=>setAmount(Number(e.target.value))}/><textarea className={fieldClass} placeholder=\"Reason\" value={reason} onChange={e=>setReason(e.target.value)}/>{current.tenderType!=='CASH'&&<input className={fieldClass} placeholder=\"External reversal / refund reference\" value={externalReference} onChange={e=>setExternal(e.target.value)}/>}<button className={primaryButtonClass} onClick={()=>perms.includes('order.refund')?void refund():setApproval({permission:'order.refund',target:current.id,run:async t=>refund(t)})}>Post refund</button></div></ActionDialog>}{approval&&<ManagerApprovalDialog permission={approval.permission} target={approval.target} onClose={()=>setApproval(null)} onApproved={approval.run}/>}</div>}",
       "status": "unverified",
@@ -22048,9 +22048,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:74:1734",
+      "id": "src/native/NativeOperationsViews.tsx:76:1734",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 74,
+      "line": 76,
       "kind": "input",
       "source": "export function NativeRefundsView(){const runtime=useRuntime();const s=runtime.snapshot!;const payments=recordsOf(s,'payments').slice().reverse();const [current,setCurrent]=useState<any>(null);const [amount,setAmount]=useState(0);const [reason,setReason]=useState('');const [externalReference,setExternal]=useState('');const [approval,setApproval]=useState<{permission:Permission;target:string;run:(t:string)=>Promise<void>}|null>(null);const perms=s.actor.permissions;const refund=async(token?:string)=>{await runtime.command('payment.refund',{paymentId:current.id,amount,reason,externalReference,approvalToken:token});setCurrent(null)};return <div className=\"h-full overflow-auto bg-slate-950 p-5 text-white\"><h1 className=\"text-2xl font-bold\">Payments & refunds</h1><p className=\"mb-5 text-sm text-slate-400\">Refunds reverse money and accounting. Ingredient stock is not automatically restored.</p>{payments.map(p=><div key={p.id} className=\"mb-2 flex items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900 p-3\"><div><b>{p.tenderType} · {money(p.amount)}</b><div className=\"text-xs text-slate-500\">{p.referenceNumber} · {shortDate(p.occurredAt)} · {p.cashierName}</div></div><button className={buttonClass} onClick={()=>{setCurrent(p);setAmount(Number(p.amount));setReason('');setExternal('')}}>Refund</button></div>)}{current&&<ActionDialog title=\"Refund payment\" onClose={()=>setCurrent(null)}><div className=\"space-y-3\"><input className={fieldClass} type=\"number\" min=\"0.01\" max={current.amount} value={amount} onChange={e=>setAmount(Number(e.target.value))}/><textarea className={fieldClass} placeholder=\"Reason\" value={reason} onChange={e=>setReason(e.target.value)}/>{current.tenderType!=='CASH'&&<input className={fieldClass} placeholder=\"External reversal / refund reference\" value={externalReference} onChange={e=>setExternal(e.target.value)}/>}<button className={primaryButtonClass} onClick={()=>perms.includes('order.refund')?void refund():setApproval({permission:'order.refund',target:current.id,run:async t=>refund(t)})}>Post refund</button></div></ActionDialog>}{approval&&<ManagerApprovalDialog permission={approval.permission} target={approval.target} onClose={()=>setApproval(null)} onApproved={approval.run}/>}</div>}",
       "status": "unverified",
@@ -22060,9 +22060,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:74:1841",
+      "id": "src/native/NativeOperationsViews.tsx:76:1841",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 74,
+      "line": 76,
       "kind": "onChange",
       "source": "export function NativeRefundsView(){const runtime=useRuntime();const s=runtime.snapshot!;const payments=recordsOf(s,'payments').slice().reverse();const [current,setCurrent]=useState<any>(null);const [amount,setAmount]=useState(0);const [reason,setReason]=useState('');const [externalReference,setExternal]=useState('');const [approval,setApproval]=useState<{permission:Permission;target:string;run:(t:string)=>Promise<void>}|null>(null);const perms=s.actor.permissions;const refund=async(token?:string)=>{await runtime.command('payment.refund',{paymentId:current.id,amount,reason,externalReference,approvalToken:token});setCurrent(null)};return <div className=\"h-full overflow-auto bg-slate-950 p-5 text-white\"><h1 className=\"text-2xl font-bold\">Payments & refunds</h1><p className=\"mb-5 text-sm text-slate-400\">Refunds reverse money and accounting. Ingredient stock is not automatically restored.</p>{payments.map(p=><div key={p.id} className=\"mb-2 flex items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900 p-3\"><div><b>{p.tenderType} · {money(p.amount)}</b><div className=\"text-xs text-slate-500\">{p.referenceNumber} · {shortDate(p.occurredAt)} · {p.cashierName}</div></div><button className={buttonClass} onClick={()=>{setCurrent(p);setAmount(Number(p.amount));setReason('');setExternal('')}}>Refund</button></div>)}{current&&<ActionDialog title=\"Refund payment\" onClose={()=>setCurrent(null)}><div className=\"space-y-3\"><input className={fieldClass} type=\"number\" min=\"0.01\" max={current.amount} value={amount} onChange={e=>setAmount(Number(e.target.value))}/><textarea className={fieldClass} placeholder=\"Reason\" value={reason} onChange={e=>setReason(e.target.value)}/>{current.tenderType!=='CASH'&&<input className={fieldClass} placeholder=\"External reversal / refund reference\" value={externalReference} onChange={e=>setExternal(e.target.value)}/>}<button className={primaryButtonClass} onClick={()=>perms.includes('order.refund')?void refund():setApproval({permission:'order.refund',target:current.id,run:async t=>refund(t)})}>Post refund</button></div></ActionDialog>}{approval&&<ManagerApprovalDialog permission={approval.permission} target={approval.target} onClose={()=>setApproval(null)} onApproved={approval.run}/>}</div>}",
       "status": "unverified",
@@ -22072,9 +22072,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:74:1885",
+      "id": "src/native/NativeOperationsViews.tsx:76:1885",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 74,
+      "line": 76,
       "kind": "button",
       "source": "export function NativeRefundsView(){const runtime=useRuntime();const s=runtime.snapshot!;const payments=recordsOf(s,'payments').slice().reverse();const [current,setCurrent]=useState<any>(null);const [amount,setAmount]=useState(0);const [reason,setReason]=useState('');const [externalReference,setExternal]=useState('');const [approval,setApproval]=useState<{permission:Permission;target:string;run:(t:string)=>Promise<void>}|null>(null);const perms=s.actor.permissions;const refund=async(token?:string)=>{await runtime.command('payment.refund',{paymentId:current.id,amount,reason,externalReference,approvalToken:token});setCurrent(null)};return <div className=\"h-full overflow-auto bg-slate-950 p-5 text-white\"><h1 className=\"text-2xl font-bold\">Payments & refunds</h1><p className=\"mb-5 text-sm text-slate-400\">Refunds reverse money and accounting. Ingredient stock is not automatically restored.</p>{payments.map(p=><div key={p.id} className=\"mb-2 flex items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900 p-3\"><div><b>{p.tenderType} · {money(p.amount)}</b><div className=\"text-xs text-slate-500\">{p.referenceNumber} · {shortDate(p.occurredAt)} · {p.cashierName}</div></div><button className={buttonClass} onClick={()=>{setCurrent(p);setAmount(Number(p.amount));setReason('');setExternal('')}}>Refund</button></div>)}{current&&<ActionDialog title=\"Refund payment\" onClose={()=>setCurrent(null)}><div className=\"space-y-3\"><input className={fieldClass} type=\"number\" min=\"0.01\" max={current.amount} value={amount} onChange={e=>setAmount(Number(e.target.value))}/><textarea className={fieldClass} placeholder=\"Reason\" value={reason} onChange={e=>setReason(e.target.value)}/>{current.tenderType!=='CASH'&&<input className={fieldClass} placeholder=\"External reversal / refund reference\" value={externalReference} onChange={e=>setExternal(e.target.value)}/>}<button className={primaryButtonClass} onClick={()=>perms.includes('order.refund')?void refund():setApproval({permission:'order.refund',target:current.id,run:async t=>refund(t)})}>Post refund</button></div></ActionDialog>}{approval&&<ManagerApprovalDialog permission={approval.permission} target={approval.target} onClose={()=>setApproval(null)} onApproved={approval.run}/>}</div>}",
       "status": "unverified",
@@ -22084,9 +22084,9 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeOperationsViews.tsx:74:1924",
+      "id": "src/native/NativeOperationsViews.tsx:76:1924",
       "file": "src/native/NativeOperationsViews.tsx",
-      "line": 74,
+      "line": 76,
       "kind": "onClick",
       "source": "export function NativeRefundsView(){const runtime=useRuntime();const s=runtime.snapshot!;const payments=recordsOf(s,'payments').slice().reverse();const [current,setCurrent]=useState<any>(null);const [amount,setAmount]=useState(0);const [reason,setReason]=useState('');const [externalReference,setExternal]=useState('');const [approval,setApproval]=useState<{permission:Permission;target:string;run:(t:string)=>Promise<void>}|null>(null);const perms=s.actor.permissions;const refund=async(token?:string)=>{await runtime.command('payment.refund',{paymentId:current.id,amount,reason,externalReference,approvalToken:token});setCurrent(null)};return <div className=\"h-full overflow-auto bg-slate-950 p-5 text-white\"><h1 className=\"text-2xl font-bold\">Payments & refunds</h1><p className=\"mb-5 text-sm text-slate-400\">Refunds reverse money and accounting. Ingredient stock is not automatically restored.</p>{payments.map(p=><div key={p.id} className=\"mb-2 flex items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900 p-3\"><div><b>{p.tenderType} · {money(p.amount)}</b><div className=\"text-xs text-slate-500\">{p.referenceNumber} · {shortDate(p.occurredAt)} · {p.cashierName}</div></div><button className={buttonClass} onClick={()=>{setCurrent(p);setAmount(Number(p.amount));setReason('');setExternal('')}}>Refund</button></div>)}{current&&<ActionDialog title=\"Refund payment\" onClose={()=>setCurrent(null)}><div className=\"space-y-3\"><input className={fieldClass} type=\"number\" min=\"0.01\" max={current.amount} value={amount} onChange={e=>setAmount(Number(e.target.value))}/><textarea className={fieldClass} placeholder=\"Reason\" value={reason} onChange={e=>setReason(e.target.value)}/>{current.tenderType!=='CASH'&&<input className={fieldClass} placeholder=\"External reversal / refund reference\" value={externalReference} onChange={e=>setExternal(e.target.value)}/>}<button className={primaryButtonClass} onClick={()=>perms.includes('order.refund')?void refund():setApproval({permission:'order.refund',target:current.id,run:async t=>refund(t)})}>Post refund</button></div></ActionDialog>}{approval&&<ManagerApprovalDialog permission={approval.permission} target={approval.target} onClose={()=>setApproval(null)} onApproved={approval.run}/>}</div>}",
       "status": "unverified",
@@ -26121,6 +26121,270 @@
       "line": 37,
       "kind": "button",
       "source": "{message&&<p role=\"alert\" className=\"text-sm text-rose-300\">{message}</p>}<button disabled={busy} className={primaryButtonClass} type=\"submit\">{busy?'Saving…':'Save settings'}</button>",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/native/NativeTerminalAcceptancePanel.tsx:35:421",
+      "file": "src/native/NativeTerminalAcceptancePanel.tsx",
+      "line": 35,
+      "kind": "button",
+      "source": "<div className=\"flex flex-wrap items-start justify-between gap-3\"><div><h2 className=\"font-bold text-emerald-200\">Physical terminal acceptance</h2><p className=\"mt-1 max-w-3xl text-xs text-slate-400\">Evidence-driven final rehearsal for this exact installed terminal. Hardware observations, backup recovery, restart behavior, offline SQLite and cloud recovery are recorded locally and cannot be edited later.</p></div><button className={buttonClass} disabled={Boolean(busy)} onClick={()=>void load()}>Refresh acceptance</button></div>",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/native/NativeTerminalAcceptancePanel.tsx:35:478",
+      "file": "src/native/NativeTerminalAcceptancePanel.tsx",
+      "line": 35,
+      "kind": "onClick",
+      "source": "<div className=\"flex flex-wrap items-start justify-between gap-3\"><div><h2 className=\"font-bold text-emerald-200\">Physical terminal acceptance</h2><p className=\"mt-1 max-w-3xl text-xs text-slate-400\">Evidence-driven final rehearsal for this exact installed terminal. Hardware observations, backup recovery, restart behavior, offline SQLite and cloud recovery are recorded locally and cannot be edited later.</p></div><button className={buttonClass} disabled={Boolean(busy)} onClick={()=>void load()}>Refresh acceptance</button></div>",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/native/NativeTerminalAcceptancePanel.tsx:50:260",
+      "file": "src/native/NativeTerminalAcceptancePanel.tsx",
+      "line": 50,
+      "kind": "button",
+      "source": "<Check title=\"Backup / restore\" done={Boolean(status.evidence.BACKUP_RESTORE_REHEARSAL)} description=\"Creates a real SQLite backup, copies it as a rehearsal restore, opens it read-only and compares schema, terminal identity and core row counts.\" action={<button className={buttonClass} disabled={Boolean(busy)} onClick={()=>void runBackup()}>{busy==='BACKUP_REHEARSAL'?'Rehearsing…':'Run backup rehearsal'}</button>}/>",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/native/NativeTerminalAcceptancePanel.tsx:50:317",
+      "file": "src/native/NativeTerminalAcceptancePanel.tsx",
+      "line": 50,
+      "kind": "onClick",
+      "source": "<Check title=\"Backup / restore\" done={Boolean(status.evidence.BACKUP_RESTORE_REHEARSAL)} description=\"Creates a real SQLite backup, copies it as a rehearsal restore, opens it read-only and compares schema, terminal identity and core row counts.\" action={<button className={buttonClass} disabled={Boolean(busy)} onClick={()=>void runBackup()}>{busy==='BACKUP_REHEARSAL'?'Rehearsing…':'Run backup rehearsal'}</button>}/>",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/native/NativeTerminalAcceptancePanel.tsx:51:334",
+      "file": "src/native/NativeTerminalAcceptancePanel.tsx",
+      "line": 51,
+      "kind": "button",
+      "source": "{status.expectations.printer&&<Check title=\"Receipt printer\" done={Boolean(status.evidence.PRINTER_PAPER_OBSERVED)} description=\"Transport success is not treated as physical paper acknowledgement. Send a ServOS test slip, look at the printer, then confirm only if the slip exists.\" action={<div className=\"flex flex-wrap gap-2\"><button className={buttonClass} disabled={Boolean(busy)} onClick={()=>void testPrinter()}>Send test slip</button><button className={primaryButtonClass} disabled={!printerJob?.jobId||!['SENT','DELIVERY_UNCERTAIN'].includes(printerJob.state)||Boolean(busy)} onClick={()=>void confirmPrinter()}>Paper observed</button></div>}/>}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/native/NativeTerminalAcceptancePanel.tsx:51:391",
+      "file": "src/native/NativeTerminalAcceptancePanel.tsx",
+      "line": 51,
+      "kind": "onClick",
+      "source": "{status.expectations.printer&&<Check title=\"Receipt printer\" done={Boolean(status.evidence.PRINTER_PAPER_OBSERVED)} description=\"Transport success is not treated as physical paper acknowledgement. Send a ServOS test slip, look at the printer, then confirm only if the slip exists.\" action={<div className=\"flex flex-wrap gap-2\"><button className={buttonClass} disabled={Boolean(busy)} onClick={()=>void testPrinter()}>Send test slip</button><button className={primaryButtonClass} disabled={!printerJob?.jobId||!['SENT','DELIVERY_UNCERTAIN'].includes(printerJob.state)||Boolean(busy)} onClick={()=>void confirmPrinter()}>Paper observed</button></div>}/>}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/native/NativeTerminalAcceptancePanel.tsx:51:447",
+      "file": "src/native/NativeTerminalAcceptancePanel.tsx",
+      "line": 51,
+      "kind": "button",
+      "source": "{status.expectations.printer&&<Check title=\"Receipt printer\" done={Boolean(status.evidence.PRINTER_PAPER_OBSERVED)} description=\"Transport success is not treated as physical paper acknowledgement. Send a ServOS test slip, look at the printer, then confirm only if the slip exists.\" action={<div className=\"flex flex-wrap gap-2\"><button className={buttonClass} disabled={Boolean(busy)} onClick={()=>void testPrinter()}>Send test slip</button><button className={primaryButtonClass} disabled={!printerJob?.jobId||!['SENT','DELIVERY_UNCERTAIN'].includes(printerJob.state)||Boolean(busy)} onClick={()=>void confirmPrinter()}>Paper observed</button></div>}/>}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/native/NativeTerminalAcceptancePanel.tsx:51:590",
+      "file": "src/native/NativeTerminalAcceptancePanel.tsx",
+      "line": 51,
+      "kind": "onClick",
+      "source": "{status.expectations.printer&&<Check title=\"Receipt printer\" done={Boolean(status.evidence.PRINTER_PAPER_OBSERVED)} description=\"Transport success is not treated as physical paper acknowledgement. Send a ServOS test slip, look at the printer, then confirm only if the slip exists.\" action={<div className=\"flex flex-wrap gap-2\"><button className={buttonClass} disabled={Boolean(busy)} onClick={()=>void testPrinter()}>Send test slip</button><button className={primaryButtonClass} disabled={!printerJob?.jobId||!['SENT','DELIVERY_UNCERTAIN'].includes(printerJob.state)||Boolean(busy)} onClick={()=>void confirmPrinter()}>Paper observed</button></div>}/>}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/native/NativeTerminalAcceptancePanel.tsx:52:273",
+      "file": "src/native/NativeTerminalAcceptancePanel.tsx",
+      "line": 52,
+      "kind": "button",
+      "source": "{status.expectations.scanner&&<Check title=\"Barcode scanner\" done={Boolean(status.evidence.SCANNER_INPUT)} description=\"Arms the keyboard-wedge scanner listener. ServOS records only capture length and the fact a wedge scan occurred, never the scanned value.\" action={<button className={scannerArmed?primaryButtonClass:buttonClass} disabled={Boolean(busy)} onClick={()=>setScannerArmed(v=>!v)}><ScanLine className=\"mr-1 inline h-4 w-4\"/>{scannerArmed?'Scan now…':'Arm scanner test'}</button>}/>}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/native/NativeTerminalAcceptancePanel.tsx:52:362",
+      "file": "src/native/NativeTerminalAcceptancePanel.tsx",
+      "line": 52,
+      "kind": "onClick",
+      "source": "{status.expectations.scanner&&<Check title=\"Barcode scanner\" done={Boolean(status.evidence.SCANNER_INPUT)} description=\"Arms the keyboard-wedge scanner listener. ServOS records only capture length and the fact a wedge scan occurred, never the scanned value.\" action={<button className={scannerArmed?primaryButtonClass:buttonClass} disabled={Boolean(busy)} onClick={()=>setScannerArmed(v=>!v)}><ScanLine className=\"mr-1 inline h-4 w-4\"/>{scannerArmed?'Scan now…':'Arm scanner test'}</button>}/>}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/native/NativeTerminalAcceptancePanel.tsx:53:268",
+      "file": "src/native/NativeTerminalAcceptancePanel.tsx",
+      "line": 53,
+      "kind": "button",
+      "source": "{status.expectations.cashDrawer&&<Check title=\"Cash drawer\" done={Boolean(status.evidence.CASH_DRAWER_MANUAL)} description=\"Direct cash-drawer control is not implemented. This is deliberately a manual physical observation, not simulated device success.\" action={<button className={buttonClass} disabled={Boolean(busy)} onClick={()=>void drawer()}>Record observed manual test</button>}/>}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/native/NativeTerminalAcceptancePanel.tsx:53:325",
+      "file": "src/native/NativeTerminalAcceptancePanel.tsx",
+      "line": 53,
+      "kind": "onClick",
+      "source": "{status.expectations.cashDrawer&&<Check title=\"Cash drawer\" done={Boolean(status.evidence.CASH_DRAWER_MANUAL)} description=\"Direct cash-drawer control is not implemented. This is deliberately a manual physical observation, not simulated device success.\" action={<button className={buttonClass} disabled={Boolean(busy)} onClick={()=>void drawer()}>Record observed manual test</button>}/>}",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/native/NativeTerminalAcceptancePanel.tsx:54:471",
+      "file": "src/native/NativeTerminalAcceptancePanel.tsx",
+      "line": 54,
+      "kind": "button",
+      "source": "<Check title=\"Restart recovery\" done={Boolean(status.evidence.RESTART_RECOVERY)} description={status.restart.pending?(status.restart.canConfirm?'A different ServOS process is running. Sign-in recovery can now be confirmed.':'Challenge stored. Close ServOS completely, relaunch it and sign in again.'):'Stores this process nonce. Acceptance only succeeds after a genuinely different native process starts.'} action={status.restart.pending&&status.restart.canConfirm?<button className={primaryButtonClass} disabled={Boolean(busy)} onClick={()=>void act('RESTART_CONFIRM')}>Confirm restart recovery</button>:!status.restart.pending?<button className={buttonClass} disabled={Boolean(busy)} onClick={()=>void act('RESTART_BEGIN').then(()=>setMessage('Restart challenge stored. Close ServOS completely, relaunch it, sign in, then return here.')).catch(()=>undefined)}>Begin restart test</button>:<span className=\"text-xs text-amber-300\">Relaunch required</span>}/>",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/native/NativeTerminalAcceptancePanel.tsx:54:535",
+      "file": "src/native/NativeTerminalAcceptancePanel.tsx",
+      "line": 54,
+      "kind": "onClick",
+      "source": "<Check title=\"Restart recovery\" done={Boolean(status.evidence.RESTART_RECOVERY)} description={status.restart.pending?(status.restart.canConfirm?'A different ServOS process is running. Sign-in recovery can now be confirmed.':'Challenge stored. Close ServOS completely, relaunch it and sign in again.'):'Stores this process nonce. Acceptance only succeeds after a genuinely different native process starts.'} action={status.restart.pending&&status.restart.canConfirm?<button className={primaryButtonClass} disabled={Boolean(busy)} onClick={()=>void act('RESTART_CONFIRM')}>Confirm restart recovery</button>:!status.restart.pending?<button className={buttonClass} disabled={Boolean(busy)} onClick={()=>void act('RESTART_BEGIN').then(()=>setMessage('Restart challenge stored. Close ServOS completely, relaunch it, sign in, then return here.')).catch(()=>undefined)}>Begin restart test</button>:<span className=\"text-xs text-amber-300\">Relaunch required</span>}/>",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/native/NativeTerminalAcceptancePanel.tsx:54:635",
+      "file": "src/native/NativeTerminalAcceptancePanel.tsx",
+      "line": 54,
+      "kind": "button",
+      "source": "<Check title=\"Restart recovery\" done={Boolean(status.evidence.RESTART_RECOVERY)} description={status.restart.pending?(status.restart.canConfirm?'A different ServOS process is running. Sign-in recovery can now be confirmed.':'Challenge stored. Close ServOS completely, relaunch it and sign in again.'):'Stores this process nonce. Acceptance only succeeds after a genuinely different native process starts.'} action={status.restart.pending&&status.restart.canConfirm?<button className={primaryButtonClass} disabled={Boolean(busy)} onClick={()=>void act('RESTART_CONFIRM')}>Confirm restart recovery</button>:!status.restart.pending?<button className={buttonClass} disabled={Boolean(busy)} onClick={()=>void act('RESTART_BEGIN').then(()=>setMessage('Restart challenge stored. Close ServOS completely, relaunch it, sign in, then return here.')).catch(()=>undefined)}>Begin restart test</button>:<span className=\"text-xs text-amber-300\">Relaunch required</span>}/>",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/native/NativeTerminalAcceptancePanel.tsx:54:692",
+      "file": "src/native/NativeTerminalAcceptancePanel.tsx",
+      "line": 54,
+      "kind": "onClick",
+      "source": "<Check title=\"Restart recovery\" done={Boolean(status.evidence.RESTART_RECOVERY)} description={status.restart.pending?(status.restart.canConfirm?'A different ServOS process is running. Sign-in recovery can now be confirmed.':'Challenge stored. Close ServOS completely, relaunch it and sign in again.'):'Stores this process nonce. Acceptance only succeeds after a genuinely different native process starts.'} action={status.restart.pending&&status.restart.canConfirm?<button className={primaryButtonClass} disabled={Boolean(busy)} onClick={()=>void act('RESTART_CONFIRM')}>Confirm restart recovery</button>:!status.restart.pending?<button className={buttonClass} disabled={Boolean(busy)} onClick={()=>void act('RESTART_BEGIN').then(()=>setMessage('Restart challenge stored. Close ServOS completely, relaunch it, sign in, then return here.')).catch(()=>undefined)}>Begin restart test</button>:<span className=\"text-xs text-amber-300\">Relaunch required</span>}/>",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/native/NativeTerminalAcceptancePanel.tsx:55:298",
+      "file": "src/native/NativeTerminalAcceptancePanel.tsx",
+      "line": 55,
+      "kind": "button",
+      "source": "<Check title=\"Offline local operation\" done={Boolean(status.evidence.OFFLINE_LOCAL_PROBE)} description=\"Disconnect networking first. The probe is enabled only while the browser/native webview reports offline, then verifies SQLite can still read and commit local acceptance evidence.\" action={<button className={buttonClass} disabled={online||Boolean(busy)} onClick={()=>void act('OFFLINE_PROBE',{navigatorOffline:!online})}><WifiOff className=\"mr-1 inline h-4 w-4\"/>{online?'Disconnect network first':'Run offline probe'}</button>}/>",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/native/NativeTerminalAcceptancePanel.tsx:55:363",
+      "file": "src/native/NativeTerminalAcceptancePanel.tsx",
+      "line": 55,
+      "kind": "onClick",
+      "source": "<Check title=\"Offline local operation\" done={Boolean(status.evidence.OFFLINE_LOCAL_PROBE)} description=\"Disconnect networking first. The probe is enabled only while the browser/native webview reports offline, then verifies SQLite can still read and commit local acceptance evidence.\" action={<button className={buttonClass} disabled={online||Boolean(busy)} onClick={()=>void act('OFFLINE_PROBE',{navigatorOffline:!online})}><WifiOff className=\"mr-1 inline h-4 w-4\"/>{online?'Disconnect network first':'Run offline probe'}</button>}/>",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/native/NativeTerminalAcceptancePanel.tsx:56:260",
+      "file": "src/native/NativeTerminalAcceptancePanel.tsx",
+      "line": 56,
+      "kind": "button",
+      "source": "<Check title=\"Reconnect + cloud\" done={Boolean(status.evidence.CLOUD_RESYNC)} description=\"Reconnect networking, synchronize, then require a recent successful sync and zero pending outbox operations. This must occur after the offline rehearsal.\" action={<button className={buttonClass} disabled={!online||Boolean(busy)} onClick={()=>void cloudRecovery()}>{busy==='CLOUD_CONFIRM'?'Synchronizing…':'Sync and verify recovery'}</button>}/>",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/native/NativeTerminalAcceptancePanel.tsx:56:326",
+      "file": "src/native/NativeTerminalAcceptancePanel.tsx",
+      "line": 56,
+      "kind": "onClick",
+      "source": "<Check title=\"Reconnect + cloud\" done={Boolean(status.evidence.CLOUD_RESYNC)} description=\"Reconnect networking, synchronize, then require a recent successful sync and zero pending outbox operations. This must occur after the offline rehearsal.\" action={<button className={buttonClass} disabled={!online||Boolean(busy)} onClick={()=>void cloudRecovery()}>{busy==='CLOUD_CONFIRM'?'Synchronizing…':'Sync and verify recovery'}</button>}/>",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/native/NativeTerminalAcceptancePanel.tsx:60:321",
+      "file": "src/native/NativeTerminalAcceptancePanel.tsx",
+      "line": 60,
+      "kind": "button",
+      "source": "<div className=\"mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-slate-950 p-4\"><div><b>Final acceptance</b><p className=\"mt-1 text-xs text-slate-500\">Admin-only. Requires LIVE stage, clean SQLite, closed till, empty outbox/print queue, configured cloud and every required evidence item.</p></div><button className={primaryButtonClass} disabled={!status.readyToFinalize||status.accepted||Boolean(busy)} onClick={()=>void finalize()}>{status.accepted?'Accepted':'Finalize terminal acceptance'}</button></div>",
+      "status": "unverified",
+      "permission": "requires workflow review",
+      "persistence": "requires workflow review",
+      "offline": "requires workflow review",
+      "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
+    },
+    {
+      "id": "src/native/NativeTerminalAcceptancePanel.tsx:60:427",
+      "file": "src/native/NativeTerminalAcceptancePanel.tsx",
+      "line": 60,
+      "kind": "onClick",
+      "source": "<div className=\"mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-slate-950 p-4\"><div><b>Final acceptance</b><p className=\"mt-1 text-xs text-slate-500\">Admin-only. Requires LIVE stage, clean SQLite, closed till, empty outbox/print queue, configured cloud and every required evidence item.</p></div><button className={primaryButtonClass} disabled={!status.readyToFinalize||status.accepted||Boolean(busy)} onClick={()=>void finalize()}>{status.accepted?'Accepted':'Finalize terminal acceptance'}</button></div>",
       "status": "unverified",
       "permission": "requires workflow review",
       "persistence": "requires workflow review",

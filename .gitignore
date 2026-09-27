@@ -23,3 +23,9 @@ playwright-report/
 fix-servos-*.ps1
 
 .servos-patch-*-backup-*
+
+# Local ServOS patch/recovery artifacts
+.servos-patch-*-backup-*/
+apply-servos-patch-*.mjs
+patch*_payload.json
+PATCH_*_README.md

@@ -167,6 +167,8 @@ Includes:
 - replacement-terminal restore and old-terminal fencing;
 - encrypted/rotated backup policy implementation.
 
+Implementation note: Patch 10A implements the local physical-acceptance harness, restored-copy command replay, hardware evidence, restart/offline/cloud recovery checks and final terminal certification. Patch 10B remains the terminal-only disaster-recovery authority exercise: encrypted backup-key management, replacement-terminal enrollment, cloud credential rotation and old-terminal fencing. Those operations must be rehearsed against the actual enrolled deployment, not simulated by a source patch.
+
 ## Patch 11 - Shared v2 Runtime Adapters & Cutover Tooling
 
 Goal: let desktop and web use the same command model without enabling two authorities at once.

@@ -89,7 +89,7 @@ pub fn open(path: &std::path::Path) -> Result<Connection> {
     let version: i64 = db
         .query_row("PRAGMA user_version", [], |r| r.get(0))
         .map_err(error)?;
-    if version > 8 {
+    if version > 9 {
         return Err("Database requires a newer ServOS version".into());
     }
     if version < 1 {
@@ -116,6 +116,9 @@ pub fn open(path: &std::path::Path) -> Result<Connection> {
     }
     if version < 8 {
         db.execute_batch(include_str!("../migrations/008_asset_register_procurement.sql")).map_err(error)?;
+    }
+    if version < 9 {
+        db.execute_batch(include_str!("../migrations/009_terminal_acceptance.sql")).map_err(error)?;
     }
     Ok(db)
 }

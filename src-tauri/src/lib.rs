@@ -11,6 +11,7 @@ struct Runtime {
     db: Mutex<Connection>,
     path: PathBuf,
     syncing: Mutex<bool>,
+    startup_nonce: String,
 }
 #[tauri::command]
 fn runtime_status(state: State<Runtime>) -> store::Result<Value> {
@@ -688,6 +689,266 @@ fn runtime_printer_jobs(state: State<Runtime>, token: String) -> store::Result<V
     Ok(json!(jobs))
 }
 
+// SERVOS_PATCH_10_TERMINAL_ACCEPTANCE
+fn acceptance_actor(db:&Connection,token:&str)->store::Result<store::Session>{
+    let actor=store::actor(db,token,true)?;
+    if !store::permissions(&actor.role).contains(&"system.configure"){
+        return Err("System configuration permission required".into());
+    }
+    Ok(actor)
+}
+fn acceptance_insert(db:&Connection,actor:&store::Session,kind:&str,details:Value)->store::Result<Value>{
+    let allowed=[
+        "BACKUP_RESTORE_REHEARSAL","PRINTER_PAPER_OBSERVED","SCANNER_INPUT","CASH_DRAWER_MANUAL",
+        "RESTART_RECOVERY","OFFLINE_LOCAL_PROBE","CLOUD_RESYNC","FINAL_ACCEPTANCE"
+    ];
+    if !allowed.contains(&kind){return Err("Unsupported terminal acceptance evidence".into());}
+    let id=uuid::Uuid::new_v4().to_string();let occurred_at=chrono::Utc::now().to_rfc3339();
+    db.execute(
+        "INSERT INTO terminal_acceptance_evidence(id,kind,details,actor_id,actor_name,occurred_at) VALUES(?,?,?,?,?,?)",
+        rusqlite::params![&id,kind,details.to_string(),&actor.staff_id,&actor.name,&occurred_at]
+    ).map_err(|e|e.to_string())?;
+    Ok(json!({"id":id,"kind":kind,"details":details,"actorId":actor.staff_id.clone(),"actorName":actor.name.clone(),"occurredAt":occurred_at}))
+}
+fn acceptance_status_value(db:&Connection,current_nonce:&str)->store::Result<Value>{
+    let schema_version:i64=db.query_row("PRAGMA user_version",[],|r|r.get(0)).map_err(|e|e.to_string())?;
+    let quick_check:String=db.query_row("PRAGMA quick_check",[],|r|r.get(0)).map_err(|e|e.to_string())?;
+    let stage=store::installation_stage(db)?;
+    let terminal_id=store::meta(db,"terminal_id")?;
+    let cloud_configured=store::meta(db,"cloud_url")?.is_some();
+    let last_sync=store::meta(db,"last_sync")?;
+    let last_backup=store::meta(db,"last_backup")?;
+    let outbox_pending:i64=db.query_row("SELECT COUNT(*) FROM outbox WHERE acknowledged_at IS NULL",[],|r|r.get(0)).map_err(|e|e.to_string())?;
+    let open_tills:i64=db.query_row("SELECT COUNT(*) FROM records WHERE collection='tillSessions' AND archived=0 AND json_extract(data,'$.status')='OPEN'",[],|r|r.get(0)).map_err(|e|e.to_string())?;
+    let unresolved_print_jobs:i64=db.query_row("SELECT COUNT(*) FROM receipt_print_jobs WHERE state!='SENT'",[],|r|r.get(0)).map_err(|e|e.to_string())?;
+
+    let intake=store::meta(db,"intake_profile")?.and_then(|raw|serde_json::from_str::<Value>(&raw).ok()).unwrap_or_else(||json!({}));
+    let printer_expected=intake["printerExpected"].as_bool().unwrap_or(false);
+    let scanner_expected=intake["barcodeScannerExpected"].as_bool().unwrap_or(false);
+    let drawer_expected=intake["drawerExpected"].as_bool().unwrap_or(false);
+
+    let mut evidence=serde_json::Map::<String,Value>::new();
+    let mut stmt=db.prepare("SELECT id,kind,details,actor_id,actor_name,occurred_at FROM terminal_acceptance_evidence ORDER BY occurred_at DESC,rowid DESC").map_err(|e|e.to_string())?;
+    let rows=stmt.query_map([],|r|Ok((
+        r.get::<_,String>(0)?,r.get::<_,String>(1)?,r.get::<_,String>(2)?,
+        r.get::<_,String>(3)?,r.get::<_,String>(4)?,r.get::<_,String>(5)?
+    ))).map_err(|e|e.to_string())?;
+    for row in rows{
+        let (id,kind,details_raw,actor_id,actor_name,occurred_at)=row.map_err(|e|e.to_string())?;
+        if evidence.contains_key(&kind){continue;}
+        let details:Value=serde_json::from_str(&details_raw).map_err(|e|e.to_string())?;
+        evidence.insert(kind,json!({"id":id,"details":details,"actorId":actor_id,"actorName":actor_name,"occurredAt":occurred_at}));
+    }
+
+    let mut required=vec![
+        "BACKUP_RESTORE_REHEARSAL".to_string(),
+        "RESTART_RECOVERY".to_string(),
+        "OFFLINE_LOCAL_PROBE".to_string()
+    ];
+    if printer_expected{required.push("PRINTER_PAPER_OBSERVED".into());}
+    if scanner_expected{required.push("SCANNER_INPUT".into());}
+    if drawer_expected{required.push("CASH_DRAWER_MANUAL".into());}
+    if cloud_configured{required.push("CLOUD_RESYNC".into());}
+
+    let restart_nonce=store::meta(db,"acceptance_restart_nonce")?;
+    let restart_started_at=store::meta(db,"acceptance_restart_started_at")?;
+    let restart_pending=restart_nonce.is_some();
+    let can_confirm_restart=restart_nonce.as_deref().is_some_and(|nonce|nonce!=current_nonce);
+
+    let mut blockers=Vec::<String>::new();
+    if schema_version<9{blockers.push(format!("Database schema is v{schema_version}; Patch 10 requires v9")); }
+    if quick_check!="ok"{blockers.push(format!("SQLite quick_check returned {quick_check}")); }
+    if stage!="LIVE"{blockers.push(format!("Installation stage is {stage}; final acceptance requires LIVE")); }
+    if terminal_id.is_none(){blockers.push("Terminal identity is missing".into());}
+    if !cloud_configured{blockers.push("Cloud synchronization is not configured".into());}
+    if outbox_pending>0{blockers.push(format!("{outbox_pending} local operation(s) are awaiting cloud acknowledgement")); }
+    if open_tills>0{blockers.push("Close the active till before final terminal acceptance".into());}
+    if unresolved_print_jobs>0{blockers.push(format!("{unresolved_print_jobs} printer job(s) are queued or delivery-uncertain")); }
+    if restart_pending{blockers.push("Restart recovery challenge is still pending confirmation".into());}
+    for kind in &required{
+        if !evidence.contains_key(kind){blockers.push(format!("Missing acceptance evidence: {kind}")); }
+    }
+
+    if let Some(backup)=evidence.get("BACKUP_RESTORE_REHEARSAL"){
+        if backup["details"]["schemaVersion"].as_i64()!=Some(schema_version){
+            blockers.push("Backup/restore rehearsal predates the current database schema".into());
+        }
+    }
+    if let (Some(offline),Some(cloud))=(evidence.get("OFFLINE_LOCAL_PROBE"),evidence.get("CLOUD_RESYNC")){
+        let offline_at=offline["occurredAt"].as_str().unwrap_or("");
+        let cloud_at=cloud["occurredAt"].as_str().unwrap_or("");
+        if !offline_at.is_empty()&&!cloud_at.is_empty()&&cloud_at<=offline_at{
+            blockers.push("Cloud recovery evidence must be recorded after the offline rehearsal".into());
+        }
+    }
+
+    let accepted=evidence.get("FINAL_ACCEPTANCE").is_some_and(|final_evidence|{
+        final_evidence["details"]["schemaVersion"].as_i64()==Some(schema_version)
+            && final_evidence["details"]["terminalId"].as_str()==terminal_id.as_deref()
+    });
+    let accepted_at=if accepted{evidence.get("FINAL_ACCEPTANCE").and_then(|v|v["occurredAt"].as_str()).map(str::to_string)}else{None};
+
+    Ok(json!({
+        "mode":"TERMINAL_ACCEPTANCE",
+        "generatedAt":chrono::Utc::now().to_rfc3339(),
+        "facts":{
+            "schemaVersion":schema_version,"quickCheck":quick_check,"installationStage":stage,
+            "terminalId":terminal_id,"cloudConfigured":cloud_configured,"lastSync":last_sync,"lastBackup":last_backup,
+            "outboxPending":outbox_pending,"openTills":open_tills,"unresolvedPrinterJobs":unresolved_print_jobs
+        },
+        "expectations":{"printer":printer_expected,"scanner":scanner_expected,"cashDrawer":drawer_expected},
+        "requiredEvidence":required,
+        "evidence":Value::Object(evidence),
+        "restart":{"pending":restart_pending,"canConfirm":can_confirm_restart,"startedAt":restart_started_at},
+        "blockers":blockers,
+        "readyToFinalize":blockers.is_empty(),
+        "accepted":accepted,"acceptedAt":accepted_at
+    }))
+}
+#[tauri::command]
+fn runtime_acceptance_status(state:State<Runtime>,token:String)->store::Result<Value>{
+    let db=state.db.lock().map_err(|e|e.to_string())?;
+    acceptance_actor(&db,&token)?;
+    acceptance_status_value(&db,&state.startup_nonce)
+}
+#[tauri::command]
+fn runtime_acceptance_action(state:State<Runtime>,token:String,action:String,payload:Value)->store::Result<Value>{
+    let db=state.db.lock().map_err(|e|e.to_string())?;
+    let actor=acceptance_actor(&db,&token)?;
+    match action.as_str(){
+        "BACKUP_REHEARSAL"=>{
+            if !store::permissions(&actor.role).contains(&"backup.create")||!store::permissions(&actor.role).contains(&"backup.restore"){
+                return Err("Backup create and restore permissions are required".into());
+            }
+            let folder=state.path.parent().ok_or("Missing application folder")?.join("backups");
+            std::fs::create_dir_all(&folder).map_err(|e|e.to_string())?;
+            let backup_path=folder.join(format!("servos-acceptance-{}.sqlite",chrono::Utc::now().format("%Y%m%dT%H%M%S%f")));
+            db.backup(rusqlite::DatabaseName::Main,&backup_path,None).map_err(|e|e.to_string())?;
+            let rehearsal_path=folder.join(format!("rehearsal-{}.sqlite",uuid::Uuid::new_v4()));
+            std::fs::copy(&backup_path,&rehearsal_path).map_err(|e|e.to_string())?;
+            let live_schema:i64=db.query_row("PRAGMA user_version",[],|r|r.get(0)).map_err(|e|e.to_string())?;
+            let live_counts:(i64,i64,i64,i64)=db.query_row(
+                "SELECT (SELECT COUNT(*) FROM records),(SELECT COUNT(*) FROM commands),(SELECT COUNT(*) FROM audit),(SELECT COUNT(*) FROM outbox)",
+                [],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?))
+            ).map_err(|e|e.to_string())?;
+            let live_terminal=store::meta(&db,"terminal_id")?;
+            let restored=Connection::open_with_flags(&rehearsal_path,rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY).map_err(|e|e.to_string())?;
+            let restored_check:String=restored.query_row("PRAGMA quick_check",[],|r|r.get(0)).map_err(|e|e.to_string())?;
+            let restored_schema:i64=restored.query_row("PRAGMA user_version",[],|r|r.get(0)).map_err(|e|e.to_string())?;
+            let restored_counts:(i64,i64,i64,i64)=restored.query_row(
+                "SELECT (SELECT COUNT(*) FROM records),(SELECT COUNT(*) FROM commands),(SELECT COUNT(*) FROM audit),(SELECT COUNT(*) FROM outbox)",
+                [],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?))
+            ).map_err(|e|e.to_string())?;
+            let restored_terminal=store::meta(&restored,"terminal_id")?;
+            drop(restored);
+            if restored_check!="ok"||restored_schema!=live_schema||restored_counts!=live_counts||restored_terminal!=live_terminal{
+                let _=std::fs::remove_file(&rehearsal_path);
+                return Err("Backup restore rehearsal did not reproduce the live database identity/counts".into());
+            }
+
+            // Exercise the restored copy as a writable ServOS database and replay one identical command ID.
+            // The temporary customer exists only in the rehearsal copy and is deleted with that file.
+            let mut writable=store::open(&rehearsal_path)?;
+            let commands_before:i64=writable.query_row("SELECT COUNT(*) FROM commands",[],|r|r.get(0)).map_err(|e|e.to_string())?;
+            let probe_record=uuid::Uuid::new_v4().to_string();
+            let probe_command=store::BusinessCommand{
+                id:uuid::Uuid::new_v4().to_string(),schema_version:1,operation:"record.save".into(),target_version:None,
+                payload:json!({"collection":"customers","id":probe_record,"data":{"name":"ServOS restore rehearsal","phone":"0700000000"}})
+            };
+            let first=store::execute(&mut writable,&token,probe_command.clone())?;
+            let second=store::execute(&mut writable,&token,probe_command.clone())?;
+            let commands_after:i64=writable.query_row("SELECT COUNT(*) FROM commands",[],|r|r.get(0)).map_err(|e|e.to_string())?;
+            let probe_count:i64=writable.query_row("SELECT COUNT(*) FROM records WHERE collection='customers' AND id=?",[&probe_record],|r|r.get(0)).map_err(|e|e.to_string())?;
+            let writable_check:String=writable.query_row("PRAGMA quick_check",[],|r|r.get(0)).map_err(|e|e.to_string())?;
+            drop(writable);
+            let _=std::fs::remove_file(&rehearsal_path);
+            if first!=second||commands_after!=commands_before+1||probe_count!=1||writable_check!="ok"{
+                return Err("Restored-copy command replay/idempotency rehearsal failed".into());
+            }
+
+            let stamp=chrono::Utc::now().to_rfc3339();
+            store::set_meta(&db,"last_backup",&stamp)?;
+            store::set_meta(&db,"last_restore_rehearsal",&stamp)?;
+            acceptance_insert(&db,&actor,"BACKUP_RESTORE_REHEARSAL",json!({
+                "schemaVersion":live_schema,"quickCheck":restored_check,"writableQuickCheck":writable_check,
+                "records":live_counts.0,"commands":live_counts.1,"auditEntries":live_counts.2,"outbox":live_counts.3,
+                "terminalId":live_terminal,"idempotentCommandReplay":true,"restoredCopyWritable":true,
+                "backupFile":backup_path.file_name().and_then(|v|v.to_str()).unwrap_or("servos-backup.sqlite")
+            }))?;
+        }
+        "PRINTER_CONFIRM"=>{
+            if payload["paperObserved"]!=true{return Err("Confirm physical paper output before recording printer acceptance".into());}
+            let job_id=payload["jobId"].as_str().map(str::trim).filter(|v|!v.is_empty()).ok_or("Printer test job ID is required")?;
+            let (order_id,job_state,updated_at):(String,String,String)=db.query_row(
+                "SELECT order_id,state,updated_at FROM receipt_print_jobs WHERE id=?",[job_id],
+                |r|Ok((r.get(0)?,r.get(1)?,r.get(2)?))
+            ).map_err(|e|e.to_string())?;
+            if order_id!="PRINTER_TEST"{return Err("Only a ServOS printer-test job can satisfy printer acceptance".into());}
+            if !["SENT","DELIVERY_UNCERTAIN"].contains(&job_state.as_str()){return Err("Printer test has not reached the printer transport yet".into());}
+            if job_state=="DELIVERY_UNCERTAIN"{
+                db.execute(
+                    "UPDATE receipt_print_jobs SET state='SENT',message='Physical paper output confirmed during terminal acceptance',updated_at=? WHERE id=? AND state='DELIVERY_UNCERTAIN'",
+                    rusqlite::params![chrono::Utc::now().to_rfc3339(),job_id]
+                ).map_err(|e|e.to_string())?;
+            }
+            acceptance_insert(&db,&actor,"PRINTER_PAPER_OBSERVED",json!({"jobId":job_id,"transportState":job_state,"transportUpdatedAt":updated_at,"physicalPaperObserved":true,"uncertainTransportResolvedByPhysicalObservation":job_state=="DELIVERY_UNCERTAIN"}))?;
+        }
+        "SCANNER_CONFIRM"=>{
+            let length=payload["codeLength"].as_i64().unwrap_or(0);
+            if !(1..=256).contains(&length){return Err("Scanner capture length is invalid".into());}
+            acceptance_insert(&db,&actor,"SCANNER_INPUT",json!({"capture":"keyboard-wedge","codeLength":length,"rawValueStored":false}))?;
+        }
+        "CASH_DRAWER_CONFIRM"=>{
+            if payload["observed"]!=true{return Err("Confirm the physical/manual drawer test before recording acceptance".into());}
+            acceptance_insert(&db,&actor,"CASH_DRAWER_MANUAL",json!({"manualPhysicalObservation":true,"directDrawerAdapter":false}))?;
+        }
+        "RESTART_BEGIN"=>{
+            store::set_meta(&db,"acceptance_restart_nonce",&state.startup_nonce)?;
+            store::set_meta(&db,"acceptance_restart_started_at",&chrono::Utc::now().to_rfc3339())?;
+        }
+        "RESTART_CONFIRM"=>{
+            let prior=store::meta(&db,"acceptance_restart_nonce")?.ok_or("No restart recovery challenge is pending")?;
+            if prior==state.startup_nonce{return Err("ServOS has not restarted yet. Close and relaunch the native app, sign in, then confirm.".into());}
+            let started=store::meta(&db,"acceptance_restart_started_at")?;
+            acceptance_insert(&db,&actor,"RESTART_RECOVERY",json!({"challengeStartedAt":started,"newProcessObserved":true,"sessionsDoNotSurviveRestart":true}))?;
+            db.execute("DELETE FROM metadata WHERE key IN ('acceptance_restart_nonce','acceptance_restart_started_at')",[]).map_err(|e|e.to_string())?;
+        }
+        "OFFLINE_PROBE"=>{
+            if payload["navigatorOffline"]!=true{return Err("Disconnect this terminal from the network before running the offline probe".into());}
+            let quick:String=db.query_row("PRAGMA quick_check",[],|r|r.get(0)).map_err(|e|e.to_string())?;
+            if quick!="ok"{return Err(format!("SQLite quick_check returned {quick}"));}
+            let records:i64=db.query_row("SELECT COUNT(*) FROM records",[],|r|r.get(0)).map_err(|e|e.to_string())?;
+            acceptance_insert(&db,&actor,"OFFLINE_LOCAL_PROBE",json!({"navigatorOffline":true,"sqliteQuickCheck":quick,"recordsReadable":records,"localEvidenceWriteCommitted":true}))?;
+        }
+        "CLOUD_CONFIRM"=>{
+            if store::meta(&db,"cloud_url")?.is_none(){return Err("Cloud synchronization is not configured".into());}
+            let pending:i64=db.query_row("SELECT COUNT(*) FROM outbox WHERE acknowledged_at IS NULL",[],|r|r.get(0)).map_err(|e|e.to_string())?;
+            if pending!=0{return Err(format!("{pending} operation(s) remain pending cloud acknowledgement"));}
+            let last_sync=store::meta(&db,"last_sync")?.ok_or("No successful synchronization is recorded")?;
+            let parsed=chrono::DateTime::parse_from_rfc3339(&last_sync).map_err(|_|"Stored last_sync timestamp is invalid".to_string())?.with_timezone(&chrono::Utc);
+            let age=chrono::Utc::now().signed_duration_since(parsed);
+            if age.num_minutes()>15||age.num_seconds()<0{return Err("Run synchronization now, then confirm cloud recovery within 15 minutes".into());}
+            acceptance_insert(&db,&actor,"CLOUD_RESYNC",json!({"lastSync":last_sync,"pendingOutbox":0,"cloudConfigured":true}))?;
+        }
+        "FINALIZE"=>{
+            if actor.role!="Admin"{return Err("Final terminal acceptance requires the Admin account".into());}
+            let status=acceptance_status_value(&db,&state.startup_nonce)?;
+            if !status["blockers"].as_array().is_some_and(|v|v.is_empty()){
+                return Err(format!("Terminal acceptance still has blockers: {}",status["blockers"]));
+            }
+            acceptance_insert(&db,&actor,"FINAL_ACCEPTANCE",json!({
+                "schemaVersion":status["facts"]["schemaVersion"],"terminalId":status["facts"]["terminalId"],
+                "quickCheck":status["facts"]["quickCheck"],"outboxPending":0,
+                "requiredEvidence":status["requiredEvidence"],"acceptedByRole":actor.role.clone()
+            }))?;
+            store::set_meta(&db,"terminal_acceptance_complete",&chrono::Utc::now().to_rfc3339())?;
+        }
+        _=>return Err("Unsupported terminal acceptance action".into())
+    }
+    acceptance_status_value(&db,&state.startup_nonce)
+}
+
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -703,6 +964,7 @@ pub fn run() {
                 db: Mutex::new(db),
                 path,
                 syncing: Mutex::new(false),
+                startup_nonce: uuid::Uuid::new_v4().to_string(),
             });
             Ok(())
         })
@@ -721,6 +983,8 @@ pub fn run() {
             runtime_sync,
             runtime_backup,
             runtime_health_audit,
+            runtime_acceptance_status,
+            runtime_acceptance_action,
             runtime_import_list,
             runtime_import_detail,
             runtime_import_stage,
