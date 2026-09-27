@@ -89,7 +89,7 @@ pub fn open(path: &std::path::Path) -> Result<Connection> {
     let version: i64 = db
         .query_row("PRAGMA user_version", [], |r| r.get(0))
         .map_err(error)?;
-    if version > 5 {
+    if version > 6 {
         return Err("Database requires a newer ServOS version".into());
     }
     if version < 1 {
@@ -107,6 +107,9 @@ pub fn open(path: &std::path::Path) -> Result<Connection> {
     }
     if version < 5 {
         db.execute_batch(include_str!("../migrations/005_import_apply.sql")).map_err(error)?;
+    }
+    if version < 6 {
+        db.execute_batch(include_str!("../migrations/006_folios.sql")).map_err(error)?;
     }
     Ok(db)
 }
@@ -137,7 +140,7 @@ pub const ALL_PERMISSIONS: &[&str] = &[
     "catalog.view","catalog.manage","pricing.manage",
     "inventory.view","inventory.receive","inventory.transfer","inventory.waste","inventory.count","inventory.adjust",
     "procurement.view","procurement.manage","procurement.receive","procurement.over_receive","procurement.pay",
-    "floorplan.view","floorplan.manage","rooms.view","rooms.manage","rooms.operate","rooms.guests.view","kds.view","kds.update",
+    "floorplan.view","floorplan.manage","rooms.view","rooms.manage","rooms.operate","rooms.guests.view","folio.view","folio.manage","folio.reverse","folio.room_charge","kds.view","kds.update",
     "accounting.view","reports.view","audit.view","data.import.view","data.import.stage","data.import.execute","backup.create","backup.restore","sync.manual","system.configure","help.view"
 ];
 
@@ -150,7 +153,7 @@ pub fn permissions(role: &str) -> Vec<&'static str> {
         _ => vec![
             "business.view","staff.view","pos.sell","pos.open_tab","pos.manage_table","order.fire",
             "payment.record","payment.split","till.open","till.close","mpesa.record",
-            "catalog.view","inventory.view","procurement.view","procurement.receive","floorplan.view","kds.view","kds.update","help.view"
+            "catalog.view","inventory.view","procurement.view","procurement.receive","floorplan.view","folio.room_charge","kds.view","kds.update","help.view"
         ],
     }
 }
@@ -682,6 +685,375 @@ fn room_validate_interval(start:chrono::DateTime<Utc>,end:chrono::DateTime<Utc>)
     if end-start>Duration::days(366){return Err("VALIDATION_FAILED: stay cannot exceed 366 days".into());}
     Ok(())
 }
+// SERVOS_PATCH_07_FOLIOS
+fn folio_minor(v:&Value,key:&str)->Result<i64>{
+    let value=v.get(key).and_then(Value::as_i64).ok_or_else(||format!("{key} must be an integer minor-unit amount"))?;
+    if value<0||value>9_000_000_000_000_000{return Err(format!("VALIDATION_FAILED: {key}"));} Ok(value)
+}
+fn folio_unique_external_reference(tx:&Transaction,method:&str,reference:&str)->Result<()>{
+    let normalized=reference.trim().to_ascii_uppercase();
+    if normalized.is_empty(){return Err("VALIDATION_FAILED: external reference is required".into());}
+    for record in list(tx,"payments")?{
+        let p=&record["data"];
+        if p["tenderType"].as_str()==Some(method)
+            && p["referenceNumber"].as_str().is_some_and(|v|v.trim().eq_ignore_ascii_case(&normalized)){
+            return Err("DUPLICATE_REFERENCE: external payment already recorded".into());
+        }
+    }
+    Ok(())
+}
+fn folio_journal(tx:&Transaction,source_type:&str,source_id:&str,memo:&str,lines:Vec<Value>,changes:&mut Vec<Value>)->Result<String>{
+    let debit:i64=lines.iter().map(|l|l["debitMinor"].as_i64().unwrap_or(0)).sum();
+    let credit:i64=lines.iter().map(|l|l["creditMinor"].as_i64().unwrap_or(0)).sum();
+    if debit!=credit{return Err("Journal is not balanced".into());}
+    let journal_id=id();let stamp=now();
+    put(tx,"journalEntries",&journal_id,json!({
+        "id":journal_id,"entryNumber":format!("JE-{}",&journal_id[..8]),"propertyId":"property",
+        "occurredAt":stamp,"postedAt":stamp,"sourceType":source_type,"sourceId":source_id,"memo":memo,
+        "lines":lines,"totalDebit":debit as f64/100.0,"totalCredit":credit as f64/100.0,"balanced":true
+    }),changes)?;
+    Ok(journal_id)
+}
+fn folio_entry(tx:&Transaction,folio_id:&str,entry_id:&str,details:Value,balance_delta:i64,deposit_delta:i64,changes:&mut Vec<Value>)->Result<()>{
+    if room_any(tx,"folioEntries",entry_id)?.is_some(){return Err("DUPLICATE_REFERENCE: folio entry already exists".into());}
+    let (version,mut folio)=get(tx,"folios",folio_id)?;
+    if folio["status"].as_str()!=Some("OPEN"){return Err("INVALID_STATE: folio closed".into());}
+    let balance=folio["balanceMinor"].as_i64().unwrap_or(0).checked_add(balance_delta).ok_or("VALIDATION_FAILED: folio balance overflow")?;
+    let deposit=folio["depositMinor"].as_i64().unwrap_or(0).checked_add(deposit_delta).ok_or("VALIDATION_FAILED: folio deposit overflow")?;
+    if balance<0||deposit<0||balance>9_000_000_000_000_000||deposit>9_000_000_000_000{return Err("VALIDATION_FAILED: folio balance/deposit bounds".into());}
+    let mut entry=details;
+    entry["id"]=json!(entry_id);entry["folioId"]=json!(folio_id);entry["balanceDeltaMinor"]=json!(balance_delta);
+    entry["depositDeltaMinor"]=json!(deposit_delta);entry["postedAt"]=json!(now());
+    put(tx,"folioEntries",entry_id,entry,changes)?;
+    folio["balanceMinor"]=json!(balance);folio["depositMinor"]=json!(deposit);folio["updatedAt"]=json!(now());
+    put(tx,"folios",folio_id,folio,changes)?;
+    let _=version;
+    Ok(())
+}
+fn folio_charge(tx:&Transaction,folio_id:&str,entry_id:&str,gross:i64,tax_bps:i64,revenue_account:&str,details:Value,changes:&mut Vec<Value>)->Result<()>{
+    if gross<0||gross>100_000_000_000_000||!(0..=10_000).contains(&tax_bps){return Err("VALIDATION_FAILED: charge money/tax".into());}
+    let denominator=10_000i128+tax_bps as i128;
+    let numerator=gross as i128*tax_bps as i128;
+    let tax=((numerator+denominator/2)/denominator) as i64;
+    let net=gross-tax;
+    if gross>0{
+        let mut lines=vec![
+            json!({"id":id(),"accountId":"GUEST_RECEIVABLE","accountCode":"GUEST_RECEIVABLE","accountName":"Guest receivable","debit":gross as f64/100.0,"credit":0,"debitMinor":gross,"creditMinor":0}),
+            json!({"id":id(),"accountId":revenue_account,"accountCode":revenue_account,"accountName":revenue_account,"debit":0,"credit":net as f64/100.0,"debitMinor":0,"creditMinor":net})
+        ];
+        if tax>0{lines.push(json!({"id":id(),"accountId":"TAX_PAYABLE","accountCode":"TAX_PAYABLE","accountName":"Tax payable","debit":0,"credit":tax as f64/100.0,"debitMinor":0,"creditMinor":tax}));}
+        folio_journal(tx,"FOLIO",folio_id,"Folio charge",lines,changes)?;
+    }
+    let mut data=details;data["kind"]=json!("CHARGE");data["grossMinor"]=json!(gross);data["netMinor"]=json!(net);
+    data["taxMinor"]=json!(tax);data["taxBasisPoints"]=json!(tax_bps);data["revenueAccount"]=json!(revenue_account);
+    folio_entry(tx,folio_id,entry_id,data,gross,0,changes)
+}
+fn folio_period_key(folio_id:&str,period:i64)->String{
+    let mut hasher=Sha256::new();hasher.update(format!("{folio_id}:{period}").as_bytes());
+    format!("accommodation-{:x}",hasher.finalize())
+}
+fn folio_post_accommodation(tx:&Transaction,folio_id:&str,settle_booked:bool,changes:&mut Vec<Value>)->Result<()>{
+    let (_,booking)=get(tx,"roomReservations",folio_id)?;let (_,stay)=get(tx,"stays",folio_id)?;
+    if booking["status"].as_str()!=Some("CHECKED_IN")||stay["status"].as_str()!=Some("CHECKED_IN"){return Err("INVALID_STATE: accommodation requires active stay".into());}
+    let rate=&booking["rateSnapshot"];let units=booking["units"].as_i64().ok_or("Reservation units are invalid")?;
+    let start=room_parse_time(text(&booking,"startsAt")?)?;
+    for period in 0..units{
+        let due=start+Duration::days(period);
+        if !settle_booked&&due>Utc::now(){continue;}
+        let entry_id=folio_period_key(folio_id,period);
+        if room_any(tx,"folioEntries",&entry_id)?.is_some(){continue;}
+        let gross=rate["priceMinor"].as_i64().ok_or("Rate snapshot price is invalid")?;
+        let tax_bps=rate["taxBasisPoints"].as_i64().unwrap_or(0);
+        folio_charge(tx,folio_id,&entry_id,gross,tax_bps,"ACCOMMODATION_REVENUE",json!({
+            "sourceType":"ACCOMMODATION","reservationId":folio_id,"period":period,
+            "periodStartsAt":due.to_rfc3339(),"rateSnapshot":rate,
+            "description":if rate["mode"].as_str()==Some("DAY_USE"){"Day-use accommodation"}else{"Nightly accommodation"}
+        }),changes)?;
+    }
+    Ok(())
+}
+fn folio_active_till(tx:&Transaction)->Result<(String,Value)>{
+    let active=list(tx,"tillSessions")?.into_iter().find(|v|v["data"]["status"]=="OPEN").ok_or("Open a till before accepting or paying out cash")?;
+    Ok((active["id"].as_str().unwrap_or("").to_string(),active["data"].clone()))
+}
+fn folio_record_funds(tx:&Transaction,user:&Session,folio_id:&str,purpose:&str,p:&Value,changes:&mut Vec<Value>)->Result<String>{
+    let amount=folio_minor(p,"amountMinor")?;if amount<=0{return Err("VALIDATION_FAILED: positive payment required".into());}
+    let method=text(p,"method")?.to_ascii_uppercase();
+    if !["CASH","MPESA","CARD"].contains(&method.as_str()){return Err("VALIDATION_FAILED: payment method".into());}
+    if !permissions(&user.role).contains(&"payment.record"){return Err("Permission required: payment.record".into());}
+    let (_,config)=get(tx,"paymentConfig","main")?;
+    if !config["methods"].as_array().is_some_and(|v|v.iter().any(|m|m.as_str()==Some(method.as_str()))){return Err(format!("{method} is not enabled for this business"));}
+    let mut reference=id();let mut receipt_id:Option<String>=None;let (active_till_id,mut active_till)=folio_active_till(tx)?;
+    let till_id:Option<String>=Some(active_till_id.clone());let mut cash_tendered:Option<i64>=None;let mut change_minor:Option<i64>=None;
+    if method=="CASH"{
+        let tender=folio_minor(p,"cashTenderedMinor")?;if tender<amount{return Err("VALIDATION_FAILED: cash tendered".into());}
+        cash_tendered=Some(tender);change_minor=Some(tender-amount);
+        active_till["expectedCashInDrawer"]=json!((money(&active_till,"expectedCashInDrawer")?+amount) as f64/100.0);
+        active_till["hotelCashReceived"]=json!((money(&active_till,"hotelCashReceived").unwrap_or(0)+amount) as f64/100.0);
+        put(tx,"tillSessions",&active_till_id,active_till,changes)?;
+    }else{
+        if p["manuallyConfirmed"]!=true{return Err("VALIDATION_FAILED: manual payment confirmation required".into());}
+        reference=text(p,"reference")?.trim().to_ascii_uppercase();
+        if method=="MPESA"{
+            if reference.len()<6||reference.len()>20||!reference.chars().all(|c|c.is_ascii_alphanumeric()){return Err("Enter a valid M-Pesa transaction code".into());}
+            let account=text(p,"account")?.trim();
+            let allowed=config["mpesaAccounts"].as_array().is_some_and(|a|a.iter().any(|x|x["number"].as_str()==Some(account)));
+            if !allowed{return Err("Choose a configured business M-Pesa account".into());}
+            let existing:Option<String>=tx.query_row("SELECT receipt_id FROM mpesa_codes WHERE account=? AND code=?",params![account,reference],|r|r.get(0)).optional().map_err(error)?;
+            if existing.is_some(){return Err("DUPLICATE_REFERENCE: external payment already recorded".into());}
+            let rid=id();let customer_id=get(tx,"folios",folio_id)?.1["customerId"].clone();
+            tx.execute("INSERT INTO mpesa_codes VALUES(?,?,?)",params![account,reference,rid]).map_err(error)?;
+            put(tx,"mpesaReceipts",&rid,json!({
+                "id":rid,"code":reference,"account":account,"receivedAmount":amount as f64/100.0,"receivedAt":now(),
+                "allocatedAmount":amount as f64/100.0,"unappliedAmount":0,"reconciliationStatus":"AWAITING_RECONCILIATION",
+                "cashierId":user.staff_id,"customerId":customer_id
+            }),changes)?;
+            receipt_id=Some(rid);
+        }else{
+            folio_unique_external_reference(tx,&method,&reference)?;
+        }
+    }
+    let payment_id=id();let stamp=now();
+    put(tx,"payments",&payment_id,json!({
+        "id":payment_id,"folioId":folio_id,"purpose":purpose,"amount":amount as f64/100.0,"amountMinor":amount,
+        "currency":"KES","tenderType":method,"status":"PAID","referenceNumber":reference,"mpesaReceiptId":receipt_id,
+        "tillSessionId":till_id,"occurredAt":stamp,"cashierId":user.staff_id,"cashierName":user.name,
+        "confirmation":if method=="CASH"{"CASH_RECEIVED"}else{"MANUALLY_CONFIRMED"},
+        "cashTenderedMinor":cash_tendered,"changeMinor":change_minor
+    }),changes)?;
+    let debit=if method=="CASH"{"CASH"}else{method.as_str()};
+    let credit=if purpose=="DEPOSIT"{"GUEST_DEPOSITS"}else{"GUEST_RECEIVABLE"};
+    folio_journal(tx,"FOLIO_PAYMENT",&payment_id,"Guest funds",vec![
+        json!({"id":id(),"accountId":debit,"accountCode":debit,"accountName":debit,"debit":amount as f64/100.0,"credit":0,"debitMinor":amount,"creditMinor":0}),
+        json!({"id":id(),"accountId":credit,"accountCode":credit,"accountName":credit,"debit":0,"credit":amount as f64/100.0,"debitMinor":0,"creditMinor":amount})
+    ],changes)?;
+    Ok(payment_id)
+}
+fn folio_refund_deposit(tx:&Transaction,user:&Session,folio_id:&str,p:&Value,changes:&mut Vec<Value>)->Result<()>{
+    let (_,folio)=get(tx,"folios",folio_id)?;let amount=folio_minor(p,"amountMinor")?;
+    if amount<=0||amount>folio["depositMinor"].as_i64().unwrap_or(0){return Err("VALIDATION_FAILED: deposit refund exceeds unapplied deposit".into());}
+    let method=text(p,"method")?.to_ascii_uppercase();
+    if !["CASH","MPESA","CARD"].contains(&method.as_str()){return Err("VALIDATION_FAILED: refund method".into());}
+    let (_,config)=get(tx,"paymentConfig","main")?;
+    if !config["methods"].as_array().is_some_and(|v|v.iter().any(|m|m.as_str()==Some(method.as_str()))){return Err(format!("{method} is not enabled for this business"));}
+    let reference=if method=="CASH"{p.get("reference").and_then(Value::as_str).unwrap_or("").trim().to_ascii_uppercase()}else{
+        if p["manuallyConfirmed"]!=true{return Err("VALIDATION_FAILED: manual payout confirmation required".into());}
+        let r=text(p,"reference")?.trim().to_ascii_uppercase();
+        if list(tx,"refunds")?.iter().any(|x|x["data"]["externalReference"].as_str().is_some_and(|v|v.eq_ignore_ascii_case(&r))){return Err("DUPLICATE_REFERENCE: payout already recorded".into());}
+        r
+    };
+    let (active_till_id,mut active_till)=folio_active_till(tx)?;let till_id:Option<String>=Some(active_till_id.clone());
+    if method=="CASH"{
+        let expected=money(&active_till,"expectedCashInDrawer")?;if amount>expected{return Err("Cash refund exceeds expected cash in drawer".into());}
+        active_till["cashPaidOut"]=json!((money(&active_till,"cashPaidOut")?+amount) as f64/100.0);active_till["expectedCashInDrawer"]=json!((expected-amount) as f64/100.0);
+        put(tx,"tillSessions",&active_till_id,active_till,changes)?;
+    }
+    let refund_id=id();put(tx,"refunds",&refund_id,json!({
+        "id":refund_id,"folioId":folio_id,"kind":"DEPOSIT_REFUND","amount":amount as f64/100.0,"amountMinor":amount,
+        "tenderType":method,"externalReference":reference,"tillSessionId":till_id,"reason":text(p,"reason")?,
+        "refundedBy":user.staff_id,"refundedAt":now()
+    }),changes)?;
+    folio_journal(tx,"FOLIO_REFUND",&refund_id,"Refund guest deposit",vec![
+        json!({"id":id(),"accountId":"GUEST_DEPOSITS","accountCode":"GUEST_DEPOSITS","accountName":"Guest deposits","debit":amount as f64/100.0,"credit":0,"debitMinor":amount,"creditMinor":0}),
+        json!({"id":id(),"accountId":method,"accountCode":method,"accountName":method,"debit":0,"credit":amount as f64/100.0,"debitMinor":0,"creditMinor":amount})
+    ],changes)?;
+    folio_entry(tx,folio_id,&format!("entry-{}",id()),json!({"kind":"DEPOSIT_REFUND","refundId":refund_id,"amountMinor":amount}),0,-amount,changes)
+}
+fn hotel_receipt_capture(tx:&Transaction,user:&Session,folio_id:&str,command_id:&str,changes:&mut Vec<Value>)->Result<String>{
+    let (_,folio)=get(tx,"folios",folio_id)?;let (_,booking)=get(tx,"roomReservations",folio_id)?;
+    let (_,business)=get(tx,"organization","business")?;let (_,property)=get(tx,"property","property")?;
+    let room=get(tx,"rooms",text(&booking,"roomId")?).map(|(_,v)|v).unwrap_or(json!({}));
+    let customer=get(tx,"customers",text(&booking,"customerId")?).map(|(_,v)|v).unwrap_or(json!({}));
+    let entries:Vec<Value>=list(tx,"folioEntries")?.into_iter().map(|r|r["data"].clone()).filter(|e|e["folioId"]==folio_id).collect();
+    let items:Vec<Value>=entries.iter().filter(|e|["CHARGE","POS_ROOM_CHARGE","REVERSAL"].contains(&e["kind"].as_str().unwrap_or(""))).map(|e|{
+        let amount=e["balanceDeltaMinor"].as_i64().unwrap_or(0);
+        json!({"id":e["id"],"description":e["description"].as_str().unwrap_or(e["sourceType"].as_str().unwrap_or("Folio entry")),"quantity":e["quantity"].as_i64().unwrap_or(1),"unitPriceMinor":if e["quantity"].as_i64().unwrap_or(1)>0{amount/e["quantity"].as_i64().unwrap_or(1)}else{amount},"amountMinor":amount,"portion":Value::Null,"modifiers":[]})
+    }).collect();
+    let total:i64=items.iter().map(|i|i["amountMinor"].as_i64().unwrap_or(0)).sum();
+    let tax:i64=entries.iter().map(|e|e["taxMinor"].as_i64().unwrap_or(0)).sum();
+    let levy:i64=entries.iter().map(|e|e["levyMinor"].as_i64().unwrap_or(0)).sum();
+    let payments:Vec<Value>=list(tx,"payments")?.into_iter().map(|r|r["data"].clone()).filter(|p|p["folioId"]==folio_id&&p["purpose"]!="RECEIVABLE_TRANSFER").map(|p|json!({
+        "id":p["id"],"tenderType":p["tenderType"],"amountMinor":p["amountMinor"],"reference":p["referenceNumber"],
+        "cashTenderedMinor":p["cashTenderedMinor"],"changeMinor":p["changeMinor"],"occurredAt":p["occurredAt"],"currentPayment":false
+    })).collect();
+    let refunds:Vec<Value>=list(tx,"refunds")?.into_iter().map(|r|r["data"].clone()).filter(|r|r["folioId"]==folio_id&&r["kind"]=="DEPOSIT_REFUND").map(|r|json!({
+        "id":r["id"],"tenderType":format!("{} REFUND",r["tenderType"].as_str().unwrap_or("REFUND")),"amountMinor":-r["amountMinor"].as_i64().unwrap_or(0),"reference":r["externalReference"],"currentPayment":false
+    })).collect();
+    let mut tender_lines=payments;tender_lines.extend(refunds);
+    let device=meta(tx,"terminal_id")?.unwrap_or_else(||"LOCAL".into());
+    let sequence=meta(tx,"receipt_sequence")?.and_then(|v|v.parse::<u64>().ok()).unwrap_or(0).checked_add(1).ok_or("Receipt sequence exhausted")?;
+    set_meta(tx,"receipt_sequence",&sequence.to_string())?;
+    let receipt_id=format!("receipt-{command_id}");
+    let doc=json!({
+        "id":receipt_id,"schemaVersion":1,"documentType":"HOTEL_FOLIO","orderId":format!("hotel-{folio_id}"),"sourceCommandId":command_id,"deviceId":device,
+        "number":format!("{}-{:06}",device,sequence),"orderNumber":format!("ROOM-{}",room["number"].as_str().unwrap_or(folio_id)),"issuedAt":now(),
+        "business":{"name":business["name"],"address":property["address"],"phone":property["phone"],"email":property["email"]},
+        "outlet":"Front Desk","cashier":user.name,"table":Value::Null,"tab":format!("{} · Room {}",customer["name"].as_str().unwrap_or("Guest"),room["number"].as_str().unwrap_or("")),
+        "currency":"KES","timezone":"Africa/Nairobi","items":items,"subtotalMinor":total,"discountMinor":0,
+        "netMinor":total-tax-levy,"taxMinor":tax,"levyMinor":levy,"totalMinor":total,"paidMinor":total,"balanceMinor":0,"payments":tender_lines,
+        "message":property["receiptFooter"].as_str().unwrap_or("Thank you for staying with us."),
+        "folioId":folio_id,"guest":customer["name"],"stayStatus":"CHECKED_OUT","folioStatus":folio["status"]
+    });
+    put(tx,"receiptDocuments",&receipt_id,doc,changes)?;
+    Ok(receipt_id)
+}
+fn folio_execute(tx:&Transaction,user:&Session,cmd:&BusinessCommand,changes:&mut Vec<Value>)->Result<bool>{
+    let op=cmd.operation.as_str();
+    if !(op.starts_with("folio.")||op.starts_with("hotelService.")||op=="pos.roomCharge"){return Ok(false);}
+
+    if op.starts_with("hotelService."){
+        if !permissions(&user.role).contains(&"folio.manage"){return Err("Permission required: folio.manage".into());}
+        let key=text(&cmd.payload,"id")?.to_string();let current=room_any(tx,"hotelServices",&key)?;
+        match op{
+            "hotelService.save"=>{
+                room_expect_version(current.as_ref(),cmd.target_version)?;
+                let data=cmd.payload["data"].as_object().ok_or("Hotel service data is required")?;
+                let name=data.get("name").and_then(Value::as_str).map(str::trim).filter(|v|!v.is_empty()).ok_or("Hotel service name is required")?;
+                let code=data.get("code").and_then(Value::as_str).map(str::trim).filter(|v|!v.is_empty()).ok_or("Hotel service code is required")?;
+                room_unique_text(tx,"hotelServices","code",&key,code)?;
+                let price=data.get("priceMinor").and_then(Value::as_i64).ok_or("Hotel service priceMinor is required")?;
+                let tax=data.get("taxBasisPoints").and_then(Value::as_i64).unwrap_or(0);
+                if price<0||!(0..=10_000).contains(&tax)||data.get("currency").and_then(Value::as_str)!=Some("KES"){return Err("VALIDATION_FAILED: hotel service price/tax/currency".into());}
+                put(tx,"hotelServices",&key,json!({"id":key,"name":name,"code":code,"category":data.get("category").cloned().unwrap_or(json!("SERVICE")),"priceMinor":price,"taxBasisPoints":tax,"currency":"KES","active":true,"updatedAt":now()}),changes)?;
+            }
+            "hotelService.archive"=>{
+                let (version,_,archived)=current.ok_or("Hotel service not found")?;if archived{return Err("Hotel service already archived".into());}
+                if cmd.target_version!=Some(version){return Err("CONFLICT: Hotel service changed".into());}
+                room_put_archived(tx,"hotelServices",&key,true,changes)?;
+            }
+            "hotelService.reactivate"=>{
+                let (version,data,archived)=current.ok_or("Hotel service not found")?;if !archived{return Err("Hotel service already active".into());}
+                if cmd.target_version!=Some(version){return Err("CONFLICT: Hotel service changed".into());}
+                room_unique_text(tx,"hotelServices","code",&key,text(&data,"code")?)?;room_put_archived(tx,"hotelServices",&key,false,changes)?;
+            }
+            _=>return Err("PROTOCOL_UNSUPPORTED: hotel service operation".into())
+        }
+        return Ok(true);
+    }
+
+    if op=="pos.roomCharge"{
+        if !permissions(&user.role).contains(&"pos.sell")||!permissions(&user.role).contains(&"folio.room_charge"){return Err("Permission required: folio.room_charge".into());}
+        let order_id=text(&cmd.payload,"orderId")?.to_string();let (order_version,mut order)=get(tx,"orders",&order_id)?;
+        if cmd.target_version!=Some(order_version){return Err("CONFLICT: Order changed; reload before room charge".into());}
+        if ["COMPLETED","VOIDED"].contains(&order["state"].as_str().unwrap_or("")){return Err("Order already closed".into());}
+        let items=order["items"].as_array().ok_or("Invalid order items")?;
+        if items.is_empty()||items.iter().any(|i|i["state"]!="VOIDED"&&i["stockFired"]!=true){return Err("Fire all active items before charging a room".into());}
+        let folio_id=text(&cmd.payload,"folioId")?.to_string();let (folio_version,folio)=get(tx,"folios",&folio_id)?;
+        if cmd.payload["folioVersion"].as_i64()!=Some(folio_version)||folio["status"].as_str()!=Some("OPEN"){return Err("CONFLICT: Folio changed or is not open".into());}
+        let (_,booking)=get(tx,"roomReservations",&folio_id)?;let (_,stay)=get(tx,"stays",&folio_id)?;
+        if booking["status"].as_str()!=Some("CHECKED_IN")||stay["status"].as_str()!=Some("CHECKED_IN"){return Err("INVALID_STATE: room charge requires checked-in guest".into());}
+        let total=money(&order,"grandTotal")?;let paid=money(&order,"amountPaid")?;let amount=total-paid;
+        if amount<=0{return Err("Order has no outstanding balance".into());}
+        let (active_till_id,_)=folio_active_till(tx)?;
+        let allocate=|tax:i64|->i64{
+            let before=((tax as i128*paid as i128)+(total as i128/2))/(total as i128);
+            tax-before as i64
+        };
+        let vat=allocate(money(&order,"taxTotal")?);let levy=allocate(money(&order,"cateringLevyTotal")?);
+        if vat<0||levy<0||vat+levy>amount{return Err("VALIDATION_FAILED: remaining POS tax allocation".into());}
+        let net=amount-vat-levy;
+        let settlement_id=id();let stamp=now();
+        put(tx,"payments",&settlement_id,json!({
+            "id":settlement_id,"orderId":order_id,"folioId":folio_id,"purpose":"RECEIVABLE_TRANSFER","tenderType":"ROOM_CHARGE",
+            "amount":amount as f64/100.0,"amountMinor":amount,"currency":"KES","status":"TRANSFERRED","referenceNumber":folio_id,
+            "tillSessionId":active_till_id,"occurredAt":stamp,"cashierId":user.staff_id,"cashierName":user.name,"confirmation":"INTERNAL_TRANSFER"
+        }),changes)?;
+        let mut lines=vec![json!({"id":id(),"accountId":"GUEST_RECEIVABLE","accountCode":"GUEST_RECEIVABLE","accountName":"Guest receivable","debit":amount as f64/100.0,"credit":0,"debitMinor":amount,"creditMinor":0}),
+            json!({"id":id(),"accountId":"SALES","accountCode":"4000","accountName":"Sales","debit":0,"credit":net as f64/100.0,"debitMinor":0,"creditMinor":net})];
+        if vat>0{lines.push(json!({"id":id(),"accountId":"VAT","accountCode":"2100","accountName":"VAT payable","debit":0,"credit":vat as f64/100.0,"debitMinor":0,"creditMinor":vat}));}
+        if levy>0{lines.push(json!({"id":id(),"accountId":"LEVY","accountCode":"2110","accountName":"Levy payable","debit":0,"credit":levy as f64/100.0,"debitMinor":0,"creditMinor":levy}));}
+        folio_journal(tx,"POS_ROOM_CHARGE",&settlement_id,"POS sale transferred to guest folio",lines,changes)?;
+        folio_entry(tx,&folio_id,&format!("pos-room-{order_id}"),json!({
+            "kind":"POS_ROOM_CHARGE","sourceType":"POS","orderId":order_id,"settlementId":settlement_id,
+            "description":format!("POS order {}",order["orderNumber"].as_str().unwrap_or(order_id.as_str())),
+            "grossMinor":amount,"netMinor":net,"taxMinor":vat,"levyMinor":levy
+        }),amount,0,changes)?;
+        order["amountPaid"]=json!(total as f64/100.0);order["paymentMethod"]=json!("ROOM_CHARGE");order["roomChargeFolioId"]=json!(folio_id);
+        order["state"]=json!("COMPLETED");order["completedAt"]=json!(stamp);
+        if let Some(table_id)=order["tableId"].as_str(){let (_,mut table)=get(tx,"tables",table_id)?;table["currentOrderId"]=Value::Null;table["state"]=json!("CLEANING");put(tx,"tables",table_id,table,changes)?;}
+        put(tx,"orders",&order_id,order,changes)?;
+        return Ok(true);
+    }
+
+    if !permissions(&user.role).contains(&"folio.manage"){return Err("Permission required: folio.manage".into());}
+    let folio_id=text(&cmd.payload,"id")?.to_string();
+    if op=="folio.open"{
+        if room_any(tx,"folios",&folio_id)?.is_some(){return Err("DUPLICATE_REFERENCE: reservation already has folio".into());}
+        let (rv,booking)=get(tx,"roomReservations",&folio_id)?;
+        if cmd.target_version!=Some(rv){return Err("CONFLICT: Reservation changed".into());}
+        if !["RESERVED","CHECKED_IN"].contains(&booking["status"].as_str().unwrap_or("")){return Err("INVALID_STATE: reservation cannot open folio".into());}
+        put(tx,"folios",&folio_id,json!({"id":folio_id,"reservationId":folio_id,"stayId":if booking["status"]=="CHECKED_IN"{Value::String(folio_id.clone())}else{Value::Null},"customerId":booking["customerId"],"currency":"KES","balanceMinor":0,"depositMinor":0,"status":"OPEN","openedAt":now(),"openedBy":user.staff_id}),changes)?;
+        return Ok(true);
+    }
+    let (folio_version,folio)=get(tx,"folios",&folio_id)?;
+    if cmd.target_version!=Some(folio_version){return Err("CONFLICT: Folio changed; reload".into());}
+    if folio["status"].as_str()!=Some("OPEN"){return Err("INVALID_STATE: folio closed".into());}
+    match op{
+        "folio.postAccommodation"=>{
+            folio_post_accommodation(tx,&folio_id,cmd.payload["settleBookedStay"].as_bool().unwrap_or(false),changes)?;
+        }
+        "folio.postService"=>{
+            let (_,booking)=get(tx,"roomReservations",&folio_id)?;if booking["status"].as_str()!=Some("CHECKED_IN"){return Err("INVALID_STATE: services require checked-in guest".into());}
+            let service_id=text(&cmd.payload,"serviceId")?;let (version,service)=get(tx,"hotelServices",service_id)?;
+            if cmd.payload["serviceVersion"].as_i64()!=Some(version){return Err("CONFLICT: Hotel service changed".into());}
+            let quantity=cmd.payload["quantity"].as_i64().ok_or("quantity must be an integer")?;if !(1..=1000).contains(&quantity){return Err("VALIDATION_FAILED: service quantity".into());}
+            let gross=service["priceMinor"].as_i64().unwrap_or(0).checked_mul(quantity).ok_or("VALIDATION_FAILED: service total")?;
+            folio_charge(tx,&folio_id,&format!("entry-{}",cmd.id),gross,service["taxBasisPoints"].as_i64().unwrap_or(0),"SERVICE_REVENUE",json!({
+                "sourceType":"SERVICE","serviceId":service_id,"quantity":quantity,"serviceSnapshot":service,
+                "description":service["name"]
+            }),changes)?;
+        }
+        "folio.deposit"|"folio.pay"=>{
+            let (_,booking)=get(tx,"roomReservations",&folio_id)?;
+            if !["RESERVED","CHECKED_IN"].contains(&booking["status"].as_str().unwrap_or("")){return Err("INVALID_STATE: cannot receive funds for closed reservation".into());}
+            let amount=folio_minor(&cmd.payload,"amountMinor")?;
+            if op=="folio.pay"&&amount>folio["balanceMinor"].as_i64().unwrap_or(0){return Err("VALIDATION_FAILED: payment exceeds outstanding balance; record excess as deposit".into());}
+            let payment_id=folio_record_funds(tx,user,&folio_id,if op=="folio.deposit"{"DEPOSIT"}else{"SETTLEMENT"},&cmd.payload,changes)?;
+            folio_entry(tx,&folio_id,&format!("entry-{}",cmd.id),json!({"kind":if op=="folio.deposit"{"DEPOSIT"}else{"PAYMENT"},"paymentId":payment_id,"amountMinor":amount}),if op=="folio.pay"{-amount}else{0},if op=="folio.deposit"{amount}else{0},changes)?;
+        }
+        "folio.applyDeposit"=>{
+            let amount=folio_minor(&cmd.payload,"amountMinor")?;
+            if amount<=0||amount>folio["depositMinor"].as_i64().unwrap_or(0)||amount>folio["balanceMinor"].as_i64().unwrap_or(0){return Err("VALIDATION_FAILED: deposit application exceeds deposit or balance".into());}
+            folio_journal(tx,"FOLIO",&format!("apply-{}",cmd.id),"Apply guest deposit",vec![
+                json!({"id":id(),"accountId":"GUEST_DEPOSITS","accountCode":"GUEST_DEPOSITS","accountName":"Guest deposits","debit":amount as f64/100.0,"credit":0,"debitMinor":amount,"creditMinor":0}),
+                json!({"id":id(),"accountId":"GUEST_RECEIVABLE","accountCode":"GUEST_RECEIVABLE","accountName":"Guest receivable","debit":0,"credit":amount as f64/100.0,"debitMinor":0,"creditMinor":amount})
+            ],changes)?;
+            folio_entry(tx,&folio_id,&format!("entry-{}",cmd.id),json!({"kind":"DEPOSIT_APPLIED","amountMinor":amount}),-amount,-amount,changes)?;
+        }
+        "folio.refundDeposit"=>folio_refund_deposit(tx,user,&folio_id,&cmd.payload,changes)?,
+        "folio.reverse"=>{
+            if !permissions(&user.role).contains(&"folio.reverse"){return Err("Permission required: folio.reverse".into());}
+            let entry_id=text(&cmd.payload,"entryId")?;let (_,entry)=get(tx,"folioEntries",entry_id)?;
+            let kind=entry["kind"].as_str().unwrap_or("");
+            if entry["folioId"].as_str()!=Some(folio_id.as_str())||!["CHARGE","POS_ROOM_CHARGE"].contains(&kind){return Err("INVALID_STATE: only unpaid charge entries can be reversed; payments require payout workflow".into());}
+            if list(tx,"folioEntries")?.iter().any(|r|r["data"]["reversesEntryId"].as_str()==Some(entry_id)){return Err("DUPLICATE_REFERENCE: entry already reversed".into());}
+            let amount=entry["balanceDeltaMinor"].as_i64().unwrap_or_else(||entry["grossMinor"].as_i64().unwrap_or(0));
+            if amount<=0||amount>folio["balanceMinor"].as_i64().unwrap_or(0){return Err("INVALID_STATE: paid charge requires refund workflow".into());}
+            let reason=text(&cmd.payload,"reason")?;
+            let net=entry["netMinor"].as_i64().unwrap_or(0);let tax=entry["taxMinor"].as_i64().unwrap_or(0);let levy=entry["levyMinor"].as_i64().unwrap_or(0);
+            let account=if kind=="POS_ROOM_CHARGE"{"SALES"}else{entry["revenueAccount"].as_str().unwrap_or("SERVICE_REVENUE")};
+            let mut lines=vec![
+                json!({"id":id(),"accountId":"GUEST_RECEIVABLE","accountCode":"GUEST_RECEIVABLE","accountName":"Guest receivable","debit":0,"credit":amount as f64/100.0,"debitMinor":0,"creditMinor":amount}),
+                json!({"id":id(),"accountId":account,"accountCode":account,"accountName":account,"debit":net as f64/100.0,"credit":0,"debitMinor":net,"creditMinor":0})
+            ];
+            if tax>0{lines.push(json!({"id":id(),"accountId":if kind=="POS_ROOM_CHARGE"{"VAT"}else{"TAX_PAYABLE"},"accountCode":if kind=="POS_ROOM_CHARGE"{"2100"}else{"TAX_PAYABLE"},"accountName":"Tax payable","debit":tax as f64/100.0,"credit":0,"debitMinor":tax,"creditMinor":0}));}
+            if levy>0{lines.push(json!({"id":id(),"accountId":"LEVY","accountCode":"2110","accountName":"Levy payable","debit":levy as f64/100.0,"credit":0,"debitMinor":levy,"creditMinor":0}));}
+            folio_journal(tx,"FOLIO",&format!("reverse-{}",cmd.id),"Reverse folio charge",lines,changes)?;
+            if kind=="POS_ROOM_CHARGE"{
+                let refund_id=id();let order_id=text(&entry,"orderId")?.to_string();
+                put(tx,"refunds",&refund_id,json!({"id":refund_id,"paymentId":entry["settlementId"],"orderId":order_id,"folioId":folio_id,"kind":"ROOM_CHARGE_REVERSAL","amount":amount as f64/100.0,"amountMinor":amount,"tenderType":"ROOM_CHARGE","reason":reason,"externalReference":"","stockDisposition":"NO_AUTOMATIC_RESTOCK","refundedBy":user.staff_id,"refundedAt":now()}),changes)?;
+                let (_,mut order)=get(tx,"orders",&order_id)?;
+                order["refundedAmount"]=json!((money(&order,"refundedAmount").unwrap_or(0)+amount) as f64/100.0);
+                order["roomChargeReversedMinor"]=json!(order["roomChargeReversedMinor"].as_i64().unwrap_or(0)+amount);
+                put(tx,"orders",&order_id,order,changes)?;
+            }
+            folio_entry(tx,&folio_id,&format!("entry-{}",cmd.id),json!({"kind":"REVERSAL","sourceType":if kind=="POS_ROOM_CHARGE"{"POS"}else{"FOLIO"},"reversesEntryId":entry_id,"reason":reason,"amountMinor":amount,"grossMinor":-amount,"netMinor":-net,"taxMinor":-tax,"levyMinor":-levy,"description":"Charge reversal"}),-amount,0,changes)?;
+        }
+        _=>return Err("PROTOCOL_UNSUPPORTED: folio operation".into())
+    }
+    Ok(true)
+}
+
 fn room_execute(tx:&Transaction,user:&Session,cmd:&BusinessCommand,changes:&mut Vec<Value>)->Result<bool>{
     let op=cmd.operation.as_str();
     if !(op.starts_with("roomType.")||op.starts_with("room.")||op.starts_with("ratePlan.")||op.starts_with("roomReservation.")||op.starts_with("stay.")){return Ok(false);}
@@ -724,16 +1096,19 @@ fn room_execute(tx:&Transaction,user:&Session,cmd:&BusinessCommand,changes:&mut 
                     "startsAt":reservation.1["startsAt"],"expectedEndAt":reservation.1["endsAt"],
                     "history":[{"type":"CHECK_IN","roomId":room_id,"at":stamp,"actorId":user.staff_id}]
                 }),changes)?;
-                if let Some((_,folio,archived))=room_any(tx,"folios",&key)?{
+                if let Some((folio_version,folio,archived))=room_any(tx,"folios",&key)?{
+                    if p["folioVersion"].as_i64()!=Some(folio_version){return Err("CONFLICT: Folio changed; reload before check-in".into());}
                     if archived||folio["status"].as_str()!=Some("OPEN")||folio["customerId"]!=reservation.1["customerId"]{
                         return Err("INVALID_STATE: existing reservation folio is not compatible with check-in".into());
                     }
                 }else{
+                    if p.get("folioVersion").is_some_and(|v|!v.is_null()){return Err("CONFLICT: Folio appeared after the screen loaded".into());}
                     put(tx,"folios",&key,json!({
                         "id":key,"reservationId":key,"stayId":key,"customerId":reservation.1["customerId"],
-                        "status":"OPEN","balanceMinor":0,"depositMinor":0,"createdAt":stamp,"openedBy":user.staff_id
+                        "currency":"KES","status":"OPEN","balanceMinor":0,"depositMinor":0,"createdAt":stamp,"openedBy":user.staff_id
                     }),changes)?;
                 }
+                folio_post_accommodation(tx,&key,false,changes)?;
             }
             "stay.move"=>{
                 let stay=room_any(tx,"stays",&key)?.ok_or("Stay not found")?;
@@ -742,6 +1117,8 @@ fn room_execute(tx:&Transaction,user:&Session,cmd:&BusinessCommand,changes:&mut 
                 let reservation=room_any(tx,"roomReservations",&key)?.ok_or("Reservation not found")?;
                 let reservation_version=p["reservationVersion"].as_i64().ok_or("reservationVersion is required")?;
                 if reservation.0!=reservation_version||reservation.1["status"].as_str()!=Some("CHECKED_IN"){return Err("CONFLICT: Reservation changed; reload before room move".into());}
+                let folio=room_any(tx,"folios",&key)?.ok_or("Folio not found")?;
+                if p["folioVersion"].as_i64()!=Some(folio.0)||folio.2||folio.1["status"].as_str()!=Some("OPEN"){return Err("CONFLICT: Folio changed or is closed; reload before room move".into());}
                 let old_room_id=text(&stay.1,"roomId")?.to_string();
                 let destination_id=text(p,"destinationRoomId")?.to_string();
                 if destination_id==old_room_id{return Err("VALIDATION_FAILED: destination room must be different".into());}
@@ -806,9 +1183,52 @@ fn room_execute(tx:&Transaction,user:&Session,cmd:&BusinessCommand,changes:&mut 
                     }),changes)?;
                 }
             }
-            "stay.extend"|"stay.checkOut"=>{
-                return Err("SETTLEMENT_REQUIRED: stay extension and checkout are enabled with Patch 07 Folios".into());
+            "stay.extend"=>{
+                if !permissions(&user.role).contains(&"folio.manage")||!permissions(&user.role).contains(&"payment.record"){return Err("Permission required: folio.manage/payment.record".into());}
+                let stay=room_any(tx,"stays",&key)?.ok_or("Stay not found")?;
+                if stay.2||stay.1["status"].as_str()!=Some("CHECKED_IN"){return Err("INVALID_STATE: extension requires active stay".into());}
+                if cmd.target_version!=Some(stay.0){return Err("CONFLICT: Stay changed; reload".into());}
+                let reservation=room_any(tx,"roomReservations",&key)?.ok_or("Reservation not found")?;
+                let folio=room_any(tx,"folios",&key)?.ok_or("Folio not found")?;
+                let room=room_any(tx,"rooms",text(&reservation.1,"roomId")?)?.ok_or("Room not found")?;
+                if cmd.payload["reservationVersion"].as_i64()!=Some(reservation.0)||cmd.payload["folioVersion"].as_i64()!=Some(folio.0)||cmd.payload["roomVersion"].as_i64()!=Some(room.0){return Err("CONFLICT: Stay dependencies changed; reload".into());}
+                if reservation.1["status"].as_str()!=Some("CHECKED_IN")||folio.1["status"].as_str()!=Some("OPEN"){return Err("INVALID_STATE: extension requires active reservation and folio".into());}
+                let rate_id=text(p,"ratePlanId")?;let (rate_version,rate)=get(tx,"ratePlans",rate_id)?;
+                if p["ratePlanVersion"].as_i64()!=Some(rate_version){return Err("CONFLICT: Rate plan changed".into());}
+                if rate["roomTypeId"]!=room.1["roomTypeId"]||rate["currency"].as_str()!=Some("KES"){return Err("VALIDATION_FAILED: extension rate room type/currency".into());}
+                let units=p["units"].as_i64().ok_or("units must be an integer")?;if !(1..=366).contains(&units){return Err("VALIDATION_FAILED: extension units".into());}
+                let old_end=room_parse_time(text(&reservation.1,"endsAt")?)?;
+                let new_end=if rate["mode"].as_str()==Some("NIGHTLY"){old_end+Duration::days(units)}else if rate["mode"].as_str()==Some("DAY_USE"){old_end+Duration::minutes(units*rate["durationMinutes"].as_i64().unwrap_or(0))}else{return Err("VALIDATION_FAILED: extension mode".into());};
+                let start=room_parse_time(text(&reservation.1,"startsAt")?)?;if new_end<=Utc::now()||new_end-start>Duration::days(366){return Err("VALIDATION_FAILED: extension interval".into());}
+                let blocked_until=new_end+Duration::minutes(room.1["turnaroundMinutes"].as_i64().unwrap_or(0));
+                room_available(tx,text(&reservation.1,"roomId")?,old_end,blocked_until,Some(&key))?;
+                let amount=rate["priceMinor"].as_i64().unwrap_or(0).checked_mul(units).ok_or("VALIDATION_FAILED: extension total")?;
+                let payment=p.get("payment").ok_or("payment is required")?;if folio_minor(payment,"amountMinor")?!=amount{return Err("VALIDATION_FAILED: extension must be paid at exact quoted price".into());}
+                let extension_id=format!("extension-{}",cmd.id);
+                folio_charge(tx,&key,&extension_id,amount,rate["taxBasisPoints"].as_i64().unwrap_or(0),"ACCOMMODATION_REVENUE",json!({"sourceType":"EXTENSION","rateSnapshot":rate,"units":units,"description":"Paid stay extension"}),changes)?;
+                let payment_id=folio_record_funds(tx,user,&key,"SETTLEMENT",payment,changes)?;
+                folio_entry(tx,&key,&format!("extension-payment-{}",cmd.id),json!({"kind":"PAYMENT","paymentId":payment_id,"amountMinor":amount}),-amount,0,changes)?;
+                put(tx,"stayExtensions",&format!("stay-extension-{}",cmd.id),json!({"stayId":key,"roomId":reservation.1["roomId"],"startsAt":reservation.1["endsAt"],"endsAt":new_end.to_rfc3339(),"rateSnapshot":rate,"units":units,"amountMinor":amount,"paymentId":payment_id,"sourceCommandId":cmd.id,"recordedAt":now(),"actorId":user.staff_id}),changes)?;
+                let mut next_res=reservation.1.clone();next_res["endsAt"]=json!(new_end.to_rfc3339());next_res["blockedUntil"]=json!(blocked_until.to_rfc3339());next_res["extensionAmountMinor"]=json!(next_res["extensionAmountMinor"].as_i64().unwrap_or(0)+amount);next_res["updatedAt"]=json!(now());put(tx,"roomReservations",&key,next_res,changes)?;
+                put(tx,"stayEvents",&format!("stay-event-{}",cmd.id),json!({"stayId":key,"operation":"stay.extend","roomId":reservation.1["roomId"],"previousEndsAt":reservation.1["endsAt"],"endsAt":new_end.to_rfc3339(),"extensionId":extension_id,"actorId":user.staff_id,"occurredAt":now(),"sourceCommandId":cmd.id}),changes)?;
             }
+            "stay.checkOut"=>{
+                let stay=room_any(tx,"stays",&key)?.ok_or("Stay not found")?;if stay.2||stay.1["status"].as_str()!=Some("CHECKED_IN"){return Err("INVALID_STATE: stay is not open".into());}
+                if cmd.target_version!=Some(stay.0){return Err("CONFLICT: Stay changed; reload".into());}
+                let reservation=room_any(tx,"roomReservations",&key)?.ok_or("Reservation not found")?;let folio=room_any(tx,"folios",&key)?.ok_or("Folio not found")?;let room=room_any(tx,"rooms",text(&reservation.1,"roomId")?)?.ok_or("Room not found")?;
+                if p["reservationVersion"].as_i64()!=Some(reservation.0)||p["folioVersion"].as_i64()!=Some(folio.0)||p["roomVersion"].as_i64()!=Some(room.0){return Err("CONFLICT: Checkout dependencies changed; reload".into());}
+                if reservation.1["status"].as_str()!=Some("CHECKED_IN")||folio.1["status"].as_str()!=Some("OPEN"){return Err("INVALID_STATE: stay is not open".into());}
+                let units=reservation.1["units"].as_i64().unwrap_or(0);for period in 0..units{if room_any(tx,"folioEntries",&folio_period_key(&key,period))?.is_none(){return Err("SETTLEMENT_REQUIRED: post all booked accommodation periods before checkout".into());}}
+                if folio.1["balanceMinor"].as_i64().unwrap_or(0)!=0||folio.1["depositMinor"].as_i64().unwrap_or(0)!=0{return Err("SETTLEMENT_REQUIRED: settle balance and apply/refund remaining deposit".into());}
+                let stamp=now();let mut next_stay=stay.1.clone();next_stay["status"]=json!("CHECKED_OUT");next_stay["checkedOutAt"]=json!(stamp);next_stay["checkedOutBy"]=json!(user.staff_id);put(tx,"stays",&key,next_stay,changes)?;
+                let mut next_res=reservation.1.clone();next_res["status"]=json!("CHECKED_OUT");next_res["checkedOutAt"]=json!(stamp);put(tx,"roomReservations",&key,next_res,changes)?;
+                let mut next_folio=folio.1.clone();next_folio["status"]=json!("CLOSED");next_folio["closedAt"]=json!(stamp);next_folio["closedBy"]=json!(user.staff_id);put(tx,"folios",&key,next_folio,changes)?;
+                let mut next_room=room.1.clone();next_room["housekeepingState"]=json!("DIRTY");next_room["housekeepingAt"]=json!(stamp);next_room["housekeepingBy"]=json!(user.staff_id);put(tx,"rooms",text(&reservation.1,"roomId")?,next_room,changes)?;
+                let turnaround=room.1["turnaroundMinutes"].as_i64().unwrap_or(0);if turnaround>0{let until=Utc::now()+Duration::minutes(turnaround);let affected:Vec<String>=list(tx,"roomReservations")?.into_iter().filter_map(|r|{if r["id"].as_str()==Some(key.as_str())||r["data"]["roomId"]!=reservation.1["roomId"]||r["data"]["status"]!="RESERVED"{return None;}let a=room_parse_time(r["data"]["startsAt"].as_str()?).ok()?;let b=room_parse_time(r["data"]["blockedUntil"].as_str()?).ok()?;if room_overlap(Utc::now(),until,a,b){r["id"].as_str().map(str::to_string)}else{None}}).collect();let block_id=format!("turnaround-{}",cmd.id);put(tx,"roomBlocks",&block_id,json!({"roomId":reservation.1["roomId"],"startsAt":Utc::now().to_rfc3339(),"endsAt":until.to_rfc3339(),"reason":"Turnaround after guest departure","sourceType":"TURNAROUND","sourceCommandId":cmd.id,"status":"ACTIVE","affectedReservationIds":affected}),changes)?;}
+                put(tx,"stayEvents",&format!("stay-event-{}",cmd.id),json!({"stayId":key,"operation":"stay.checkOut","roomId":reservation.1["roomId"],"actorId":user.staff_id,"occurredAt":stamp,"sourceCommandId":cmd.id}),changes)?;
+                hotel_receipt_capture(tx,user,&key,&cmd.id,changes)?;
+            }
+
             _=>return Err("PROTOCOL_UNSUPPORTED: stay operation".into())
         }
         return Ok(true);
@@ -1141,6 +1561,12 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
     let mut changes = vec![];
     let p = &cmd.payload;
     live_required(&tx, &cmd.operation)?;
+    if folio_execute(&tx,user,&cmd,&mut changes)? {
+        if cmd.operation=="pos.roomCharge" { receipts::capture(&tx,user,text(p,"orderId")?,&cmd.id,&mut changes)?; }
+        let result=finish(&tx,&cmd,&user.staff_id,changes)?;
+        tx.commit().map_err(error)?;
+        return Ok(result);
+    }
     if room_execute(&tx,user,&cmd,&mut changes)? {
         let result=finish(&tx,&cmd,&user.staff_id,changes)?;
         tx.commit().map_err(error)?;
@@ -2198,17 +2624,19 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
             let mut cash=0i64;let mut mpesa=0i64;let mut card=0i64;let mut order_ids=std::collections::HashSet::new();
             for pay in &payments{let amount=money(pay,"amount")?;match pay["tenderType"].as_str().unwrap_or(""){"CASH"=>cash+=amount,"MPESA"=>mpesa+=amount,"CARD"=>card+=amount,_=>{}} if let Some(x)=pay["orderId"].as_str(){order_ids.insert(x.to_string());}}
             let orders:Vec<Value>=list(&tx,"orders")?.into_iter().map(|r|r["data"].clone()).filter(|o|order_ids.contains(o["id"].as_str().unwrap_or(""))).collect();
-            let gross=orders.iter().map(|o|money(o,"grandTotal")).collect::<Result<Vec<_>>>()?.iter().sum::<i64>(); let tax=orders.iter().map(|o|money(o,"taxTotal")).collect::<Result<Vec<_>>>()?.iter().sum::<i64>(); let levy=orders.iter().map(|o|money(o,"cateringLevyTotal")).collect::<Result<Vec<_>>>()?.iter().sum::<i64>(); let discounts=orders.iter().map(|o|money(o,"discountTotal")).collect::<Result<Vec<_>>>()?.iter().sum::<i64>();
+            let pos_gross=orders.iter().map(|o|money(o,"grandTotal")).collect::<Result<Vec<_>>>()?.iter().sum::<i64>(); let tax=orders.iter().map(|o|money(o,"taxTotal")).collect::<Result<Vec<_>>>()?.iter().sum::<i64>(); let levy=orders.iter().map(|o|money(o,"cateringLevyTotal")).collect::<Result<Vec<_>>>()?.iter().sum::<i64>(); let discounts=orders.iter().map(|o|money(o,"discountTotal")).collect::<Result<Vec<_>>>()?.iter().sum::<i64>();
+            let hotel_entries:Vec<Value>=list(&tx,"folioEntries")?.into_iter().map(|r|r["data"].clone()).filter(|e|["CHARGE","REVERSAL"].contains(&e["kind"].as_str().unwrap_or(""))&&e["sourceType"].as_str()!=Some("POS")&&e["postedAt"].as_str().is_some_and(|t|t>=opened.as_str()&&t<=closed.as_str())).collect();
+            let hotel_gross=hotel_entries.iter().map(|e|e["balanceDeltaMinor"].as_i64().unwrap_or(0)).sum::<i64>();let hotel_tax=hotel_entries.iter().map(|e|e["taxMinor"].as_i64().unwrap_or(0)).sum::<i64>();let gross=pos_gross+hotel_gross;
             let comp_value=orders.iter().flat_map(|o|o["items"].as_array().cloned().unwrap_or_default()).filter(|i|i["comped"]==true).map(|i|i["discountMinor"].as_i64().unwrap_or(0)).sum::<i64>();
             let movements:Vec<Value>=list(&tx,"stockMovements")?.into_iter().map(|r|r["data"].clone()).filter(|m|m["occurredAt"].as_str().is_some_and(|t|t>=opened.as_str()&&t<=closed.as_str())).collect();
             let cogs=movements.iter().filter(|m|m["movementType"]=="SALE_CONSUMPTION").map(|m|(m["totalCostValuation"].as_f64().unwrap_or(0.0)*100.0).round().abs() as i64).sum::<i64>(); let waste=movements.iter().filter(|m|m["movementType"]=="WASTE").map(|m|(m["totalCostValuation"].as_f64().unwrap_or(0.0)*100.0).round().abs() as i64).sum::<i64>();
-            let refunds:Vec<Value>=list(&tx,"refunds")?.into_iter().map(|r|r["data"].clone()).filter(|r|r["refundedAt"].as_str().is_some_and(|t|t>=opened.as_str()&&t<=closed.as_str())).collect(); let refund_total=refunds.iter().map(|r|money(r,"amount")).collect::<Result<Vec<_>>>()?.iter().sum::<i64>();
+            let refunds:Vec<Value>=list(&tx,"refunds")?.into_iter().map(|r|r["data"].clone()).filter(|r|r["kind"].as_str()!=Some("DEPOSIT_REFUND")&&r["refundedAt"].as_str().is_some_and(|t|t>=opened.as_str()&&t<=closed.as_str())).collect(); let refund_total=refunds.iter().map(|r|money(r,"amount")).collect::<Result<Vec<_>>>()?.iter().sum::<i64>();
             let pending_mpesa=payments.iter().filter_map(|p|p["mpesaReceiptId"].as_str()).filter(|id|get(&tx,"mpesaReceipts",id).ok().is_some_and(|(_,r)|r["reconciliationStatus"]!="RECONCILED")).count();
             let mut product_counts=std::collections::HashMap::<String,f64>::new(); let mut staff_sales=std::collections::HashMap::<String,i64>::new();
             for order in &orders{let name=order["serverName"].as_str().unwrap_or("Unknown").to_string();*staff_sales.entry(name).or_insert(0)+=money(order,"grandTotal")?;for item in order["items"].as_array().cloned().unwrap_or_default(){*product_counts.entry(item["productName"].as_str().unwrap_or("Unknown").to_string()).or_insert(0.0)+=item["quantity"].as_f64().unwrap_or(0.0);}}
             let mut top_products:Vec<Value>=product_counts.into_iter().map(|(name,quantity)|json!({"name":name,"quantity":quantity})).collect();top_products.sort_by(|a,b|b["quantity"].as_f64().partial_cmp(&a["quantity"].as_f64()).unwrap_or(std::cmp::Ordering::Equal));top_products.truncate(10);
             let staff:Vec<Value>=staff_sales.into_iter().map(|(name,amount)|json!({"name":name,"sales":amount as f64/100.0})).collect(); let pending:i64=tx.query_row("SELECT count(*) FROM outbox WHERE acknowledged_at IS NULL",[],|r|r.get(0)).map_err(error)?;
-            let report_id=id();put(&tx,"closeDayReports",&report_id,json!({"id":report_id,"tillSessionId":till_id,"openedAt":opened,"closedAt":closed,"generatedAt":now(),"generatedBy":user.staff_id,"sales":{"gross":gross as f64/100.0,"net":(gross-tax-levy-refund_total) as f64/100.0,"vat":tax as f64/100.0,"levy":levy as f64/100.0,"refunds":refund_total as f64/100.0},"tenders":{"cash":cash as f64/100.0,"mpesa":mpesa as f64/100.0,"card":card as f64/100.0},"cash":{"openingFloat":till["openingFloat"],"paidIn":till["cashPaidIn"],"paidOut":till["cashPaidOut"],"expected":till["expectedCashInDrawer"],"actual":till["countedCashAtClose"],"variance":till["cashVariance"]},"adjustments":{"discounts":discounts as f64/100.0,"comps":comp_value as f64/100.0,"refunds":refund_total as f64/100.0},"inventory":{"cogs":cogs as f64/100.0,"waste":waste as f64/100.0},"margin":{"grossProfit":(gross-refund_total-cogs) as f64/100.0},"mpesa":{"pendingReconciliation":pending_mpesa},"topProducts":top_products,"staffSales":staff,"system":{"pendingSync":pending,"lastSync":meta(&tx,"last_sync")?,"lastBackup":meta(&tx,"last_backup")?}}),&mut changes)?;
+            let report_id=id();put(&tx,"closeDayReports",&report_id,json!({"id":report_id,"tillSessionId":till_id,"openedAt":opened,"closedAt":closed,"generatedAt":now(),"generatedBy":user.staff_id,"sales":{"gross":gross as f64/100.0,"net":(gross-tax-levy-hotel_tax-refund_total) as f64/100.0,"vat":tax as f64/100.0,"levy":levy as f64/100.0,"hotelTax":hotel_tax as f64/100.0,"hotelGross":hotel_gross as f64/100.0,"refunds":refund_total as f64/100.0},"tenders":{"cash":cash as f64/100.0,"mpesa":mpesa as f64/100.0,"card":card as f64/100.0},"cash":{"openingFloat":till["openingFloat"],"paidIn":till["cashPaidIn"],"paidOut":till["cashPaidOut"],"expected":till["expectedCashInDrawer"],"actual":till["countedCashAtClose"],"variance":till["cashVariance"]},"adjustments":{"discounts":discounts as f64/100.0,"comps":comp_value as f64/100.0,"refunds":refund_total as f64/100.0},"inventory":{"cogs":cogs as f64/100.0,"waste":waste as f64/100.0},"margin":{"grossProfit":(gross-refund_total-cogs) as f64/100.0},"mpesa":{"pendingReconciliation":pending_mpesa},"topProducts":top_products,"staffSales":staff,"system":{"pendingSync":pending,"lastSync":meta(&tx,"last_sync")?,"lastBackup":meta(&tx,"last_backup")?}}),&mut changes)?;
         }
         _ => {
             return Err(format!(
@@ -3266,8 +3694,30 @@ fn import_plan_row_record(
         return Ok(steps);
     }
     if template_key=="hotel_services" {
-        one("BLOCKED",None,None,None,None,None,
-            "Hotel services remain staged until Patch 07 Folios so service posting and price/tax snapshots are atomic.".into(),None,None);
+        if import_boolean(row,"active")==Some(false) {
+            one("BLOCKED",None,None,None,None,None,"Archived hotel services are not imported implicitly.".into(),None,None);
+            return Ok(steps);
+        }
+        let code=import_string(row,"code").unwrap_or_default();
+        let (_,property)=get(db,"property","property")?;
+        let tax_bps=((property["vatRatePct"].as_f64().unwrap_or(0.0)+property["levyRatePct"].as_f64().unwrap_or(0.0))*100.0).round() as i64;
+        let desired=json!({
+            "name":import_string(row,"name").unwrap_or_default(),"code":code,
+            "category":import_string(row,"category").unwrap_or_else(||"SERVICE".into()),
+            "priceMinor":(import_number(row,"unit_price").unwrap_or(0.0)*100.0).round() as i64,
+            "taxBasisPoints":tax_bps,"currency":"KES"
+        });
+        let checks=vec![("code".into(),code)];
+        let (target_id,version,existing,match_error)=import_target(db,"hotel_services",&external_id,"hotelServices",&checks)?;
+        if let Some(reason)=match_error {
+            one("CONFLICT",None,Some("hotelServices"),if target_id.is_empty(){None}else{Some(&target_id)},version,None,reason,Some("hotel_services"),Some(&external_id));
+            return Ok(steps);
+        }
+        let same=existing.as_ref().is_some_and(|prior|import_patch_matches(prior,&desired));
+        let action=if same{"NO_CHANGE"}else if version.is_some(){"UPDATE"}else{"CREATE"};
+        one(action,Some("hotelService.save"),Some("hotelServices"),Some(&target_id),version,Some(json!({"id":target_id,"data":desired})),
+            if same{"Current hotel service already matches the staged fields".into()}else{"Apply through the native folio service master command".into()},
+            Some("hotel_services"),Some(&external_id));
         return Ok(steps);
     }
     if ["asset_categories","assets"].contains(&template_key) {
@@ -3669,6 +4119,21 @@ pub fn snapshot(db: &Connection, token: &str) -> Result<Value> {
             }
         }
         records.extend(collection_records);
+    }
+    if permissions(&user.role).contains(&"folio.room_charge") {
+        for folio_record in list(db,"folios")? {
+            let data=&folio_record["data"];if data["status"].as_str()!=Some("OPEN"){continue;}
+            let Some(folio_id)=folio_record["id"].as_str() else {continue;};
+            let Ok((_,reservation))=get(db,"roomReservations",folio_id) else {continue;};
+            let Ok((_,stay))=get(db,"stays",folio_id) else {continue;};
+            if reservation["status"].as_str()!=Some("CHECKED_IN")||stay["status"].as_str()!=Some("CHECKED_IN"){continue;}
+            let room=get(db,"rooms",reservation["roomId"].as_str().unwrap_or("")).map(|(_,v)|v).unwrap_or(json!({}));
+            let customer=get(db,"customers",reservation["customerId"].as_str().unwrap_or("")).map(|(_,v)|v).unwrap_or(json!({}));
+            records.push(json!({"collection":"roomChargeTargets","id":folio_id,"version":folio_record["version"],"data":{
+                "id":folio_id,"folioId":folio_id,"folioVersion":folio_record["version"],"roomId":reservation["roomId"],
+                "roomNumber":room["number"],"guestName":customer["name"],"balanceMinor":data["balanceMinor"]
+            }}));
+        }
     }
     let pending:i64=db.query_row("SELECT COUNT(*) FROM outbox WHERE acknowledged_at IS NULL",[],|r|r.get(0)).map_err(error)?;
     Ok(json!({

@@ -21,6 +21,7 @@ export type Permission =
   | 'procurement.view' | 'procurement.manage' | 'procurement.receive' | 'procurement.over_receive' | 'procurement.pay'
   | 'floorplan.view' | 'floorplan.manage'
   | 'rooms.view' | 'rooms.manage' | 'rooms.operate' | 'rooms.guests.view'
+  | 'folio.view' | 'folio.manage' | 'folio.reverse' | 'folio.room_charge'
   | 'kds.view' | 'kds.update'
   | 'accounting.view' | 'reports.view' | 'audit.view'
   | 'backup.create' | 'backup.restore' | 'sync.manual' | 'system.configure' | 'help.view'

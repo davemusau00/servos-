@@ -545,6 +545,97 @@ fn front_desk_rejects_early_check_in_and_financially_incomplete_checkout() {
     let mut checkout=cmd("stay.checkOut",json!({"id":"gate-res"}));checkout.target_version=Some(0);assert!(execute(&mut db,&s.token,checkout).unwrap_err().contains("Patch 07"));
 }
 
+// SERVOS_PATCH_07_FOLIOS
+fn hotel_booking_fixture(db:&mut rusqlite::Connection,s:&Session,prefix:&str,price_minor:i64)->String{
+    let customer=format!("{prefix}-guest");let room_type=format!("{prefix}-type");let rate=format!("{prefix}-rate");let room=format!("{prefix}-room");let reservation=format!("{prefix}-reservation");
+    run(db,s,"record.save",json!({"collection":"customers","id":customer,"data":{"name":format!("{prefix} Guest"),"phone":"+254700000099"}}));
+    run(db,s,"roomType.save",json!({"id":room_type,"data":{"name":format!("{prefix} Type"),"code":prefix.to_ascii_uppercase(),"maxGuests":2}}));
+    run(db,s,"ratePlan.save",json!({"id":rate,"data":{"name":format!("{prefix} Night"),"roomTypeId":room_type,"mode":"NIGHTLY","priceMinor":price_minor,"currency":"KES","taxBasisPoints":0,"minNights":1,"maxNights":30}}));
+    run(db,s,"room.save",json!({"id":room,"data":{"number":format!("R-{prefix}"),"roomTypeId":room_type,"capacity":2,"turnaroundMinutes":30}}));
+    let arrival=(chrono::Utc::now()-chrono::Duration::minutes(5)).to_rfc3339();
+    let departure=(chrono::Utc::now()+chrono::Duration::days(1)).to_rfc3339();
+    run(db,s,"roomReservation.create",json!({"id":reservation,"roomId":room,"ratePlanId":rate,"customerId":customer,"guests":1,"startsAt":arrival,"endsAt":departure}));
+    reservation
+}
+fn hotel_check_in(db:&mut rusqlite::Connection,s:&Session,reservation_id:&str){
+    let (rv,reservation)=get(db,"roomReservations",reservation_id).unwrap();
+    let (roomv,_)=get(db,"rooms",reservation["roomId"].as_str().unwrap()).unwrap();
+    let mut payload=json!({"id":reservation_id,"roomVersion":roomv});
+    if let Ok((fv,_))=get(db,"folios",reservation_id){payload["folioVersion"]=json!(fv);}
+    let mut command=cmd("stay.checkIn",payload);command.target_version=Some(rv);execute(db,&s.token,command).unwrap();
+}
+#[test]
+fn folio_deposit_accommodation_settlement_and_checkout_conserve_money() {
+    let (_dir,mut db,s)=setup();run(&mut db,&s,"till.open",json!({"floatAmount":500}));
+    let rid=hotel_booking_fixture(&mut db,&s,"folioa",10_000);
+    let (rv,_)=get(&db,"roomReservations",&rid).unwrap();
+    let mut open=cmd("folio.open",json!({"id":rid}));open.target_version=Some(rv);execute(&mut db,&s.token,open).unwrap();
+    let (fv,_)=get(&db,"folios",&rid).unwrap();
+    let mut deposit=cmd("folio.deposit",json!({"id":rid,"amountMinor":5_000,"method":"CARD","reference":"DEP-FOLIO-A","manuallyConfirmed":true}));deposit.target_version=Some(fv);execute(&mut db,&s.token,deposit).unwrap();
+    let folio=get(&db,"folios",&rid).unwrap().1;assert_eq!(folio["balanceMinor"],0);assert_eq!(folio["depositMinor"],5_000);
+    hotel_check_in(&mut db,&s,&rid);
+    let folio=get(&db,"folios",&rid).unwrap().1;assert_eq!(folio["balanceMinor"],10_000);assert_eq!(folio["depositMinor"],5_000);
+    assert_eq!(list(&db,"folioEntries").unwrap().iter().filter(|r|r["data"]["sourceType"]=="ACCOMMODATION").count(),1);
+    let (fv,_)=get(&db,"folios",&rid).unwrap();let mut repost=cmd("folio.postAccommodation",json!({"id":rid}));repost.target_version=Some(fv);execute(&mut db,&s.token,repost).unwrap();
+    assert_eq!(list(&db,"folioEntries").unwrap().iter().filter(|r|r["data"]["sourceType"]=="ACCOMMODATION").count(),1);
+
+    let (stayv,_)=get(&db,"stays",&rid).unwrap();let (rv,res)=get(&db,"roomReservations",&rid).unwrap();let (fv,_)=get(&db,"folios",&rid).unwrap();let (roomv,_)=get(&db,"rooms",res["roomId"].as_str().unwrap()).unwrap();
+    let mut early=cmd("stay.checkOut",json!({"id":rid,"reservationVersion":rv,"folioVersion":fv,"roomVersion":roomv}));early.target_version=Some(stayv);
+    assert!(execute(&mut db,&s.token,early).unwrap_err().contains("SETTLEMENT_REQUIRED"));
+
+    let (fv,_)=get(&db,"folios",&rid).unwrap();let mut apply=cmd("folio.applyDeposit",json!({"id":rid,"amountMinor":5_000}));apply.target_version=Some(fv);execute(&mut db,&s.token,apply).unwrap();
+    let (fv,_)=get(&db,"folios",&rid).unwrap();let mut pay=cmd("folio.pay",json!({"id":rid,"amountMinor":5_000,"method":"CARD","reference":"SETTLE-FOLIO-A","manuallyConfirmed":true}));pay.target_version=Some(fv);execute(&mut db,&s.token,pay).unwrap();
+    let folio=get(&db,"folios",&rid).unwrap().1;assert_eq!(folio["balanceMinor"],0);assert_eq!(folio["depositMinor"],0);
+
+    let (stayv,_)=get(&db,"stays",&rid).unwrap();let (rv,res)=get(&db,"roomReservations",&rid).unwrap();let (fv,_)=get(&db,"folios",&rid).unwrap();let (roomv,_)=get(&db,"rooms",res["roomId"].as_str().unwrap()).unwrap();
+    let checkout_id=Uuid::new_v4().to_string();let checkout=BusinessCommand{id:checkout_id.clone(),schema_version:1,operation:"stay.checkOut".into(),target_version:Some(stayv),payload:json!({"id":rid,"reservationVersion":rv,"folioVersion":fv,"roomVersion":roomv})};
+    let first_result=execute(&mut db,&s.token,checkout.clone()).unwrap();
+    assert_eq!(get(&db,"folios",&rid).unwrap().1["status"],"CLOSED");
+    assert_eq!(get(&db,"stays",&rid).unwrap().1["status"],"CHECKED_OUT");
+    assert_eq!(get(&db,"rooms",res["roomId"].as_str().unwrap()).unwrap().1["housekeepingState"],"DIRTY");
+    let receipt_id=format!("receipt-{checkout_id}");let receipt=get(&db,"receiptDocuments",&receipt_id).unwrap().1;assert_eq!(receipt["documentType"],"HOTEL_FOLIO");assert_eq!(receipt["balanceMinor"],0);
+    assert_eq!(first_result,execute(&mut db,&s.token,checkout).unwrap());
+    assert!(db.execute("UPDATE records SET data='{}' WHERE collection='folioEntries'",[]).is_err());
+    assert!(db.execute("DELETE FROM records WHERE collection='journalEntries'",[]).is_err());
+}
+#[test]
+fn pos_room_charge_moves_receivable_without_inflating_cash_or_revenue_twice() {
+    let (_dir,mut db,s)=setup();run(&mut db,&s,"till.open",json!({"floatAmount":500}));
+    let rid=hotel_booking_fixture(&mut db,&s,"posroom",10_000);hotel_check_in(&mut db,&s,&rid);
+    let before_balance=get(&db,"folios",&rid).unwrap().1["balanceMinor"].as_i64().unwrap();
+    let oid=order(&mut db,&s);run(&mut db,&s,"order.fire",json!({"orderId":oid}));
+    let (ov,_)=get(&db,"orders",&oid).unwrap();let (fv,_)=get(&db,"folios",&rid).unwrap();
+    let room_cmd_id=Uuid::new_v4().to_string();let room_cmd=BusinessCommand{id:room_cmd_id.clone(),schema_version:1,operation:"pos.roomCharge".into(),target_version:Some(ov),payload:json!({"orderId":oid,"folioId":rid,"folioVersion":fv})};
+    execute(&mut db,&s.token,room_cmd).unwrap();
+    assert_eq!(get(&db,"folios",&rid).unwrap().1["balanceMinor"].as_i64().unwrap(),before_balance+10_000);
+    let order_record=get(&db,"orders",&oid).unwrap().1;assert_eq!(order_record["state"],"COMPLETED");assert_eq!(order_record["paymentMethod"],"ROOM_CHARGE");
+    let transfer=list(&db,"payments").unwrap().into_iter().find(|r|r["data"]["orderId"]==oid).unwrap()["data"].clone();
+    assert_eq!(transfer["status"],"TRANSFERRED");assert_eq!(transfer["tenderType"],"ROOM_CHARGE");
+    let journal=list(&db,"journalEntries").unwrap().into_iter().find(|r|r["data"]["sourceType"]=="POS_ROOM_CHARGE").unwrap()["data"].clone();
+    assert_eq!(journal["lines"][0]["accountId"],"GUEST_RECEIVABLE");assert_eq!(journal["lines"][0]["debitMinor"],10_000);
+    let receipt=get(&db,"receiptDocuments",&format!("receipt-{room_cmd_id}")).unwrap().1;assert_eq!(receipt["payments"][0]["tenderType"],"ROOM_CHARGE");assert_eq!(receipt["balanceMinor"],0);
+
+    let (fv,_)=get(&db,"folios",&rid).unwrap();let mut reverse=cmd("folio.reverse",json!({"id":rid,"entryId":format!("pos-room-{oid}"),"reason":"Posted to wrong room"}));reverse.target_version=Some(fv);execute(&mut db,&s.token,reverse).unwrap();
+    assert_eq!(get(&db,"folios",&rid).unwrap().1["balanceMinor"].as_i64().unwrap(),before_balance);
+    assert!(list(&db,"refunds").unwrap().iter().any(|r|r["data"]["kind"]=="ROOM_CHARGE_REVERSAL"&&r["data"]["orderId"]==oid));
+}
+#[test]
+fn paid_extension_is_atomic_and_duplicate_external_reference_rolls_back() {
+    let (_dir,mut db,s)=setup();run(&mut db,&s,"till.open",json!({"floatAmount":500}));
+    let rid=hotel_booking_fixture(&mut db,&s,"extend",10_000);hotel_check_in(&mut db,&s,&rid);
+    let rate_id=get(&db,"roomReservations",&rid).unwrap().1["ratePlanId"].as_str().unwrap().to_string();
+    let build=|db:&rusqlite::Connection,reference:&str|{
+        let (sv,_)=get(db,"stays",&rid).unwrap();let (rv,res)=get(db,"roomReservations",&rid).unwrap();let (fv,_)=get(db,"folios",&rid).unwrap();let (roomv,_)=get(db,"rooms",res["roomId"].as_str().unwrap()).unwrap();let (ratev,_)=get(db,"ratePlans",&rate_id).unwrap();
+        let mut x=cmd("stay.extend",json!({"id":rid,"ratePlanId":rate_id,"units":1,"reservationVersion":rv,"folioVersion":fv,"roomVersion":roomv,"ratePlanVersion":ratev,"payment":{"amountMinor":10_000,"method":"CARD","reference":reference,"manuallyConfirmed":true}}));x.target_version=Some(sv);x
+    };
+    let first=build(&db,"EXT-CARD-A");execute(&mut db,&s.token,first).unwrap();
+    let after_first=get(&db,"roomReservations",&rid).unwrap().1["endsAt"].clone();
+    assert_eq!(list(&db,"stayExtensions").unwrap().len(),1);
+    let second=build(&db,"EXT-CARD-A");assert!(execute(&mut db,&s.token,second).unwrap_err().contains("DUPLICATE_REFERENCE"));
+    assert_eq!(get(&db,"roomReservations",&rid).unwrap().1["endsAt"],after_first);
+    assert_eq!(list(&db,"stayExtensions").unwrap().len(),1);
+}
+
 #[test]
 fn audit_cannot_be_modified() {
     let (_, db, _) = setup();
