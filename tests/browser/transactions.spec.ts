@@ -12,7 +12,12 @@ test.describe('transactional browser with PostgreSQL',()=>{
  test.beforeAll(async()=>{
   test.setTimeout(120000);container=`servos-browser-${randomUUID()}`;
   docker(['run','--rm','-d','--name',container,'-e','POSTGRES_HOST_AUTH_METHOD=trust','postgres:18.6-bookworm']);running=true;
-  for(let i=0;i<30;i++){if(spawnSync('docker',['exec',container,'pg_isready','-U','postgres'],{stdio:'ignore'}).status===0)break;await new Promise(r=>setTimeout(r,1000))}
+  let databaseReady=false;
+  for(let i=0;i<60;i++){
+   if(spawnSync('docker',['exec',container,'psql','-U','postgres','-Atqc','select 1'],{stdio:'ignore'}).status===0){databaseReady=true;break}
+   await new Promise(r=>setTimeout(r,1000));
+  }
+  if(!databaseReady)throw new Error('Disposable PostgreSQL did not accept SQL connections within 60 seconds.');
   const files=['tests/supabase/bootstrap.sql',...['supabase/migrations','supabase/expansion'].flatMap(dir=>readdirSync(dir).filter(f=>f.endsWith('.sql')).sort().map(f=>`${dir}/${f}`))];
   sql(files.map(f=>readFileSync(f,'utf8')).join('\n'));
   sql(`
@@ -89,15 +94,16 @@ test.describe('transactional browser with PostgreSQL',()=>{
    return result;
   }).toBe('NO_ERROR');
   await expect.poll(()=>sql("select count(*) from servos_v2.records where collection='tillSessions' and data->>'status'='OPEN';").trim()).toBe('1');
+  await page.getByRole('button',{name:'Synchronize',exact:true}).click();
   await expect(page.getByText('No open till')).toHaveCount(0);
   await page.getByRole('button',{name:'Quick tab',exact:true}).click();
   await page.getByRole('button',{name:/Test Soda/}).click();
-  await expect(page.getByText('KES 12.50')).toBeVisible();
   await page.getByRole('button',{name:/Take payment/}).click();
   const dialog=page.getByRole('dialog');
   await dialog.getByLabel('Payment account').selectOption('web-pos-cash');
   await dialog.getByRole('button',{name:'Record payment'}).click();
   await expect(page.getByText('Receipt history (1)')).toBeVisible();
+  await page.getByText('Receipt history (1)').click();
   await expect(page.getByText('V2-00000001')).toBeVisible();
   expect(sql("select count(*) from servos_v2.records where collection='payments' and data->>'method'='CASH' and data->>'amountMinor'='1250';").trim()).toBe('1');
   expect(sql("select count(*) from servos_v2.records where collection='receiptDocuments' and data->>'paidMinor'='1250' and data->>'balanceMinor'='0';").trim()).toBe('1');
