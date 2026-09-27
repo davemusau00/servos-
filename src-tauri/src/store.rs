@@ -167,7 +167,7 @@ fn live_required(tx: &Transaction, operation: &str) -> Result<()> {
         "till.open","till.cashMovement","till.close","order.create","order.addItem","order.updateItem",
         "order.removeItem","order.fire","order.kds","order.repeatRound","order.transfer","order.merge","order.void","order.discount",
         "order.compItem","payment.record","payment.split","payment.refund","payment.reverse","mpesa.reconcile","mpesa.discrepancy","mpesa.discrepancy.resolve",
-        "inventory.receive","inventory.adjust","inventory.waste","inventory.transfer","purchaseOrder.create","purchaseOrder.receive","supplierPayable.matchInvoice","supplierPayable.pay","table.ready","closeDay.generate"
+        "inventory.receive","inventory.adjust","inventory.waste","inventory.transfer","purchaseOrder.create","purchaseOrder.receive","supplierPayable.matchInvoice","supplierPayable.pay","table.ready","closeDay.generate","roomReservation.create","roomReservation.update","roomReservation.cancel","roomReservation.noShow","stay.checkIn","stay.move"
     ];
     if TRADING.contains(&operation) && installation_stage(tx)? != "LIVE" {
         return Err("Complete business setup and approve Go Live before trading".into());
@@ -684,8 +684,135 @@ fn room_validate_interval(start:chrono::DateTime<Utc>,end:chrono::DateTime<Utc>)
 }
 fn room_execute(tx:&Transaction,user:&Session,cmd:&BusinessCommand,changes:&mut Vec<Value>)->Result<bool>{
     let op=cmd.operation.as_str();
-    if !(op.starts_with("roomType.")||op.starts_with("room.")||op.starts_with("ratePlan.")||op.starts_with("roomReservation.")){return Ok(false);}
+    if !(op.starts_with("roomType.")||op.starts_with("room.")||op.starts_with("ratePlan.")||op.starts_with("roomReservation.")||op.starts_with("stay.")){return Ok(false);}
     let p=&cmd.payload;
+
+// SERVOS_PATCH_06_FRONT_DESK
+    if op.starts_with("stay."){
+        if !permissions(&user.role).contains(&"rooms.operate"){return Err("Permission required: rooms.operate".into());}
+        let key=text(p,"id")?.to_string();
+        match op {
+            "stay.checkIn"=>{
+                let reservation=room_any(tx,"roomReservations",&key)?.ok_or("Reservation not found")?;
+                if reservation.2||reservation.1["status"].as_str()!=Some("RESERVED"){return Err("INVALID_STATE: reservation is not awaiting check-in".into());}
+                if cmd.target_version!=Some(reservation.0){return Err("CONFLICT: Reservation changed; reload before check-in".into());}
+                if room_any(tx,"stays",&key)?.is_some(){return Err("DUPLICATE_REFERENCE: stay already exists".into());}
+                let room_id=text(&reservation.1,"roomId")?.to_string();
+                let room=room_any(tx,"rooms",&room_id)?.ok_or("Room not found")?;
+                let room_version=p["roomVersion"].as_i64().ok_or("roomVersion is required")?;
+                if room.0!=room_version{return Err("CONFLICT: Room changed; reload before check-in".into());}
+                if room.2{return Err("INVALID_STATE: room is archived".into());}
+                if room.1["maintenanceState"].as_str().unwrap_or("AVAILABLE")!="AVAILABLE"{return Err("ROOM_UNAVAILABLE: room is out of order".into());}
+                if room.1["housekeepingState"].as_str().unwrap_or("CLEAN")!="CLEAN"{return Err("ROOM_UNAVAILABLE: room must be clean before check-in".into());}
+                let arrival=room_parse_time(text(&reservation.1,"startsAt")?)?;
+                let departure=room_parse_time(text(&reservation.1,"endsAt")?)?;
+                let blocked_until=room_parse_time(text(&reservation.1,"blockedUntil")?)?;
+                let now_utc=Utc::now();
+                if now_utc<arrival{return Err("INVALID_STATE: arrival time has not been reached".into());}
+                if now_utc>=departure{return Err("INVALID_STATE: reservation departure has already passed".into());}
+                room_available(tx,&room_id,arrival,blocked_until,Some(&key))?;
+                let mut next_reservation=reservation.1.clone();
+                let stamp=now();
+                next_reservation["status"]=json!("CHECKED_IN");
+                next_reservation["checkedInAt"]=json!(stamp);
+                next_reservation["checkedInBy"]=json!(user.staff_id);
+                next_reservation["updatedAt"]=json!(stamp);
+                put(tx,"roomReservations",&key,next_reservation,changes)?;
+                put(tx,"stays",&key,json!({
+                    "id":key,"reservationId":key,"roomId":room_id,"customerId":reservation.1["customerId"],
+                    "status":"CHECKED_IN","checkedInAt":stamp,"checkedInBy":user.staff_id,
+                    "startsAt":reservation.1["startsAt"],"expectedEndAt":reservation.1["endsAt"],
+                    "history":[{"type":"CHECK_IN","roomId":room_id,"at":stamp,"actorId":user.staff_id}]
+                }),changes)?;
+                if let Some((_,folio,archived))=room_any(tx,"folios",&key)?{
+                    if archived||folio["status"].as_str()!=Some("OPEN")||folio["customerId"]!=reservation.1["customerId"]{
+                        return Err("INVALID_STATE: existing reservation folio is not compatible with check-in".into());
+                    }
+                }else{
+                    put(tx,"folios",&key,json!({
+                        "id":key,"reservationId":key,"stayId":key,"customerId":reservation.1["customerId"],
+                        "status":"OPEN","balanceMinor":0,"depositMinor":0,"createdAt":stamp,"openedBy":user.staff_id
+                    }),changes)?;
+                }
+            }
+            "stay.move"=>{
+                let stay=room_any(tx,"stays",&key)?.ok_or("Stay not found")?;
+                if stay.2||stay.1["status"].as_str()!=Some("CHECKED_IN"){return Err("INVALID_STATE: only checked-in stays can move rooms".into());}
+                if cmd.target_version!=Some(stay.0){return Err("CONFLICT: Stay changed; reload before room move".into());}
+                let reservation=room_any(tx,"roomReservations",&key)?.ok_or("Reservation not found")?;
+                let reservation_version=p["reservationVersion"].as_i64().ok_or("reservationVersion is required")?;
+                if reservation.0!=reservation_version||reservation.1["status"].as_str()!=Some("CHECKED_IN"){return Err("CONFLICT: Reservation changed; reload before room move".into());}
+                let old_room_id=text(&stay.1,"roomId")?.to_string();
+                let destination_id=text(p,"destinationRoomId")?.to_string();
+                if destination_id==old_room_id{return Err("VALIDATION_FAILED: destination room must be different".into());}
+                let old_room=room_any(tx,"rooms",&old_room_id)?.ok_or("Current room not found")?;
+                let destination=room_any(tx,"rooms",&destination_id)?.ok_or("Destination room not found")?;
+                if p["currentRoomVersion"].as_i64()!=Some(old_room.0)||p["destinationRoomVersion"].as_i64()!=Some(destination.0){
+                    return Err("CONFLICT: A room changed; reload before room move".into());
+                }
+                if destination.2||destination.1["maintenanceState"].as_str().unwrap_or("AVAILABLE")!="AVAILABLE"{
+                    return Err("ROOM_UNAVAILABLE: destination room is out of order".into());
+                }
+                if destination.1["housekeepingState"].as_str().unwrap_or("CLEAN")!="CLEAN"{
+                    return Err("ROOM_UNAVAILABLE: destination room must be clean".into());
+                }
+                let guests=reservation.1["guests"].as_i64().unwrap_or(1);
+                if guests>destination.1["capacity"].as_i64().unwrap_or(0){return Err("VALIDATION_FAILED: destination room capacity".into());}
+                let now_utc=Utc::now();
+                let departure=room_parse_time(text(&reservation.1,"endsAt")?)?;
+                if now_utc>=departure{return Err("INVALID_STATE: stay departure has already passed".into());}
+                let destination_turnaround=destination.1["turnaroundMinutes"].as_i64().unwrap_or(0);
+                let destination_blocked_until=departure+Duration::minutes(destination_turnaround);
+                room_available(tx,&destination_id,now_utc,destination_blocked_until,Some(&key))?;
+
+                let stamp=now();
+                let mut next_reservation=reservation.1.clone();
+                next_reservation["roomId"]=json!(destination_id);
+                next_reservation["turnaroundMinutes"]=json!(destination_turnaround);
+                next_reservation["blockedUntil"]=json!(destination_blocked_until.to_rfc3339());
+                next_reservation["updatedAt"]=json!(stamp);
+                next_reservation["lastRoomMoveAt"]=json!(stamp);
+                put(tx,"roomReservations",&key,next_reservation,changes)?;
+
+                let mut next_stay=stay.1.clone();
+                next_stay["roomId"]=json!(destination_id);
+                next_stay["lastMovedAt"]=json!(stamp);
+                let history=next_stay["history"].as_array_mut().ok_or("Stay history is invalid")?;
+                history.push(json!({"type":"ROOM_MOVE","fromRoomId":old_room_id,"toRoomId":destination_id,"at":stamp,"actorId":user.staff_id,"reason":p.get("reason").cloned().unwrap_or(Value::Null)}));
+                put(tx,"stays",&key,next_stay,changes)?;
+
+                let mut old_room_data=old_room.1.clone();
+                old_room_data["housekeepingState"]=json!("DIRTY");
+                old_room_data["housekeepingAt"]=json!(stamp);
+                old_room_data["housekeepingBy"]=json!(user.staff_id);
+                put(tx,"rooms",&old_room_id,old_room_data,changes)?;
+
+                let turnaround=old_room.1["turnaroundMinutes"].as_i64().unwrap_or(0);
+                if turnaround>0{
+                    let block_end=now_utc+Duration::minutes(turnaround);
+                    let affected:Vec<String>=list(tx,"roomReservations")?.into_iter().filter_map(|record|{
+                        if record["id"].as_str()==Some(key.as_str()){return None;}
+                        let data=&record["data"];
+                        if data["roomId"].as_str()!=Some(old_room_id.as_str())||!["RESERVED","CHECKED_IN"].contains(&data["status"].as_str().unwrap_or("")){return None;}
+                        let start=room_parse_time(data["startsAt"].as_str()?).ok()?;
+                        let end=room_parse_time(data["blockedUntil"].as_str()?).ok()?;
+                        if room_overlap(now_utc,block_end,start,end){record["id"].as_str().map(str::to_string)}else{None}
+                    }).collect();
+                    let block_id=id();
+                    put(tx,"roomBlocks",&block_id,json!({
+                        "id":block_id,"roomId":old_room_id,"startsAt":now_utc.to_rfc3339(),"endsAt":block_end.to_rfc3339(),
+                        "reason":"Room move turnaround","status":"ACTIVE","sourceType":"MOVE_TURNAROUND","stayId":key,
+                        "affectedReservationIds":affected,"createdAt":stamp,"createdBy":user.staff_id
+                    }),changes)?;
+                }
+            }
+            "stay.extend"|"stay.checkOut"=>{
+                return Err("SETTLEMENT_REQUIRED: stay extension and checkout are enabled with Patch 07 Folios".into());
+            }
+            _=>return Err("PROTOCOL_UNSUPPORTED: stay operation".into())
+        }
+        return Ok(true);
+    }
 
     if op.starts_with("roomReservation."){
         if !permissions(&user.role).contains(&"rooms.operate"){return Err("Permission required: rooms.operate".into());}

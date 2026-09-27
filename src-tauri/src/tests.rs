@@ -485,6 +485,66 @@ fn room_csv_imports_apply_through_native_room_commands() {
     assert_eq!(list(&db,"roomTypes").unwrap().len(),1);assert_eq!(list(&db,"rooms").unwrap().len(),1);assert_eq!(list(&db,"ratePlans").unwrap().len(),1);
 }
 
+// SERVOS_PATCH_06_FRONT_DESK
+#[test]
+fn front_desk_check_in_creates_stay_and_zero_value_folio_atomically() {
+    let (_,mut db,s)=setup();
+    run(&mut db,&s,"record.save",json!({"collection":"customers","id":"front-guest","data":{"name":"Front Guest","phone":"+254700000004"}}));
+    run(&mut db,&s,"roomType.save",json!({"id":"front-type","data":{"name":"Front Type","code":"FRT","maxGuests":2}}));
+    run(&mut db,&s,"ratePlan.save",json!({"id":"front-rate","data":{"name":"Front Rate","roomTypeId":"front-type","mode":"NIGHTLY","priceMinor":12000,"currency":"KES","taxBasisPoints":0}}));
+    run(&mut db,&s,"room.save",json!({"id":"front-room","data":{"number":"301","roomTypeId":"front-type","capacity":2,"turnaroundMinutes":30}}));
+    let arrival=(chrono::Utc::now()-chrono::Duration::minutes(5)).to_rfc3339();
+    let departure=(chrono::Utc::now()+chrono::Duration::days(1)).to_rfc3339();
+    run(&mut db,&s,"roomReservation.create",json!({"id":"front-res","roomId":"front-room","ratePlanId":"front-rate","customerId":"front-guest","guests":1,"startsAt":arrival,"endsAt":departure}));
+    let (reservation_version,_)=get(&db,"roomReservations","front-res").unwrap();
+    let (room_version,_)=get(&db,"rooms","front-room").unwrap();
+    let before:(i64,i64)=db.query_row("SELECT (SELECT COUNT(*) FROM commands),(SELECT COUNT(*) FROM audit)",[],|r|Ok((r.get(0)?,r.get(1)?))).unwrap();
+    let mut checkin=cmd("stay.checkIn",json!({"id":"front-res","roomVersion":room_version}));
+    checkin.target_version=Some(reservation_version);
+    execute(&mut db,&s.token,checkin).unwrap();
+    let after:(i64,i64)=db.query_row("SELECT (SELECT COUNT(*) FROM commands),(SELECT COUNT(*) FROM audit)",[],|r|Ok((r.get(0)?,r.get(1)?))).unwrap();
+    assert_eq!(after.0,before.0+1);assert_eq!(after.1,before.1+1);
+    assert_eq!(get(&db,"roomReservations","front-res").unwrap().1["status"],"CHECKED_IN");
+    assert_eq!(get(&db,"stays","front-res").unwrap().1["status"],"CHECKED_IN");
+    let folio=get(&db,"folios","front-res").unwrap().1;
+    assert_eq!(folio["balanceMinor"],0);assert_eq!(folio["depositMinor"],0);assert_eq!(folio["status"],"OPEN");
+}
+#[test]
+fn front_desk_room_move_preserves_quote_and_dirties_old_room() {
+    let (_,mut db,s)=setup();
+    run(&mut db,&s,"record.save",json!({"collection":"customers","id":"move-guest","data":{"name":"Move Guest","phone":"+254700000005"}}));
+    run(&mut db,&s,"roomType.save",json!({"id":"move-type","data":{"name":"Move Type","code":"MOV","maxGuests":2}}));
+    run(&mut db,&s,"ratePlan.save",json!({"id":"move-rate","data":{"name":"Move Rate","roomTypeId":"move-type","mode":"NIGHTLY","priceMinor":14000,"currency":"KES","taxBasisPoints":0}}));
+    run(&mut db,&s,"room.save",json!({"id":"move-a","data":{"number":"401","roomTypeId":"move-type","capacity":2,"turnaroundMinutes":20}}));
+    run(&mut db,&s,"room.save",json!({"id":"move-b","data":{"number":"402","roomTypeId":"move-type","capacity":2,"turnaroundMinutes":25}}));
+    let arrival=(chrono::Utc::now()-chrono::Duration::minutes(5)).to_rfc3339();
+    let departure=(chrono::Utc::now()+chrono::Duration::days(2)).to_rfc3339();
+    run(&mut db,&s,"roomReservation.create",json!({"id":"move-res","roomId":"move-a","ratePlanId":"move-rate","customerId":"move-guest","guests":2,"startsAt":arrival,"endsAt":departure}));
+    let (rv,_)=get(&db,"roomReservations","move-res").unwrap();let (av,_)=get(&db,"rooms","move-a").unwrap();
+    let mut checkin=cmd("stay.checkIn",json!({"id":"move-res","roomVersion":av}));checkin.target_version=Some(rv);execute(&mut db,&s.token,checkin).unwrap();
+    let quote=get(&db,"roomReservations","move-res").unwrap().1["quotedAmountMinor"].clone();
+    let (sv,_)=get(&db,"stays","move-res").unwrap();let (rv,_)=get(&db,"roomReservations","move-res").unwrap();let (av,_)=get(&db,"rooms","move-a").unwrap();let (bv,_)=get(&db,"rooms","move-b").unwrap();
+    let mut moving=cmd("stay.move",json!({"id":"move-res","destinationRoomId":"move-b","reservationVersion":rv,"currentRoomVersion":av,"destinationRoomVersion":bv,"reason":"Guest request"}));moving.target_version=Some(sv);execute(&mut db,&s.token,moving).unwrap();
+    let reservation=get(&db,"roomReservations","move-res").unwrap().1;assert_eq!(reservation["roomId"],"move-b");assert_eq!(reservation["quotedAmountMinor"],quote);
+    assert_eq!(get(&db,"stays","move-res").unwrap().1["roomId"],"move-b");
+    assert_eq!(get(&db,"rooms","move-a").unwrap().1["housekeepingState"],"DIRTY");
+    let blocks=list(&db,"roomBlocks").unwrap();assert!(blocks.iter().any(|b|b["data"]["stayId"]=="move-res"&&b["data"]["sourceType"]=="MOVE_TURNAROUND"));
+}
+#[test]
+fn front_desk_rejects_early_check_in_and_financially_incomplete_checkout() {
+    let (_,mut db,s)=setup();
+    run(&mut db,&s,"record.save",json!({"collection":"customers","id":"gate-guest","data":{"name":"Gate Guest","phone":"+254700000006"}}));
+    run(&mut db,&s,"roomType.save",json!({"id":"gate-type","data":{"name":"Gate Type","code":"GAT","maxGuests":1}}));
+    run(&mut db,&s,"ratePlan.save",json!({"id":"gate-rate","data":{"name":"Gate Rate","roomTypeId":"gate-type","mode":"NIGHTLY","priceMinor":9000,"currency":"KES","taxBasisPoints":0}}));
+    run(&mut db,&s,"room.save",json!({"id":"gate-room","data":{"number":"501","roomTypeId":"gate-type","capacity":1,"turnaroundMinutes":0}}));
+    let arrival=(chrono::Utc::now()+chrono::Duration::hours(2)).to_rfc3339();
+    let departure=(chrono::Utc::now()+chrono::Duration::days(1)).to_rfc3339();
+    run(&mut db,&s,"roomReservation.create",json!({"id":"gate-res","roomId":"gate-room","ratePlanId":"gate-rate","customerId":"gate-guest","guests":1,"startsAt":arrival,"endsAt":departure}));
+    let (rv,_)=get(&db,"roomReservations","gate-res").unwrap();let (roomv,_)=get(&db,"rooms","gate-room").unwrap();
+    let mut early=cmd("stay.checkIn",json!({"id":"gate-res","roomVersion":roomv}));early.target_version=Some(rv);assert!(execute(&mut db,&s.token,early).unwrap_err().contains("arrival time"));
+    let mut checkout=cmd("stay.checkOut",json!({"id":"gate-res"}));checkout.target_version=Some(0);assert!(execute(&mut db,&s.token,checkout).unwrap_err().contains("Patch 07"));
+}
+
 #[test]
 fn audit_cannot_be_modified() {
     let (_, db, _) = setup();

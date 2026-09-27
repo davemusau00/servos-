@@ -104,7 +104,8 @@ Includes:
 - tape chart;
 - arrivals/departures;
 - create/edit/cancel/no-show reservation flows;
-- check-in, move, extend, check-out;
+- safe check-in and in-house room move;
+- extension and checkout affordances remain gated until Patch 07 folio/payment conservation is active;
 - DIRTY -> CLEANING -> INSPECTION -> CLEAN workflow;
 - maintenance/out-of-order room blocks;
 - empty/loading/error/conflict states.
