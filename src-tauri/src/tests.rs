@@ -411,7 +411,7 @@ fn controlled_import_dry_run_and_apply_use_domain_commands_and_are_idempotent() 
     assert_eq!(db.query_row::<i64,_,_>("SELECT COUNT(*) FROM import_external_ids WHERE namespace='customers' AND external_id='customer-import-1'",[],|r|r.get(0)).unwrap(),1);
 }
 #[test]
-fn controlled_import_blocks_live_opening_inventory_and_deferred_domains() {
+fn controlled_import_blocks_live_opening_inventory_and_promotes_hotel_services() {
     let (_, mut db, s)=setup();
     let seed_batch=Uuid::new_v4().to_string();let stamp="2026-09-27T00:00:00Z";
     db.execute(
@@ -430,8 +430,11 @@ fn controlled_import_blocks_live_opening_inventory_and_deferred_domains() {
     let services="external_id,code,name,category,unit_price,taxable,active\nservice-x,ROOM-SVC,Room Service,ROOM_SERVICE,1000,true,true\n";
     let service_batch=import_stage(&mut db,&s.token,"hotel_services","hotel_services.csv",services).unwrap();
     let service_plan=import_plan(&mut db,&s.token,service_batch["id"].as_str().unwrap()).unwrap();
-    assert_eq!(service_plan["status"],"BLOCKED");
-    assert!(service_plan["steps"][0]["reason"].as_str().unwrap().contains("Patch 07"));
+    assert_eq!(service_plan["status"],"READY");
+    assert_eq!(service_plan["steps"][0]["operation"],"hotelService.save");
+    let service_plan_id=service_plan["id"].as_str().unwrap().to_string();
+    assert_eq!(import_apply(&mut db,&s.token,&service_plan_id).unwrap()["status"],"APPLIED");
+    assert_eq!(list(&db,"hotelServices").unwrap().len(),1);
 }
 
 // SERVOS_PATCH_05_ROOMS_ENGINE
@@ -487,7 +490,7 @@ fn room_csv_imports_apply_through_native_room_commands() {
 
 // SERVOS_PATCH_06_FRONT_DESK
 #[test]
-fn front_desk_check_in_creates_stay_and_zero_value_folio_atomically() {
+fn front_desk_check_in_creates_stay_folio_and_due_accommodation_atomically() {
     let (_,mut db,s)=setup();
     run(&mut db,&s,"record.save",json!({"collection":"customers","id":"front-guest","data":{"name":"Front Guest","phone":"+254700000004"}}));
     run(&mut db,&s,"roomType.save",json!({"id":"front-type","data":{"name":"Front Type","code":"FRT","maxGuests":2}}));
@@ -507,7 +510,8 @@ fn front_desk_check_in_creates_stay_and_zero_value_folio_atomically() {
     assert_eq!(get(&db,"roomReservations","front-res").unwrap().1["status"],"CHECKED_IN");
     assert_eq!(get(&db,"stays","front-res").unwrap().1["status"],"CHECKED_IN");
     let folio=get(&db,"folios","front-res").unwrap().1;
-    assert_eq!(folio["balanceMinor"],0);assert_eq!(folio["depositMinor"],0);assert_eq!(folio["status"],"OPEN");
+    assert_eq!(folio["balanceMinor"],12000);assert_eq!(folio["depositMinor"],0);assert_eq!(folio["status"],"OPEN");
+    assert_eq!(list(&db,"folioEntries").unwrap().iter().filter(|r|r["data"]["sourceType"]=="ACCOMMODATION").count(),1);
 }
 #[test]
 fn front_desk_room_move_preserves_quote_and_dirties_old_room() {
@@ -523,8 +527,8 @@ fn front_desk_room_move_preserves_quote_and_dirties_old_room() {
     let (rv,_)=get(&db,"roomReservations","move-res").unwrap();let (av,_)=get(&db,"rooms","move-a").unwrap();
     let mut checkin=cmd("stay.checkIn",json!({"id":"move-res","roomVersion":av}));checkin.target_version=Some(rv);execute(&mut db,&s.token,checkin).unwrap();
     let quote=get(&db,"roomReservations","move-res").unwrap().1["quotedAmountMinor"].clone();
-    let (sv,_)=get(&db,"stays","move-res").unwrap();let (rv,_)=get(&db,"roomReservations","move-res").unwrap();let (av,_)=get(&db,"rooms","move-a").unwrap();let (bv,_)=get(&db,"rooms","move-b").unwrap();
-    let mut moving=cmd("stay.move",json!({"id":"move-res","destinationRoomId":"move-b","reservationVersion":rv,"currentRoomVersion":av,"destinationRoomVersion":bv,"reason":"Guest request"}));moving.target_version=Some(sv);execute(&mut db,&s.token,moving).unwrap();
+    let (sv,_)=get(&db,"stays","move-res").unwrap();let (rv,_)=get(&db,"roomReservations","move-res").unwrap();let (fv,_)=get(&db,"folios","move-res").unwrap();let (av,_)=get(&db,"rooms","move-a").unwrap();let (bv,_)=get(&db,"rooms","move-b").unwrap();
+    let mut moving=cmd("stay.move",json!({"id":"move-res","destinationRoomId":"move-b","reservationVersion":rv,"folioVersion":fv,"currentRoomVersion":av,"destinationRoomVersion":bv,"reason":"Guest request"}));moving.target_version=Some(sv);execute(&mut db,&s.token,moving).unwrap();
     let reservation=get(&db,"roomReservations","move-res").unwrap().1;assert_eq!(reservation["roomId"],"move-b");assert_eq!(reservation["quotedAmountMinor"],quote);
     assert_eq!(get(&db,"stays","move-res").unwrap().1["roomId"],"move-b");
     assert_eq!(get(&db,"rooms","move-a").unwrap().1["housekeepingState"],"DIRTY");
@@ -542,7 +546,15 @@ fn front_desk_rejects_early_check_in_and_financially_incomplete_checkout() {
     run(&mut db,&s,"roomReservation.create",json!({"id":"gate-res","roomId":"gate-room","ratePlanId":"gate-rate","customerId":"gate-guest","guests":1,"startsAt":arrival,"endsAt":departure}));
     let (rv,_)=get(&db,"roomReservations","gate-res").unwrap();let (roomv,_)=get(&db,"rooms","gate-room").unwrap();
     let mut early=cmd("stay.checkIn",json!({"id":"gate-res","roomVersion":roomv}));early.target_version=Some(rv);assert!(execute(&mut db,&s.token,early).unwrap_err().contains("arrival time"));
-    let mut checkout=cmd("stay.checkOut",json!({"id":"gate-res"}));checkout.target_version=Some(0);assert!(execute(&mut db,&s.token,checkout).unwrap_err().contains("Patch 07"));
+    let (rv,_)=get(&db,"roomReservations","gate-res").unwrap();let mut cancel=cmd("roomReservation.cancel",json!({"id":"gate-res","reason":"Early-arrival gate test complete"}));cancel.target_version=Some(rv);execute(&mut db,&s.token,cancel).unwrap();
+    let current_arrival=(chrono::Utc::now()-chrono::Duration::minutes(5)).to_rfc3339();
+    let current_departure=(chrono::Utc::now()+chrono::Duration::days(1)).to_rfc3339();
+    run(&mut db,&s,"roomReservation.create",json!({"id":"gate-live","roomId":"gate-room","ratePlanId":"gate-rate","customerId":"gate-guest","guests":1,"startsAt":current_arrival,"endsAt":current_departure}));
+    let (rv,_)=get(&db,"roomReservations","gate-live").unwrap();let (roomv,_)=get(&db,"rooms","gate-room").unwrap();
+    let mut checkin=cmd("stay.checkIn",json!({"id":"gate-live","roomVersion":roomv}));checkin.target_version=Some(rv);execute(&mut db,&s.token,checkin).unwrap();
+    let (sv,_)=get(&db,"stays","gate-live").unwrap();let (rv,res)=get(&db,"roomReservations","gate-live").unwrap();let (fv,_)=get(&db,"folios","gate-live").unwrap();let (roomv,_)=get(&db,"rooms",res["roomId"].as_str().unwrap()).unwrap();
+    let mut checkout=cmd("stay.checkOut",json!({"id":"gate-live","reservationVersion":rv,"folioVersion":fv,"roomVersion":roomv}));checkout.target_version=Some(sv);
+    assert!(execute(&mut db,&s.token,checkout).unwrap_err().contains("SETTLEMENT_REQUIRED"));
 }
 
 // SERVOS_PATCH_07_FOLIOS
@@ -634,6 +646,130 @@ fn paid_extension_is_atomic_and_duplicate_external_reference_rolls_back() {
     let second=build(&db,"EXT-CARD-A");assert!(execute(&mut db,&s.token,second).unwrap_err().contains("DUPLICATE_REFERENCE"));
     assert_eq!(get(&db,"roomReservations",&rid).unwrap().1["endsAt"],after_first);
     assert_eq!(list(&db,"stayExtensions").unwrap().len(),1);
+}
+
+// SERVOS_PATCH_08_ASSETS_MAINTENANCE
+fn asset_fixture(db:&mut rusqlite::Connection,s:&Session,prefix:&str)->String{
+    let category=format!("{prefix}-category");
+    run(db,s,"assetCategory.save",json!({"id":category,"data":{"name":format!("{prefix} Equipment"),"code":prefix.to_ascii_uppercase(),"depreciationMethod":"STRAIGHT_LINE","usefulLifeMonths":60}}));
+    let asset=format!("{prefix}-asset");
+    run(db,s,"asset.save",json!({"id":asset,"data":{"name":format!("{prefix} Pump"),"tag":format!("{}-001",prefix.to_ascii_uppercase()),"assetCategoryId":category,"locationId":"main","purchaseCostMinor":10000}}));
+    asset
+}
+fn technician(db:&mut rusqlite::Connection,s:&Session,name:&str)->String{
+    run(db,s,"staff.create",json!({"name":name,"pin":"456789","role":"Server","jobTitle":"Technician"}));
+    db.query_row("SELECT id FROM staff WHERE name=?",[name],|r|r.get(0)).unwrap()
+}
+#[test]
+fn asset_domain_enforces_permanent_tags_custody_location_and_immutable_events() {
+    let (_dir,mut db,s)=setup();
+    let asset=asset_fixture(&mut db,&s,"pump");
+    let duplicate=execute(&mut db,&s.token,cmd("asset.save",json!({"id":"pump-duplicate","data":{"name":"Other Pump","tag":"pump-001","assetCategoryId":"pump-category","locationId":"main","purchaseCostMinor":1}})));
+    assert!(duplicate.unwrap_err().contains("DUPLICATE_REFERENCE"));
+
+    run(&mut db,&s,"record.save",json!({"collection":"stockLocations","id":"workshop","data":{"name":"Workshop","code":"WORKSHOP","type":"STORE","active":true,"propertyId":"property"}}));
+    let (version,data)=get(&db,"assets",&asset).unwrap();
+    let mut illegal=cmd("asset.save",json!({"id":asset,"data":{"name":data["name"],"tag":data["tag"],"assetCategoryId":data["assetCategoryId"],"locationId":"workshop","purchaseCostMinor":10000}}));illegal.target_version=Some(version);
+    assert!(execute(&mut db,&s.token,illegal).unwrap_err().contains("asset.transfer"));
+
+    let tech=technician(&mut db,&s,"Asset Tech");
+    let (v,_)=get(&db,"assets",&asset).unwrap();let mut assign=cmd("asset.assign",json!({"id":asset,"custodianId":tech,"reason":"Issued for engineering shift"}));assign.target_version=Some(v);execute(&mut db,&s.token,assign).unwrap();
+    let (v,_)=get(&db,"assets",&asset).unwrap();let mut retire=cmd("asset.retire",json!({"id":asset,"reason":"Old"}));retire.target_version=Some(v);assert!(execute(&mut db,&s.token,retire).unwrap_err().contains("return assigned asset"));
+    let (v,_)=get(&db,"assets",&asset).unwrap();let mut returned=cmd("asset.return",json!({"id":asset,"reason":"Back to engineering store"}));returned.target_version=Some(v);execute(&mut db,&s.token,returned).unwrap();
+    let (v,_)=get(&db,"assets",&asset).unwrap();let mut transfer=cmd("asset.transfer",json!({"id":asset,"locationId":"workshop","reason":"Move to workshop"}));transfer.target_version=Some(v);execute(&mut db,&s.token,transfer).unwrap();
+    let (v,_)=get(&db,"assets",&asset).unwrap();let mut inspect=cmd("asset.inspect",json!({"id":asset,"condition":"FAIR","nextInspectionAt":"2027-03-01","reason":"Quarterly inspection"}));inspect.target_version=Some(v);execute(&mut db,&s.token,inspect).unwrap();
+    let current=get(&db,"assets",&asset).unwrap().1;assert_eq!(current["locationId"],"workshop");assert_eq!(current["condition"],"FAIR");assert_eq!(current["custodianId"],Value::Null);
+    assert!(list(&db,"assetEvents").unwrap().len()>=5);
+    assert!(db.execute("UPDATE records SET data='{}' WHERE collection='assetEvents'",[]).is_err());
+    assert!(db.execute("DELETE FROM records WHERE collection='assetEvents'",[]).is_err());
+}
+#[test]
+fn maintenance_completion_consumes_parts_and_posts_service_payable_atomically() {
+    let (_dir,mut db,s)=setup();
+    let asset=asset_fixture(&mut db,&s,"maint");
+    let tech=technician(&mut db,&s,"Maintenance Tech");
+    run(&mut db,&s,"record.save",json!({"collection":"stockItems","id":"bearing","data":{"name":"Bearing","code":"BEARING","baseUnit":"unit","averageUnitCost":1.5}}));
+    run(&mut db,&s,"inventory.adjust",json!({"stockItemId":"bearing","locationId":"main","countedQty":10,"reason":"Maintenance stock fixture"}));
+    run(&mut db,&s,"record.save",json!({"collection":"suppliers","id":"repair-supplier","data":{"name":"Repair Supplier","code":"REPAIR","active":true}}));
+
+    run(&mut db,&s,"maintenance.report",json!({"id":"work-1","assetId":asset,"description":"Replace pump bearing","priority":"HIGH"}));
+    let (v,_)=get(&db,"maintenanceOrders","work-1").unwrap();let mut assign=cmd("maintenance.assign",json!({"id":"work-1","assigneeId":tech}));assign.target_version=Some(v);execute(&mut db,&s.token,assign).unwrap();
+    let (v,_)=get(&db,"maintenanceOrders","work-1").unwrap();let mut start=cmd("maintenance.start",json!({"id":"work-1"}));start.target_version=Some(v);execute(&mut db,&s.token,start).unwrap();
+
+    let before_stock=get(&db,"stockItems","bearing").unwrap().1["currentStock"]["main"].as_f64().unwrap();
+    let before_movements=list(&db,"stockMovements").unwrap().len();
+    let (wv,_)=get(&db,"maintenanceOrders","work-1").unwrap();let (sv,_)=get(&db,"stockItems","bearing").unwrap();
+    let mut fail=cmd("maintenance.complete",json!({"id":"work-1","resolution":"Bearing replaced","parts":[{"stockItemId":"bearing","stockItemVersion":sv,"locationId":"main","quantity":2}],"serviceCostMinor":500,"supplierId":"missing","invoiceReference":"INV-FAIL"}));fail.target_version=Some(wv);
+    assert!(execute(&mut db,&s.token,fail).is_err());
+    assert_eq!(get(&db,"stockItems","bearing").unwrap().1["currentStock"]["main"].as_f64().unwrap(),before_stock);
+    assert_eq!(list(&db,"stockMovements").unwrap().len(),before_movements);
+    assert_eq!(get(&db,"maintenanceOrders","work-1").unwrap().1["status"],"IN_PROGRESS");
+    assert!(list(&db,"supplierPayables").unwrap().iter().all(|r|r["data"]["sourceId"]!="work-1"));
+
+    let (wv,_)=get(&db,"maintenanceOrders","work-1").unwrap();let (sv,_)=get(&db,"stockItems","bearing").unwrap();
+    let mut complete=cmd("maintenance.complete",json!({"id":"work-1","resolution":"Bearing replaced and tested","parts":[{"stockItemId":"bearing","stockItemVersion":sv,"locationId":"main","quantity":2}],"serviceCostMinor":500,"supplierId":"repair-supplier","invoiceReference":"INV-MAINT-1"}));complete.target_version=Some(wv);
+    execute(&mut db,&s.token,complete).unwrap();
+    assert_eq!(get(&db,"stockItems","bearing").unwrap().1["currentStock"]["main"],8.0);
+    let work=get(&db,"maintenanceOrders","work-1").unwrap().1;assert_eq!(work["status"],"COMPLETED");assert_eq!(work["partsCostMinor"],300);assert_eq!(work["serviceCostMinor"],500);
+    assert!(list(&db,"stockMovements").unwrap().iter().any(|r|r["data"]["movementType"]=="MAINTENANCE"&&r["data"]["sourceId"]=="work-1"));
+    assert!(list(&db,"supplierPayables").unwrap().iter().any(|r|r["data"]["sourceType"]=="MAINTENANCE"&&r["data"]["sourceId"]=="work-1"&&r["data"]["status"]=="MATCHED_UNPAID"));
+    let maintenance_journals:Vec<Value>=list(&db,"journalEntries").unwrap().into_iter().filter(|r|r["data"]["sourceId"]=="work-1").collect();
+    assert_eq!(maintenance_journals.len(),2);
+}
+#[test]
+fn maintenance_linked_room_block_requires_closed_work_and_inspected_release() {
+    let (_dir,mut db,s)=setup();
+    let tech=technician(&mut db,&s,"Room Maintenance Tech");
+    run(&mut db,&s,"roomType.save",json!({"id":"maint-room-type","data":{"name":"Maintenance Room","code":"MROOM","maxGuests":2}}));
+    run(&mut db,&s,"room.save",json!({"id":"maint-room","data":{"number":"M-01","roomTypeId":"maint-room-type","capacity":2,"turnaroundMinutes":30}}));
+    run(&mut db,&s,"maintenance.report",json!({"id":"room-work","roomId":"maint-room","description":"Repair bathroom plumbing","priority":"CRITICAL"}));
+    let start=(chrono::Utc::now()+chrono::Duration::days(2)).to_rfc3339();let end=(chrono::Utc::now()+chrono::Duration::days(3)).to_rfc3339();
+    run(&mut db,&s,"room.block",json!({"id":"maintenance-block","roomId":"maint-room","startsAt":start,"endsAt":end,"reason":"Plumbing repair","maintenanceOrderId":"room-work"}));
+    let (bv,_)=get(&db,"roomBlocks","maintenance-block").unwrap();let mut release=cmd("room.unblock",json!({"id":"maintenance-block","inspection":"Premature"}));release.target_version=Some(bv);
+    assert!(execute(&mut db,&s.token,release).unwrap_err().contains("resolve maintenance"));
+
+    let (v,_)=get(&db,"maintenanceOrders","room-work").unwrap();let mut assign=cmd("maintenance.assign",json!({"id":"room-work","assigneeId":tech}));assign.target_version=Some(v);execute(&mut db,&s.token,assign).unwrap();
+    let (v,_)=get(&db,"maintenanceOrders","room-work").unwrap();let mut start_work=cmd("maintenance.start",json!({"id":"room-work"}));start_work.target_version=Some(v);execute(&mut db,&s.token,start_work).unwrap();
+    let (v,_)=get(&db,"maintenanceOrders","room-work").unwrap();let mut complete=cmd("maintenance.complete",json!({"id":"room-work","resolution":"Leak repaired and pressure tested","parts":[],"serviceCostMinor":0}));complete.target_version=Some(v);execute(&mut db,&s.token,complete).unwrap();
+    assert_eq!(get(&db,"roomBlocks","maintenance-block").unwrap().1["status"],"ACTIVE");
+    let (bv,_)=get(&db,"roomBlocks","maintenance-block").unwrap();let mut release=cmd("room.unblock",json!({"id":"maintenance-block","inspection":"Room inspected after repair"}));release.target_version=Some(bv);execute(&mut db,&s.token,release).unwrap();
+    assert_eq!(get(&db,"roomBlocks","maintenance-block").unwrap().1["status"],"RELEASED");
+}
+
+#[test]
+fn asset_operational_lifecycle_and_maintenance_are_blocked_before_go_live() {
+    let dir=tempfile::tempdir().unwrap();let mut db=open(&dir.path().join("assets-prelive.sqlite")).unwrap();
+    initialize(&mut db,"terminal-assets-prelive","Owner","827193","Prelive assets").unwrap();
+    let user:String=db.query_row("SELECT id FROM staff",[],|r|r.get(0)).unwrap();let session=login(&db,&user,"827193").unwrap();
+    for operation in ["asset.assign","asset.transfer","asset.inspect","asset.retire","maintenance.report","maintenance.assign","maintenance.start","maintenance.complete","maintenance.cancel"] {
+        let blocked=execute(&mut db,&session.token,cmd(operation,json!({"id":"missing","reason":"test"}))).unwrap_err();
+        assert!(blocked.contains("Complete business setup"),"{operation}: {blocked}");
+    }
+}
+#[test]
+fn asset_csv_imports_apply_categories_then_assets_through_native_commands() {
+    let (_dir,mut db,s)=setup();
+    let seed_batch=Uuid::new_v4().to_string();let stamp="2026-09-27T00:00:00Z";
+    db.execute(
+        "INSERT INTO import_batches(id,template_key,file_name,status,created_by,created_at,updated_at,row_count,valid_count,invalid_count,source_hash,headers,notes) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        rusqlite::params![seed_batch,"stock_locations","seed.csv","APPLIED",s.staff_id,stamp,stamp,0,0,0,"seed","[]",""]
+    ).unwrap();
+    db.execute(
+        "INSERT INTO import_external_ids(namespace,external_id,collection,record_id,batch_id,created_at) VALUES('stock_locations','stock-main','stockLocations','main',?,?)",
+        rusqlite::params![seed_batch,stamp]
+    ).unwrap();
+
+    let categories="external_id,name,code,depreciation_method,useful_life_months,active\nassetcat-electronics,Electronics,ELEC,STRAIGHT_LINE,60,true\n";
+    let batch=import_stage(&mut db,&s.token,"asset_categories","asset_categories.csv",categories).unwrap();
+    let plan=import_plan(&mut db,&s.token,batch["id"].as_str().unwrap()).unwrap();assert_eq!(plan["status"],"READY");
+    assert_eq!(plan["steps"][0]["operation"],"assetCategory.save");let plan_id=plan["id"].as_str().unwrap().to_string();import_apply(&mut db,&s.token,&plan_id).unwrap();
+
+    let assets="external_id,asset_tag,name,category_external_id,serial_number,location_external_id,acquisition_date,acquisition_cost,status,notes\nasset-tv-001,TV-001,Guest Room Smart TV,assetcat-electronics,SN-001,stock-main,2026-01-15,45000.00,IN_SERVICE,Imported asset\n";
+    let batch=import_stage(&mut db,&s.token,"assets","assets.csv",assets).unwrap();
+    let plan=import_plan(&mut db,&s.token,batch["id"].as_str().unwrap()).unwrap();assert_eq!(plan["status"],"READY");
+    assert_eq!(plan["steps"][0]["operation"],"asset.save");let plan_id=plan["id"].as_str().unwrap().to_string();import_apply(&mut db,&s.token,&plan_id).unwrap();
+    let asset=list(&db,"assets").unwrap().into_iter().find(|r|r["data"]["tag"]=="TV-001").unwrap()["data"].clone();
+    assert_eq!(asset["locationId"],"main");assert_eq!(asset["purchaseCostMinor"],4_500_000);assert_eq!(asset["status"],"ACTIVE");
 }
 
 #[test]
@@ -873,6 +1009,10 @@ fn trading_is_blocked_until_native_go_live() {
     assert_eq!(installation_stage(&db).unwrap(), "SETUP_REQUIRED");
     assert!(execute(&mut db, &session.token, cmd("till.open", json!({"floatAmount":0}))).is_err());
     assert!(execute(&mut db, &session.token, cmd("order.create", json!({"outletId":"missing","name":"Nope"}))).is_err());
+    for operation in ["folio.open","folio.deposit","folio.pay","stay.extend","stay.checkOut","pos.roomCharge"] {
+        let blocked=execute(&mut db,&session.token,cmd(operation,json!({"id":"missing","orderId":"missing"}))).unwrap_err();
+        assert!(blocked.contains("Complete business setup"),"{operation}: {blocked}");
+    }
 }
 
 #[test]

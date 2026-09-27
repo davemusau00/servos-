@@ -53,6 +53,11 @@ Expansion migrations 003-007 retain the private `(collection,id)` record key and
 - `ratePlans`: room type, NIGHTLY or DAY_USE mode, day-use duration, integer KES minor-unit price and tax basis points. Reservation records snapshot the rate; later rate changes do not rewrite quotes.
 - `roomReservations`: guest/customer, capacity, UTC start/end, turnaround-inclusive blockedUntil, mode/rate snapshot, units, quote and lifecycle. Nairobi calendar-date differences determine nightly units. Fixed-duration day use must exactly match its selected rate. Bookings and room blocks share availability checks across registered devices.
 - `roomBlocks`: room/time interval, reason, optional shared maintenance order and explicit inspected release. Completing maintenance does not silently release a room.
+- `assetCategories`: category code/name plus depreciation method and useful life metadata.
+- `assets`: permanent unique asset tag, category, physical room/stock location, acquisition metadata, condition, custodian and terminal lifecycle state. Location/custody/lifecycle changes use dedicated commands.
+- `assetEvents`: immutable before/after evidence for every native asset operation.
+- `maintenanceOrders`: asset/room work order with priority and REPORTED / ASSIGNED / IN_PROGRESS / COMPLETED / CANCELLED lifecycle. Completion can consume stock parts and create supplier payables atomically.
+- `maintenanceEvents`: immutable work-order transition evidence.
 
 Cloud `journalEntries`, `folioEntries`, `assetEvents`, `stayEvents`, `stayExtensions`, `stockMovements`, `receiptDocuments` and `payments` cannot be updated or deleted. The change feed filters collections by explicit permission while retaining empty sequence slots for safe cursor advancement. Unknown collections default to deny for non-admin members. Permission changes and local cache eviction still require adapter integration.
 

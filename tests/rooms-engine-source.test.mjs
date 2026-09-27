@@ -11,9 +11,10 @@ test('native rooms engine owns room masters and reservation overlap rules',()=>{
   assert.match(store,/rateSnapshot/);
   assert.match(store,/Stay lifecycle gate|PROTOCOL_UNSUPPORTED/);
 });
-test('rooms route is permission gated and hotel services remain deferred',()=>{
+test('rooms route is permission gated and hotel services are owned by Patch 07 folios',()=>{
   const shell=readFileSync('src/native/NativeBarShell.tsx','utf8');
   const store=readFileSync('src-tauri/src/store.rs','utf8');
   assert.match(shell,/permission:'rooms\.view'/);
-  assert.match(store,/Hotel services remain staged until Patch 07 Folios/);
+  assert.match(store,/hotelService\.save/);
+  assert.match(store,/SERVOS_PATCH_07_FOLIOS/);
 });

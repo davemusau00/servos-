@@ -22,6 +22,7 @@ export type Permission =
   | 'floorplan.view' | 'floorplan.manage'
   | 'rooms.view' | 'rooms.manage' | 'rooms.operate' | 'rooms.guests.view'
   | 'folio.view' | 'folio.manage' | 'folio.reverse' | 'folio.room_charge'
+  | 'assets.view' | 'assets.manage' | 'assets.operate' | 'maintenance.view' | 'maintenance.manage'
   | 'kds.view' | 'kds.update'
   | 'accounting.view' | 'reports.view' | 'audit.view'
   | 'backup.create' | 'backup.restore' | 'sync.manual' | 'system.configure' | 'help.view'

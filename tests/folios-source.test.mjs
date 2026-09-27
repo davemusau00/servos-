@@ -33,3 +33,12 @@ test('financial history receives SQLite immutability protection',()=>{
   assert.match(migration,/journalEntries/);
   assert.match(migration,/payments/);
 });
+test('Patch 07 money operations remain behind native Go Live',()=>{
+  const store=readFileSync('src-tauri/src/store.rs','utf8');
+  const start=store.indexOf('fn live_required');
+  const end=store.indexOf('fn verify_staff_pin',start);
+  const gate=store.slice(start,end);
+  for(const operation of ['stay.extend','stay.checkOut','folio.open','folio.postAccommodation','folio.postService','folio.deposit','folio.pay','folio.applyDeposit','folio.refundDeposit','folio.reverse','pos.roomCharge']){
+    assert.ok(gate.includes(`"${operation}"`),operation);
+  }
+});

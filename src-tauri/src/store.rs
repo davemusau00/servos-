@@ -89,7 +89,7 @@ pub fn open(path: &std::path::Path) -> Result<Connection> {
     let version: i64 = db
         .query_row("PRAGMA user_version", [], |r| r.get(0))
         .map_err(error)?;
-    if version > 6 {
+    if version > 7 {
         return Err("Database requires a newer ServOS version".into());
     }
     if version < 1 {
@@ -110,6 +110,9 @@ pub fn open(path: &std::path::Path) -> Result<Connection> {
     }
     if version < 6 {
         db.execute_batch(include_str!("../migrations/006_folios.sql")).map_err(error)?;
+    }
+    if version < 7 {
+        db.execute_batch(include_str!("../migrations/007_assets_maintenance.sql")).map_err(error)?;
     }
     Ok(db)
 }
@@ -140,7 +143,7 @@ pub const ALL_PERMISSIONS: &[&str] = &[
     "catalog.view","catalog.manage","pricing.manage",
     "inventory.view","inventory.receive","inventory.transfer","inventory.waste","inventory.count","inventory.adjust",
     "procurement.view","procurement.manage","procurement.receive","procurement.over_receive","procurement.pay",
-    "floorplan.view","floorplan.manage","rooms.view","rooms.manage","rooms.operate","rooms.guests.view","folio.view","folio.manage","folio.reverse","folio.room_charge","kds.view","kds.update",
+    "floorplan.view","floorplan.manage","rooms.view","rooms.manage","rooms.operate","rooms.guests.view","folio.view","folio.manage","folio.reverse","folio.room_charge","assets.view","assets.manage","assets.operate","maintenance.view","maintenance.manage","kds.view","kds.update",
     "accounting.view","reports.view","audit.view","data.import.view","data.import.stage","data.import.execute","backup.create","backup.restore","sync.manual","system.configure","help.view"
 ];
 
@@ -170,8 +173,7 @@ fn live_required(tx: &Transaction, operation: &str) -> Result<()> {
         "till.open","till.cashMovement","till.close","order.create","order.addItem","order.updateItem",
         "order.removeItem","order.fire","order.kds","order.repeatRound","order.transfer","order.merge","order.void","order.discount",
         "order.compItem","payment.record","payment.split","payment.refund","payment.reverse","mpesa.reconcile","mpesa.discrepancy","mpesa.discrepancy.resolve",
-        "inventory.receive","inventory.adjust","inventory.waste","inventory.transfer","purchaseOrder.create","purchaseOrder.receive","supplierPayable.matchInvoice","supplierPayable.pay","table.ready","closeDay.generate","roomReservation.create","roomReservation.update","roomReservation.cancel","roomReservation.noShow","stay.checkIn","stay.move"
-    ];
+        "inventory.receive","inventory.adjust","inventory.waste","inventory.transfer","purchaseOrder.create","purchaseOrder.receive","supplierPayable.matchInvoice","supplierPayable.pay","table.ready","closeDay.generate","roomReservation.create","roomReservation.update","roomReservation.cancel","roomReservation.noShow","stay.checkIn","stay.move","stay.extend","stay.checkOut","folio.open","folio.postAccommodation","folio.postService","folio.deposit","folio.pay","folio.applyDeposit","folio.refundDeposit","folio.reverse","pos.roomCharge","asset.assign","asset.return","asset.transfer","asset.inspect","asset.lose","asset.retire","asset.dispose","maintenance.report","maintenance.assign","maintenance.start","maintenance.complete","maintenance.cancel"];
     if TRADING.contains(&operation) && installation_stage(tx)? != "LIVE" {
         return Err("Complete business setup and approve Go Live before trading".into());
     }
@@ -897,6 +899,315 @@ fn hotel_receipt_capture(tx:&Transaction,user:&Session,folio_id:&str,command_id:
     put(tx,"receiptDocuments",&receipt_id,doc,changes)?;
     Ok(receipt_id)
 }
+// SERVOS_PATCH_08_ASSETS_MAINTENANCE
+fn asset_date(value:&Value,key:&str)->Result<Option<String>>{
+    let Some(raw)=value.get(key).and_then(Value::as_str).map(str::trim).filter(|v|!v.is_empty()) else {return Ok(None);};
+    chrono::NaiveDate::parse_from_str(raw,"%Y-%m-%d").map_err(|_|format!("VALIDATION_FAILED: {key} must use YYYY-MM-DD"))?;
+    Ok(Some(raw.to_string()))
+}
+fn asset_open_maintenance(tx:&Transaction,asset_id:Option<&str>,room_id:Option<&str>)->Result<bool>{
+    Ok(list(tx,"maintenanceOrders")?.iter().any(|record|{
+        let data=&record["data"];
+        !["COMPLETED","CANCELLED"].contains(&data["status"].as_str().unwrap_or(""))
+            && asset_id.is_some_and(|id|data["assetId"].as_str()==Some(id))
+                || (!["COMPLETED","CANCELLED"].contains(&data["status"].as_str().unwrap_or(""))
+                    && room_id.is_some_and(|id|data["roomId"].as_str()==Some(id)))
+    }))
+}
+fn asset_unique_text_all(tx:&Transaction,collection:&str,field:&str,id_key:&str,value:&str)->Result<()>{
+    let normalized=value.trim().to_ascii_lowercase();
+    let mut stmt=tx.prepare("SELECT id,data FROM records WHERE collection=? ORDER BY rowid").map_err(error)?;
+    let rows=stmt.query_map([collection],|r|Ok((r.get::<_,String>(0)?,r.get::<_,String>(1)?))).map_err(error)?;
+    for row in rows{
+        let (id,data)=row.map_err(error)?;if id==id_key{continue;}
+        let parsed:Value=serde_json::from_str(&data).map_err(error)?;
+        if parsed[field].as_str().is_some_and(|v|v.trim().eq_ignore_ascii_case(&normalized)){return Err(format!("DUPLICATE_REFERENCE: {field} remains unique across history"));}
+    }
+    Ok(())
+}
+fn asset_event(tx:&Transaction,user:&Session,cmd:&BusinessCommand,asset_id:&str,operation:&str,reason:Option<&str>,before:Option<Value>,after:Option<Value>,changes:&mut Vec<Value>)->Result<()>{
+    let event_id=format!("asset-{}",cmd.id);
+    if room_any(tx,"assetEvents",&event_id)?.is_some(){return Err("DUPLICATE_REFERENCE: asset event".into());}
+    put(tx,"assetEvents",&event_id,json!({
+        "id":event_id,"assetId":asset_id,"operation":operation,"reason":reason,
+        "before":before,"after":after,"actorId":user.staff_id,"actorName":user.name,
+        "occurredAt":now(),"sourceCommandId":cmd.id
+    }),changes)
+}
+fn maintenance_event(tx:&Transaction,user:&Session,cmd:&BusinessCommand,work_id:&str,operation:&str,before:Option<Value>,after:Value,changes:&mut Vec<Value>)->Result<()>{
+    let event_id=format!("maintenance-{}",cmd.id);
+    put(tx,"maintenanceEvents",&event_id,json!({
+        "id":event_id,"maintenanceOrderId":work_id,"operation":operation,
+        "before":before,"after":after,"actorId":user.staff_id,"actorName":user.name,
+        "occurredAt":now(),"sourceCommandId":cmd.id
+    }),changes)
+}
+fn asset_journal(tx:&Transaction,source_type:&str,source_id:&str,memo:&str,debit_account:(&str,&str,&str),credit_account:(&str,&str,&str),amount_minor:i64,changes:&mut Vec<Value>)->Result<()>{
+    if amount_minor<=0{return Ok(());}
+    let journal_id=id();let stamp=now();let amount=amount_minor as f64/100.0;
+    put(tx,"journalEntries",&journal_id,json!({
+        "id":journal_id,"entryNumber":format!("JE-{}",&journal_id[..8].to_ascii_uppercase()),
+        "propertyId":"property","occurredAt":stamp,"postedAt":stamp,"sourceType":source_type,"sourceId":source_id,"memo":memo,
+        "lines":[
+            {"id":id(),"accountId":debit_account.0,"accountCode":debit_account.1,"accountName":debit_account.2,"debit":amount,"credit":0,"debitMinor":amount_minor,"creditMinor":0},
+            {"id":id(),"accountId":credit_account.0,"accountCode":credit_account.1,"accountName":credit_account.2,"debit":0,"credit":amount,"debitMinor":0,"creditMinor":amount_minor}
+        ],"totalDebit":amount,"totalCredit":amount,"balanced":true
+    }),changes)
+}
+fn maintenance_issue_parts(tx:&Transaction,user:&Session,work_id:&str,parts:&[Value],changes:&mut Vec<Value>)->Result<i64>{
+    if parts.len()>100{return Err("VALIDATION_FAILED: parts list".into());}
+    let mut seen=Vec::<String>::new();let mut total_minor=0i64;
+    for part in parts{
+        let stock_id=text(part,"stockItemId")?.to_string();let location=text(part,"locationId")?.to_string();
+        if seen.iter().any(|v|v==&stock_id){return Err("VALIDATION_FAILED: combine duplicate stock items".into());}
+        seen.push(stock_id.clone());
+        let qty=quantity(part,"quantity")?;if qty<=0.0{return Err("VALIDATION_FAILED: part quantity".into());}
+        let (version,stock)=get(tx,"stockItems",&stock_id)?;
+        if part["stockItemVersion"].as_i64()!=Some(version){return Err("CONFLICT: maintenance part stock changed; reload".into());}
+        get(tx,"stockLocations",&location)?;
+        let on_hand=stock["currentStock"][&location].as_f64().unwrap_or(0.0);
+        if on_hand+0.000001<qty{return Err("ALLOCATION_EXHAUSTED: maintenance part stock".into());}
+        let unit_cost=stock["averageUnitCost"].as_f64().unwrap_or(0.0);
+        if !unit_cost.is_finite()||unit_cost<0.0{return Err("VALIDATION_FAILED: maintenance part cost".into());}
+        let value_minor=(qty*unit_cost*100.0).round() as i64;
+        total_minor=total_minor.checked_add(value_minor).ok_or("VALIDATION_FAILED: maintenance parts total")?;
+        stock_delta_with_cost(tx,user,&stock_id,&location,-qty,"MAINTENANCE",work_id,"Maintenance part issue",Some(unit_cost),changes)?;
+    }
+    Ok(total_minor)
+}
+fn asset_execute(tx:&Transaction,user:&Session,cmd:&BusinessCommand,changes:&mut Vec<Value>)->Result<bool>{
+    let op=cmd.operation.as_str();let p=&cmd.payload;
+    if !(op.starts_with("asset.")||op.starts_with("assetCategory.")||op.starts_with("maintenance.")){return Ok(false);}
+
+    if op.starts_with("assetCategory."){
+        if !permissions(&user.role).contains(&"assets.manage"){return Err("Permission required: assets.manage".into());}
+        let key=text(p,"id")?.to_string();let current=room_any(tx,"assetCategories",&key)?;
+        match op{
+            "assetCategory.save"=>{
+                room_expect_version(current.as_ref(),cmd.target_version)?;
+                if current.as_ref().is_some_and(|(_,_,archived)|*archived){return Err("VALIDATION_FAILED: reactivate archived asset category first".into());}
+                let data=p["data"].as_object().ok_or("Asset category data is required")?;
+                let name=data.get("name").and_then(Value::as_str).map(str::trim).filter(|v|!v.is_empty()).ok_or("Asset category name is required")?;
+                let code=data.get("code").and_then(Value::as_str).map(str::trim).filter(|v|!v.is_empty()).ok_or("Asset category code is required")?.to_ascii_uppercase();
+                asset_unique_text_all(tx,"assetCategories","code",&key,&code)?;
+                let method=data.get("depreciationMethod").and_then(Value::as_str).unwrap_or("STRAIGHT_LINE");
+                if !["STRAIGHT_LINE","NONE"].contains(&method){return Err("VALIDATION_FAILED: depreciation method".into());}
+                let life=data.get("usefulLifeMonths").and_then(Value::as_i64).unwrap_or(0);
+                if !(0..=1200).contains(&life)||method=="STRAIGHT_LINE"&&life==0{return Err("VALIDATION_FAILED: useful life months".into());}
+                put(tx,"assetCategories",&key,json!({"id":key,"name":name,"code":code,"depreciationMethod":method,"usefulLifeMonths":life,"active":true,"updatedAt":now()}),changes)?;
+            }
+            "assetCategory.archive"=>{
+                let (version,_,archived)=current.ok_or("Asset category not found")?;
+                if archived{return Err("Asset category already archived".into());}
+                if cmd.target_version!=Some(version){return Err("CONFLICT: Asset category changed".into());}
+                if list(tx,"assets")?.iter().any(|a|a["data"]["assetCategoryId"].as_str()==Some(key.as_str())&&a["data"]["status"].as_str().is_some_and(|s|!["RETIRED","DISPOSED"].contains(&s))){
+                    return Err("INVALID_STATE: active assets still use this category".into());
+                }
+                room_put_archived(tx,"assetCategories",&key,true,changes)?;
+            }
+            "assetCategory.reactivate"=>{
+                let (version,data,archived)=current.ok_or("Asset category not found")?;
+                if !archived{return Err("Asset category already active".into());}
+                if cmd.target_version!=Some(version){return Err("CONFLICT: Asset category changed".into());}
+                asset_unique_text_all(tx,"assetCategories","code",&key,text(&data,"code")?)?;
+                room_put_archived(tx,"assetCategories",&key,false,changes)?;
+            }
+            _=>return Err("PROTOCOL_UNSUPPORTED: asset category operation".into())
+        }
+        return Ok(true);
+    }
+
+    if op.starts_with("asset."){
+        let permission=if ["asset.save","asset.archive","asset.reactivate"].contains(&op){"assets.manage"}else{"assets.operate"};
+        if !permissions(&user.role).contains(&permission){return Err(format!("Permission required: {permission}"));}
+        let key=text(p,"id")?.to_string();let current=room_any(tx,"assets",&key)?;
+        let before=current.as_ref().map(|(_,data,_)|data.clone());
+        match op{
+            "asset.save"=>{
+                room_expect_version(current.as_ref(),cmd.target_version)?;
+                if current.as_ref().is_some_and(|(_,_,archived)|*archived){return Err("VALIDATION_FAILED: reactivate archived asset first".into());}
+                if current.as_ref().is_some_and(|(_,data,_)|["LOST","RETIRED","DISPOSED"].contains(&data["status"].as_str().unwrap_or(""))){return Err("INVALID_STATE: terminal asset cannot be edited".into());}
+                let data=p["data"].as_object().ok_or("Asset details are required")?;
+                let name=data.get("name").and_then(Value::as_str).map(str::trim).filter(|v|!v.is_empty()).ok_or("Asset name is required")?;
+                let tag=data.get("tag").and_then(Value::as_str).map(str::trim).filter(|v|!v.is_empty()).ok_or("Asset tag is required")?.to_ascii_uppercase();
+                if tag.len()>128{return Err("VALIDATION_FAILED: asset tag length".into());}
+                asset_unique_text_all(tx,"assets","tag",&key,&tag)?;
+                let category_id=data.get("assetCategoryId").and_then(Value::as_str).map(str::trim).filter(|v|!v.is_empty()).ok_or("Asset category is required")?;
+                get(tx,"assetCategories",category_id)?;
+                let room_id=data.get("roomId").and_then(Value::as_str).map(str::trim).filter(|v|!v.is_empty()).map(str::to_string);
+                let location_id=data.get("locationId").and_then(Value::as_str).map(str::trim).filter(|v|!v.is_empty()).map(str::to_string);
+                if room_id.is_none()&&location_id.is_none(){return Err("VALIDATION_FAILED: room or stock location required".into());}
+                if let Some(id)=room_id.as_deref(){get(tx,"rooms",id)?;}
+                if let Some(id)=location_id.as_deref(){get(tx,"stockLocations",id)?;}
+                let supplier_id=data.get("supplierId").and_then(Value::as_str).map(str::trim).filter(|v|!v.is_empty()).map(str::to_string);
+                if let Some(id)=supplier_id.as_deref(){get(tx,"suppliers",id)?;}
+                let cost=data.get("purchaseCostMinor").and_then(Value::as_i64).unwrap_or(0);
+                if cost<0||cost>9_000_000_000_000_000{return Err("VALIDATION_FAILED: acquisition cost".into());}
+                let acquired=asset_date(&Value::Object(data.clone()),"acquiredAt")?;
+                let warranty=asset_date(&Value::Object(data.clone()),"warrantyUntil")?;
+                if let Some((_,prior,_))=current.as_ref(){
+                    if prior["roomId"].as_str()!=room_id.as_deref()||prior["locationId"].as_str()!=location_id.as_deref(){return Err("INVALID_STATE: use asset.transfer to change location".into());}
+                    if prior.get("acquisitionSourceId").and_then(Value::as_str).is_some_and(|v|!v.is_empty())
+                        && (prior["purchaseCostMinor"].as_i64()!=Some(cost)||prior["supplierId"].as_str()!=supplier_id.as_deref()){
+                        return Err("INVALID_STATE: correct acquisition through procurement".into());
+                    }
+                }
+                let created_at=current.as_ref().and_then(|(_,v,_)|v["createdAt"].as_str()).unwrap_or("").to_string();
+                let mut next=json!({
+                    "id":key,"name":name,"tag":tag,"assetCategoryId":category_id,
+                    "serialNumber":data.get("serialNumber").cloned().unwrap_or(Value::Null),
+                    "roomId":room_id,"locationId":location_id,"supplierId":supplier_id,
+                    "acquiredAt":acquired,"purchaseCostMinor":cost,"warrantyUntil":warranty,
+                    "notes":data.get("notes").cloned().unwrap_or(json!("")),
+                    "status":current.as_ref().and_then(|(_,v,_)|v["status"].as_str()).unwrap_or("ACTIVE"),
+                    "condition":current.as_ref().and_then(|(_,v,_)|v["condition"].as_str()).unwrap_or("GOOD"),
+                    "custodianId":current.as_ref().map(|(_,v,_)|v["custodianId"].clone()).unwrap_or(Value::Null),
+                    "createdAt":if created_at.is_empty(){now()}else{created_at},"updatedAt":now()
+                });
+                if let Some((_,prior,_))=current.as_ref(){
+                    for field in ["acquisitionSourceId","acquisitionLineId","lastInspectedAt","nextInspectionAt"]{
+                        if prior.get(field).is_some(){next[field]=prior[field].clone();}
+                    }
+                }
+                put(tx,"assets",&key,next.clone(),changes)?;
+                asset_event(tx,user,cmd,&key,op,None,before,Some(next),changes)?;
+            }
+            "asset.archive"|"asset.reactivate"=>{
+                let (version,data,archived)=current.ok_or("Asset not found")?;
+                if cmd.target_version!=Some(version){return Err("CONFLICT: Asset changed".into());}
+                if op=="asset.archive"{
+                    if archived{return Err("Asset already archived".into());}
+                    if !["RETIRED","DISPOSED"].contains(&data["status"].as_str().unwrap_or("")){return Err("INVALID_STATE: retire/dispose asset before archive".into());}
+                    if asset_open_maintenance(tx,Some(&key),None)?{return Err("INVALID_STATE: resolve maintenance before archive".into());}
+                    room_put_archived(tx,"assets",&key,true,changes)?;
+                }else{
+                    if !archived{return Err("Asset already active".into());}
+                    asset_unique_text_all(tx,"assets","tag",&key,text(&data,"tag")?)?;
+                    room_put_archived(tx,"assets",&key,false,changes)?;
+                }
+                asset_event(tx,user,cmd,&key,op,p.get("reason").and_then(Value::as_str),Some(data.clone()),Some(data),changes)?;
+            }
+            "asset.assign"|"asset.return"|"asset.transfer"|"asset.inspect"|"asset.lose"|"asset.retire"|"asset.dispose"=>{
+                let (version,mut data,archived)=current.ok_or("Asset not found")?;
+                if archived{return Err("INVALID_STATE: asset is archived".into());}
+                if cmd.target_version!=Some(version){return Err("CONFLICT: Asset changed; reload".into());}
+                let reason=text(p,"reason")?.trim();if reason.len()>1000{return Err("VALIDATION_FAILED: asset reason length".into());}
+                if data["status"]=="DISPOSED"{return Err("INVALID_STATE: disposed asset is final".into());}
+                if ["asset.assign","asset.return","asset.transfer","asset.inspect","asset.lose"].contains(&op)&&data["status"]!="ACTIVE"{return Err("INVALID_STATE: asset is not active".into());}
+                if op=="asset.assign"{
+                    let custodian=text(p,"custodianId")?;let (_,employee)=get(tx,"employees",custodian)?;
+                    if employee["status"].as_str()!=Some("ACTIVE"){return Err("INVALID_STATE: custodian is not active".into());}
+                    if data.get("custodianId").and_then(Value::as_str).is_some_and(|v|!v.is_empty()){return Err("INVALID_STATE: return current assignment first".into());}
+                    data["custodianId"]=json!(custodian);
+                }else if op=="asset.return"{
+                    if data.get("custodianId").and_then(Value::as_str).is_none_or(|v|v.is_empty()){return Err("INVALID_STATE: no custodian to return from".into());}
+                    data["custodianId"]=Value::Null;
+                }else if op=="asset.transfer"{
+                    let room_id=p.get("roomId").and_then(Value::as_str).map(str::trim).filter(|v|!v.is_empty()).map(str::to_string);
+                    let location_id=p.get("locationId").and_then(Value::as_str).map(str::trim).filter(|v|!v.is_empty()).map(str::to_string);
+                    if room_id.is_none()&&location_id.is_none(){return Err("VALIDATION_FAILED: transfer destination".into());}
+                    if let Some(id)=room_id.as_deref(){get(tx,"rooms",id)?;}
+                    if let Some(id)=location_id.as_deref(){get(tx,"stockLocations",id)?;}
+                    if data["roomId"].as_str()==room_id.as_deref()&&data["locationId"].as_str()==location_id.as_deref(){return Err("VALIDATION_FAILED: asset is already at destination".into());}
+                    data["roomId"]=json!(room_id);data["locationId"]=json!(location_id);
+                }else if op=="asset.inspect"{
+                    let condition=text(p,"condition")?.to_ascii_uppercase();
+                    if !["GOOD","FAIR","POOR","BROKEN"].contains(&condition.as_str()){return Err("VALIDATION_FAILED: asset condition".into());}
+                    let next=asset_date(p,"nextInspectionAt")?;
+                    data["condition"]=json!(condition);data["lastInspectedAt"]=json!(now());data["nextInspectionAt"]=json!(next);
+                }else{
+                    if asset_open_maintenance(tx,Some(&key),None)?{return Err("INVALID_STATE: resolve maintenance first".into());}
+                    if op!="asset.lose"&&data.get("custodianId").and_then(Value::as_str).is_some_and(|v|!v.is_empty()){return Err("INVALID_STATE: return assigned asset before retirement/disposal".into());}
+                    data["status"]=json!(if op=="asset.lose"{"LOST"}else if op=="asset.retire"{"RETIRED"}else{"DISPOSED"});
+                    data["custodianId"]=Value::Null;
+                }
+                data["updatedAt"]=json!(now());
+                put(tx,"assets",&key,data.clone(),changes)?;
+                asset_event(tx,user,cmd,&key,op,Some(reason),before,Some(data),changes)?;
+            }
+            _=>return Err("PROTOCOL_UNSUPPORTED: asset operation".into())
+        }
+        return Ok(true);
+    }
+
+    let permission=if op=="maintenance.report"{"maintenance.manage"}else{"maintenance.manage"};
+    if !permissions(&user.role).contains(&permission){return Err(format!("Permission required: {permission}"));}
+    let key=text(p,"id")?.to_string();let current=room_any(tx,"maintenanceOrders",&key)?;
+    match op{
+        "maintenance.report"=>{
+            if current.is_some(){return Err("DUPLICATE_REFERENCE: maintenance order".into());}
+            if cmd.target_version.is_some(){return Err("CONFLICT: new maintenance order must not have a target version".into());}
+            let asset_id=p.get("assetId").and_then(Value::as_str).map(str::trim).filter(|v|!v.is_empty()).map(str::to_string);
+            let room_id=p.get("roomId").and_then(Value::as_str).map(str::trim).filter(|v|!v.is_empty()).map(str::to_string);
+            if asset_id.is_none()&&room_id.is_none(){return Err("VALIDATION_FAILED: asset or room required".into());}
+            if let Some(id)=asset_id.as_deref(){
+                let (_,asset)=get(tx,"assets",id)?;if asset["status"]!="ACTIVE"{return Err("INVALID_STATE: inactive asset".into());}
+                if let Some(room)=room_id.as_deref(){if asset["roomId"].as_str()!=Some(room){return Err("VALIDATION_FAILED: asset/room mismatch".into());}}
+            }
+            if let Some(id)=room_id.as_deref(){get(tx,"rooms",id)?;}
+            let priority=text(p,"priority")?.to_ascii_uppercase();if !["LOW","MEDIUM","HIGH","CRITICAL"].contains(&priority.as_str()){return Err("VALIDATION_FAILED: priority".into());}
+            let description=text(p,"description")?.trim();if description.len()>4000{return Err("VALIDATION_FAILED: maintenance description length".into());}
+            let data=json!({"id":key,"assetId":asset_id,"roomId":room_id,"description":description,"priority":priority,"status":"REPORTED","reportedAt":now(),"reportedBy":user.staff_id,"reportedByName":user.name});
+            put(tx,"maintenanceOrders",&key,data.clone(),changes)?;
+            maintenance_event(tx,user,cmd,&key,op,None,data,changes)?;
+        }
+        "maintenance.assign"|"maintenance.start"|"maintenance.cancel"|"maintenance.complete"=>{
+            let (version,mut work,archived)=current.ok_or("Maintenance order not found")?;
+            if archived{return Err("INVALID_STATE: maintenance order archived".into());}
+            if cmd.target_version!=Some(version){return Err("CONFLICT: Maintenance order changed; reload".into());}
+            let before=work.clone();let status=work["status"].as_str().unwrap_or("");
+            if ["COMPLETED","CANCELLED"].contains(&status){return Err("INVALID_STATE: maintenance is closed".into());}
+            if op=="maintenance.assign"{
+                if !["REPORTED","ASSIGNED"].contains(&status){return Err("INVALID_STATE: maintenance assignment".into());}
+                let assignee=text(p,"assigneeId")?;let (_,employee)=get(tx,"employees",assignee)?;
+                if employee["status"].as_str()!=Some("ACTIVE"){return Err("INVALID_STATE: assignee is not active".into());}
+                work["status"]=json!("ASSIGNED");work["assigneeId"]=json!(assignee);work["assignedAt"]=json!(now());work["assignedBy"]=json!(user.staff_id);
+            }else if op=="maintenance.start"{
+                if status!="ASSIGNED"{return Err("INVALID_STATE: assign maintenance first".into());}
+                work["status"]=json!("IN_PROGRESS");work["startedAt"]=json!(now());work["startedBy"]=json!(user.staff_id);
+            }else if op=="maintenance.cancel"{
+                let reason=text(p,"reason")?.trim();if reason.len()>2000{return Err("VALIDATION_FAILED: cancellation reason length".into());}
+                work["status"]=json!("CANCELLED");work["reason"]=json!(reason);work["closedAt"]=json!(now());work["closedBy"]=json!(user.staff_id);
+            }else{
+                if status!="IN_PROGRESS"{return Err("INVALID_STATE: start maintenance first".into());}
+                let resolution=text(p,"resolution")?.trim();if resolution.len()>4000{return Err("VALIDATION_FAILED: maintenance resolution length".into());}
+                let parts=p["parts"].as_array().ok_or("VALIDATION_FAILED: parts list")?;
+                let parts_cost=maintenance_issue_parts(tx,user,&key,parts,changes)?;
+                if parts_cost>0{
+                    asset_journal(tx,"MAINTENANCE_PARTS",&key,"Parts used for maintenance",("MAINTENANCE_EXPENSE","6100","Maintenance expense"),("INVENTORY","1400","Inventory"),parts_cost,changes)?;
+                }
+                let service_cost=p.get("serviceCostMinor").and_then(Value::as_i64).unwrap_or(0);
+                if service_cost<0||service_cost>9_000_000_000_000_000{return Err("VALIDATION_FAILED: maintenance service cost".into());}
+                let mut payable_id:Option<String>=None;
+                if service_cost>0{
+                    let supplier_id=text(p,"supplierId")?.to_string();let (_,supplier)=get(tx,"suppliers",&supplier_id)?;
+                    let invoice=text(p,"invoiceReference")?.trim().to_string();if invoice.len()>100{return Err("VALIDATION_FAILED: supplier invoice reference length".into());}
+                    if list(tx,"supplierPayables")?.iter().any(|r|r["data"]["supplierId"].as_str()==Some(supplier_id.as_str())&&r["data"]["supplierInvoiceNumber"].as_str().is_some_and(|v|v.trim().eq_ignore_ascii_case(&invoice))){
+                        return Err("DUPLICATE_REFERENCE: supplier invoice".into());
+                    }
+                    let pid=format!("maintenance-{}",cmd.id);
+                    put(tx,"supplierPayables",&pid,json!({
+                        "id":pid,"payableNumber":format!("AP-{}",&pid[..8].to_ascii_uppercase()),"supplierId":supplier_id,
+                        "supplierName":supplier["name"],"supplierInvoiceNumber":invoice,"sourceType":"MAINTENANCE","sourceId":key,
+                        "amount":service_cost as f64/100.0,"paidAmount":0,"amountDue":service_cost as f64/100.0,
+                        "status":"MATCHED_UNPAID","basis":"External maintenance service confirmed at work completion","createdAt":now()
+                    }),changes)?;
+                    asset_journal(tx,"MAINTENANCE_SERVICE",&key,"External maintenance service",("MAINTENANCE_EXPENSE","6100","Maintenance expense"),("ACCOUNTS_PAYABLE","2000","Accounts payable"),service_cost,changes)?;
+                    payable_id=Some(pid);
+                }
+                work["status"]=json!("COMPLETED");work["resolution"]=json!(resolution);work["parts"]=json!(parts);
+                work["partsCostMinor"]=json!(parts_cost);work["serviceCostMinor"]=json!(service_cost);work["supplierPayableId"]=json!(payable_id);
+                work["completedAt"]=json!(now());work["completedBy"]=json!(user.staff_id);work["completedByName"]=json!(user.name);
+            }
+            work["updatedAt"]=json!(now());
+            put(tx,"maintenanceOrders",&key,work.clone(),changes)?;
+            maintenance_event(tx,user,cmd,&key,op,Some(before),work,changes)?;
+        }
+        _=>return Err("PROTOCOL_UNSUPPORTED: maintenance operation".into())
+    }
+    Ok(true)
+}
+
 fn folio_execute(tx:&Transaction,user:&Session,cmd:&BusinessCommand,changes:&mut Vec<Value>)->Result<bool>{
     let op=cmd.operation.as_str();
     if !(op.starts_with("folio.")||op.starts_with("hotelService.")||op=="pos.roomCharge"){return Ok(false);}
@@ -1505,19 +1816,29 @@ fn room_execute(tx:&Transaction,user:&Session,cmd:&BusinessCommand,changes:&mut 
             let room_id=text(p,"roomId")?;
             let start=room_parse_time(text(p,"startsAt")?)?;let end=room_parse_time(text(p,"endsAt")?)?;
             room_validate_interval(start,end)?;
-            if p.get("maintenanceOrderId").and_then(Value::as_str).is_some_and(|v|!v.trim().is_empty()){
-                return Err("Maintenance-linked room blocks are enabled with the Assets & Maintenance domain in Patch 08".into());
+            let maintenance_order_id=p.get("maintenanceOrderId").and_then(Value::as_str).map(str::trim).filter(|v|!v.is_empty()).map(str::to_string);
+            if let Some(order_id)=maintenance_order_id.as_deref(){
+                let (_,work)=get(tx,"maintenanceOrders",order_id)?;
+                if work["roomId"].as_str()!=Some(room_id)||["COMPLETED","CANCELLED"].contains(&work["status"].as_str().unwrap_or("")){
+                    return Err("VALIDATION_FAILED: maintenance room/status".into());
+                }
             }
             room_available(tx,room_id,start,end,None)?;
             put(tx,"roomBlocks",&key,json!({
                 "id":key,"roomId":room_id,"startsAt":start.to_rfc3339(),"endsAt":end.to_rfc3339(),
-                "reason":text(p,"reason")?,"status":"ACTIVE","createdAt":now(),"createdBy":user.staff_id
+                "reason":text(p,"reason")?,"maintenanceOrderId":maintenance_order_id,"status":"ACTIVE","createdAt":now(),"createdBy":user.staff_id
             }),changes)?;
         }
         "room.unblock"=>{
             let (version,mut data,archived)=current.ok_or("Room block not found")?;
             if archived||data["status"].as_str()!=Some("ACTIVE"){return Err("INVALID_STATE: room block already released".into());}
             if cmd.target_version!=Some(version){return Err("CONFLICT: Room block changed".into());}
+            if let Some(order_id)=data.get("maintenanceOrderId").and_then(Value::as_str).filter(|v|!v.trim().is_empty()){
+                let (_,work)=get(tx,"maintenanceOrders",order_id)?;
+                if !["COMPLETED","CANCELLED"].contains(&work["status"].as_str().unwrap_or("")){
+                    return Err("INVALID_STATE: resolve maintenance before inspection/release".into());
+                }
+            }
             data["status"]=json!("RELEASED");data["releasedAt"]=json!(now());data["inspection"]=json!(text(p,"inspection")?);data["releasedBy"]=json!(user.staff_id);
             put(tx,"roomBlocks",&key,data,changes)?;
         }
@@ -1561,6 +1882,11 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
     let mut changes = vec![];
     let p = &cmd.payload;
     live_required(&tx, &cmd.operation)?;
+    if asset_execute(&tx,user,&cmd,&mut changes)? {
+        let result=finish(&tx,&cmd,&user.staff_id,changes)?;
+        tx.commit().map_err(error)?;
+        return Ok(result);
+    }
     if folio_execute(&tx,user,&cmd,&mut changes)? {
         if cmd.operation=="pos.roomCharge" { receipts::capture(&tx,user,text(p,"orderId")?,&cmd.id,&mut changes)?; }
         let result=finish(&tx,&cmd,&user.staff_id,changes)?;
@@ -3721,8 +4047,96 @@ fn import_plan_row_record(
         return Ok(steps);
     }
     if ["asset_categories","assets"].contains(&template_key) {
-        one("BLOCKED",None,None,None,None,None,
-            "This staged dataset is reserved for Patch 08 Assets so custody, maintenance and lifecycle invariants exist before application.".into(),None,None);
+        if template_key=="asset_categories" {
+            if import_boolean(row,"active")==Some(false) {
+                one("BLOCKED",None,Some("assetCategories"),None,None,None,
+                    "Archived asset categories are not imported implicitly. Apply the active category, then archive it through the Assets domain if required.".into(),
+                    Some("asset_categories"),Some(&external_id));
+                return Ok(steps);
+            }
+            let code=import_string(row,"code").unwrap_or_default().to_ascii_uppercase();
+            let method=import_string(row,"depreciation_method").unwrap_or_else(||"STRAIGHT_LINE".into()).to_ascii_uppercase();
+            let life=import_number(row,"useful_life_months").unwrap_or(0.0).round() as i64;
+            if !["STRAIGHT_LINE","NONE"].contains(&method.as_str())||life<0||life>1200||method=="STRAIGHT_LINE"&&life==0 {
+                one("BLOCKED",None,Some("assetCategories"),None,None,None,
+                    "Asset category depreciation method/useful life is invalid.".into(),Some("asset_categories"),Some(&external_id));
+                return Ok(steps);
+            }
+            let desired=json!({"name":import_string(row,"name").unwrap_or_default(),"code":code,"depreciationMethod":method,"usefulLifeMonths":life});
+            let checks=vec![("code".into(),desired["code"].as_str().unwrap_or("").to_string())];
+            let (target_id,version,existing,match_error)=import_target(db,"asset_categories",&external_id,"assetCategories",&checks)?;
+            if let Some(reason)=match_error {
+                one("CONFLICT",None,Some("assetCategories"),if target_id.is_empty(){None}else{Some(&target_id)},version,None,reason,Some("asset_categories"),Some(&external_id));
+                return Ok(steps);
+            }
+            let same=existing.as_ref().is_some_and(|prior|import_patch_matches(prior,&desired));
+            let action=if same{"NO_CHANGE"}else if version.is_some(){"UPDATE"}else{"CREATE"};
+            one(action,Some("assetCategory.save"),Some("assetCategories"),Some(&target_id),version,Some(json!({"id":target_id,"data":desired})),
+                if same{"Current asset category already matches the staged fields".into()}else{"Apply through the native Assets domain".into()},
+                Some("asset_categories"),Some(&external_id));
+            return Ok(steps);
+        }
+
+        let status=import_string(row,"status").unwrap_or_else(||"IN_SERVICE".into()).to_ascii_uppercase();
+        if !["IN_SERVICE","ACTIVE"].contains(&status.as_str()) {
+            one("BLOCKED",None,Some("assets"),None,None,None,
+                "Asset imports create active assets only. Lost, retired or disposed lifecycle state must be recorded through explicit asset commands.".into(),
+                Some("assets"),Some(&external_id));
+            return Ok(steps);
+        }
+        let category_external=import_string(row,"category_external_id").unwrap_or_default();
+        let category_id=match import_mapping_lookup(db,"asset_categories",&category_external)?{
+            Some((_,id))=>id,
+            None=>{
+                one("CONFLICT",None,Some("assets"),None,None,None,format!("Asset category external ID {category_external} is not applied yet"),Some("assets"),Some(&external_id));
+                return Ok(steps);
+            }
+        };
+        let location_external=import_string(row,"location_external_id").unwrap_or_default();
+        let room_mapping=import_mapping_lookup(db,"rooms",&location_external)?;
+        let stock_mapping=import_mapping_lookup(db,"stock_locations",&location_external)?;
+        if room_mapping.is_some()&&stock_mapping.is_some(){
+            one("CONFLICT",None,Some("assets"),None,None,None,
+                format!("Location external ID {location_external} resolves to both a room and stock location; use unambiguous migration IDs"),
+                Some("assets"),Some(&external_id));
+            return Ok(steps);
+        }
+        let (room_id,location_id)=match (room_mapping,stock_mapping){
+            (Some((_,id)),None)=>(Some(id),None),
+            (None,Some((_,id)))=>(None,Some(id)),
+            _=>{
+                one("CONFLICT",None,Some("assets"),None,None,None,
+                    format!("Asset location external ID {location_external} is not applied as a room or stock location yet"),
+                    Some("assets"),Some(&external_id));
+                return Ok(steps);
+            }
+        };
+        let acquired=import_string(row,"acquisition_date");
+        if acquired.as_deref().is_some_and(|v|chrono::NaiveDate::parse_from_str(v,"%Y-%m-%d").is_err()){
+            one("BLOCKED",None,Some("assets"),None,None,None,"Asset acquisition date must use YYYY-MM-DD".into(),Some("assets"),Some(&external_id));
+            return Ok(steps);
+        }
+        let cost_minor=(import_number(row,"acquisition_cost").unwrap_or(0.0)*100.0).round() as i64;
+        let desired=json!({
+            "name":import_string(row,"name").unwrap_or_default(),
+            "tag":import_string(row,"asset_tag").unwrap_or_default().to_ascii_uppercase(),
+            "assetCategoryId":category_id,
+            "serialNumber":import_string(row,"serial_number"),
+            "roomId":room_id,"locationId":location_id,
+            "acquiredAt":acquired,"purchaseCostMinor":cost_minor,
+            "notes":import_string(row,"notes").unwrap_or_default()
+        });
+        let checks=vec![("tag".into(),desired["tag"].as_str().unwrap_or("").to_string())];
+        let (target_id,version,existing,match_error)=import_target(db,"assets",&external_id,"assets",&checks)?;
+        if let Some(reason)=match_error {
+            one("CONFLICT",None,Some("assets"),if target_id.is_empty(){None}else{Some(&target_id)},version,None,reason,Some("assets"),Some(&external_id));
+            return Ok(steps);
+        }
+        let same=existing.as_ref().is_some_and(|prior|import_patch_matches(prior,&desired));
+        let action=if same{"NO_CHANGE"}else if version.is_some(){"UPDATE"}else{"CREATE"};
+        one(action,Some("asset.save"),Some("assets"),Some(&target_id),version,Some(json!({"id":target_id,"data":desired})),
+            if same{"Current asset already matches the staged fields".into()}else{"Apply through the native Assets domain".into()},
+            Some("assets"),Some(&external_id));
         return Ok(steps);
     }
 

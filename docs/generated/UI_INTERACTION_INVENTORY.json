@@ -17932,11 +17932,11 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeImportCenterView.tsx:32:597",
+      "id": "src/native/NativeImportCenterView.tsx:32:601",
       "file": "src/native/NativeImportCenterView.tsx",
       "line": 32,
       "kind": "button",
-      "source": "<section className=\"mt-5\"><h2 className=\"mb-1 font-bold\">Template library</h2><p className=\"mb-3 text-xs text-slate-500\">Dependency order: business → stock locations → outlets → inventory stock masters → products. Room types, rooms, rate plans and hotel services now apply through native Rooms/Folios commands; Assets remain staged.</p>{IMPORT_TEMPLATE_GROUPS.map(g=><div className=\"mb-4\" key={g}><div className=\"mb-2 text-xs font-black uppercase tracking-wider text-slate-500\">{g}</div><div className=\"grid gap-2 sm:grid-cols-2 lg:grid-cols-3\">{IMPORT_TEMPLATES.filter(t=>t.group===g).map(t=><button key={t.key} onClick={()=>download(t.fileName,t.csv)} className=\"flex items-center justify-between rounded-xl border border-slate-800 bg-slate-900 p-3 text-left\"><span><b className=\"text-sm\">{t.label}</b><span className=\"mt-1 block font-mono text-[11px] text-slate-500\">{t.fileName}</span></span><FileSpreadsheet className=\"h-4 w-4 text-slate-500\"/></button>)}</div></div>)}</section>",
+      "source": "<section className=\"mt-5\"><h2 className=\"mb-1 font-bold\">Template library</h2><p className=\"mb-3 text-xs text-slate-500\">Dependency order: business → stock locations → outlets → inventory stock masters → products. Room types, rooms, rate plans, hotel services, asset categories and assets now apply through their native domain commands.</p>{IMPORT_TEMPLATE_GROUPS.map(g=><div className=\"mb-4\" key={g}><div className=\"mb-2 text-xs font-black uppercase tracking-wider text-slate-500\">{g}</div><div className=\"grid gap-2 sm:grid-cols-2 lg:grid-cols-3\">{IMPORT_TEMPLATES.filter(t=>t.group===g).map(t=><button key={t.key} onClick={()=>download(t.fileName,t.csv)} className=\"flex items-center justify-between rounded-xl border border-slate-800 bg-slate-900 p-3 text-left\"><span><b className=\"text-sm\">{t.label}</b><span className=\"mt-1 block font-mono text-[11px] text-slate-500\">{t.fileName}</span></span><FileSpreadsheet className=\"h-4 w-4 text-slate-500\"/></button>)}</div></div>)}</section>",
       "status": "unverified",
       "permission": "requires workflow review",
       "persistence": "requires workflow review",
@@ -17944,11 +17944,11 @@
       "acceptance": "exercise action; verify validation, durable state, permission denial, reload and sync"
     },
     {
-      "id": "src/native/NativeImportCenterView.tsx:32:617",
+      "id": "src/native/NativeImportCenterView.tsx:32:621",
       "file": "src/native/NativeImportCenterView.tsx",
       "line": 32,
       "kind": "onClick",
-      "source": "<section className=\"mt-5\"><h2 className=\"mb-1 font-bold\">Template library</h2><p className=\"mb-3 text-xs text-slate-500\">Dependency order: business → stock locations → outlets → inventory stock masters → products. Room types, rooms, rate plans and hotel services now apply through native Rooms/Folios commands; Assets remain staged.</p>{IMPORT_TEMPLATE_GROUPS.map(g=><div className=\"mb-4\" key={g}><div className=\"mb-2 text-xs font-black uppercase tracking-wider text-slate-500\">{g}</div><div className=\"grid gap-2 sm:grid-cols-2 lg:grid-cols-3\">{IMPORT_TEMPLATES.filter(t=>t.group===g).map(t=><button key={t.key} onClick={()=>download(t.fileName,t.csv)} className=\"flex items-center justify-between rounded-xl border border-slate-800 bg-slate-900 p-3 text-left\"><span><b className=\"text-sm\">{t.label}</b><span className=\"mt-1 block font-mono text-[11px] text-slate-500\">{t.fileName}</span></span><FileSpreadsheet className=\"h-4 w-4 text-slate-500\"/></button>)}</div></div>)}</section>",
+      "source": "<section className=\"mt-5\"><h2 className=\"mb-1 font-bold\">Template library</h2><p className=\"mb-3 text-xs text-slate-500\">Dependency order: business → stock locations → outlets → inventory stock masters → products. Room types, rooms, rate plans, hotel services, asset categories and assets now apply through their native domain commands.</p>{IMPORT_TEMPLATE_GROUPS.map(g=><div className=\"mb-4\" key={g}><div className=\"mb-2 text-xs font-black uppercase tracking-wider text-slate-500\">{g}</div><div className=\"grid gap-2 sm:grid-cols-2 lg:grid-cols-3\">{IMPORT_TEMPLATES.filter(t=>t.group===g).map(t=><button key={t.key} onClick={()=>download(t.fileName,t.csv)} className=\"flex items-center justify-between rounded-xl border border-slate-800 bg-slate-900 p-3 text-left\"><span><b className=\"text-sm\">{t.label}</b><span className=\"mt-1 block font-mono text-[11px] text-slate-500\">{t.fileName}</span></span><FileSpreadsheet className=\"h-4 w-4 text-slate-500\"/></button>)}</div></div>)}</section>",
       "status": "unverified",
       "permission": "requires workflow review",
       "persistence": "requires workflow review",

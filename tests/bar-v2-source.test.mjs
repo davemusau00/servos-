@@ -37,5 +37,5 @@ test('runtime exposes intake, approval and native snapshot permissions',()=>{
 
 test('native production source contains no legacy demo stock or SKU conventions',()=>{
   const files=fs.readdirSync('src/native').filter(f=>/\.tsx?$/.test(f)).map(f=>read(`src/native/${f}`)).join('\n');
-  for(const forbidden of ['JAM-','loc-bar-store','loc-warehouse','ROOM_CHARGE']) assert.equal(files.includes(forbidden),false,forbidden);
+  for(const forbidden of ['JAM-','loc-bar-store','loc-warehouse']) assert.equal(files.includes(forbidden),false,forbidden);
 });

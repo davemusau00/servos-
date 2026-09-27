@@ -8,7 +8,7 @@ It does not directly write business `records`, `commands`, `audit`, `outbox`, pa
 
 Supported now: business identity, outlets, stock locations, suppliers, customers, products, stock-item masters, and pre-Go-Live opening inventory.
 
-Employees remain blocked because PINs/passwords are not migration data. Room types, rooms and rate plans apply through the native Rooms engine. Hotel services apply through Patch 07 Folios with price/tax snapshots. Assets stay staged until Patch 08.
+Employees remain blocked because PINs/passwords are not migration data. Room types, rooms and rate plans apply through the native Rooms engine. Hotel services apply through Folios with price/tax snapshots. Asset categories and assets apply through Patch 08 with permanent tags, location/custody rules and lifecycle invariants.
 
 Dry-run decisions are `CREATE`, `UPDATE`, `NO_CHANGE`, `BLOCKED`, or `CONFLICT`. Expected record versions and stable command IDs are stored with the plan. Apply uses the existing versioned ServOS command boundary.
 
