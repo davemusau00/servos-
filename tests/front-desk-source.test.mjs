@@ -6,7 +6,7 @@ test('front desk exposes tape chart, arrivals, check-in and room moves without f
   const view=readFileSync('src/native/NativeFrontDeskView.tsx','utf8');
   const store=readFileSync('src-tauri/src/store.rs','utf8');
   assert.match(view,/Tape chart/);
-  assert.match(view,/Arrivals today/);
+  assert.match(view,/Arrivals & overdue/);
   assert.match(view,/stay\.checkIn/);
   assert.match(view,/stay\.move/);
   assert.match(view,/Checkout · P07/);
