@@ -25,3 +25,9 @@ Physical packaged XP-80T paper/cut/retry acceptance remains. Historical payments
 `npm run lint`, `npm test` (19), native and desktop tests (31 each, overlapping source), browser tests (12), docs checks (33 guides), build, UI inventory (1,901), and `node scripts/test-supabase.mjs --expansion`.
 
 Tests do not establish live sync or physical printing. The explicit demo bundle retains a size warning; the final production bundle was below the warning threshold and its authenticated entry was smoke-tested. Preserve existing barcode/CSV functionality and backup artifacts. External commits appeared during the session; no reset/revert or branch rewrite was performed.
+
+## Next v2 transaction slice — POS settlement
+
+The next implementation slice is online POS settlement in the staged PostgreSQL protocol. It must use the installed Rust `payment.record`, `payment.split`, refund/reversal, receipt, and till behavior as its semantic reference. Start with atomic partial/final CASH, manually confirmed MPESA, and externally authorized CARD payment; balanced journals and immutable payment/receipt documents; exact outstanding-balance checks; table release at completion; and response-loss replay. Payment must not trigger stock consumption. Split tender must post all legs or none.
+
+Do not expose this slice through the web UI until the command path and isolated PostgreSQL acceptance cover duplicate M-Pesa references, stale order/till/payment-account versions, invalid split rollback, replay, receipt immutability, journal balance, and absence of additional stock movements. Room-charge tender, refund/payout flows, till close, and close-day reporting remain separate dependent slices unless their complete invariants are included and tested. The legacy terminal remains the only production writer throughout.

@@ -114,6 +114,62 @@ select pg_temp.pos_command('order.create','orders','tab-1','{"id":"tab-1","outle
 select pg_temp.pos_command('order.addItem','orders','tab-1','{"orderId":"tab-1","productId":"gin-shot","itemId":"tab-line","quantity":1,"portionId":"double","modifierIds":[]}');
 select pg_temp.pos_command('order.fire','orders','tab-1','{"orderId":"tab-1"}');
 
+-- Online POS settlement: manual evidence, atomic split, receipt and journal.
+select servos_v2.put_record('paymentAccounts','cash',jsonb_build_object('name','Cash till','method','CASH','accountCode','CASH'));
+select servos_v2.put_record('paymentAccounts','mpesa',jsonb_build_object('name','Manual M-Pesa','method','MPESA','number','0700000000','accountCode','MPESA_CLEARING'));
+select servos_v2.put_record('paymentAccounts','card',jsonb_build_object('name','External card','method','CARD','accountCode','CARD_CLEARING'));
+select pg_temp.pos_command('till.open','tillSessions','shift-1','{"id":"shift-1","openingFloatMinor":1000}');
+
+-- An invalid later leg rolls back an earlier cash leg and all related effects.
+select pg_temp.pos_command('payment.split','orders','tab-1','{"orderId":"tab-1","payments":[{"amountMinor":20000,"accountId":"cash","cashTenderedMinor":20000},{"amountMinor":35000,"accountId":"mpesa","reference":"AABBCC11","receivedAmountMinor":35000,"receivedAt":"2026-09-27T12:00:00Z"}]}','REJECTED','VALIDATION_FAILED');
+do $$begin
+ if exists(select 1 from servos_v2.records where collection='payments') then raise exception 'Failed split retained payment effects';end if;
+ if (servos_v2.read_record('tillSessions','shift-1')->>'expectedCashMinor')::bigint<>1000 then raise exception 'Failed split changed drawer cash';end if;
+end$$;
+
+select pg_temp.pos_command('payment.split','orders','tab-1','{"orderId":"tab-1","payments":[{"amountMinor":20000,"accountId":"cash","cashTenderedMinor":22000},{"amountMinor":35000,"accountId":"mpesa","reference":"AABBCC11","receivedAmountMinor":35000,"receivedAt":"2026-09-27T12:00:00Z","manuallyConfirmed":true}]}');
+do $$declare o jsonb;s jsonb;receipt jsonb;begin
+ o:=servos_v2.read_record('orders','tab-1');s:=servos_v2.read_record('stockItems','gin');
+ select data into receipt from servos_v2.records where collection='receiptDocuments' and data->>'orderId'='tab-1';
+ if o->>'state'<>'COMPLETED' or (o->>'amountPaidMinor')::bigint<>55000 then raise exception 'Split did not complete the settled order';end if;
+ if (s->'currentStock'->>'bar-stock')::numeric<>9.9 then raise exception 'Payment consumed stock a second time';end if;
+ if jsonb_array_length(receipt->'paymentIds')<>2 or receipt->>'balanceMinor'<>'0' then raise exception 'Receipt snapshot omitted split settlement';end if;
+ if (select count(*) from servos_v2.records where collection='payments' and data->>'orderId'='tab-1')<>2 then raise exception 'Split did not persist two tender records';end if;
+ if exists(select 1 from servos_v2.records where collection='journalEntries' and data->>'sourceType'='PAYMENT' and data->>'totalDebitMinor'<>data->>'totalCreditMinor') then raise exception 'POS payment journal is unbalanced';end if;
+ if (servos_v2.read_record('tillSessions','shift-1')->>'expectedCashMinor')::bigint<>23000 then raise exception 'Cash tender/change drawer total is wrong';end if;
+ if exists(select 1 from servos_v2.records where collection='payments' and data->>'method'='MPESA' and data->>'confirmation'<>'MANUALLY_CONFIRMED') then raise exception 'M-Pesa was represented as provider initiated';end if;
+end$$;
+
+-- Duplicate M-Pesa reference rejects without a partial payment.
+select pg_temp.pos_command('order.create','orders','order-duplicate','{"id":"order-duplicate","outletId":"bar","name":"Duplicate reference test"}');
+select pg_temp.pos_command('order.addItem','orders','order-duplicate','{"orderId":"order-duplicate","productId":"gin-shot","itemId":"dup-line","quantity":1,"portionId":"single","modifierIds":[]}');
+select pg_temp.pos_command('payment.record','orders','order-duplicate','{"orderId":"order-duplicate","amountMinor":30000,"accountId":"mpesa","reference":"aabbcc11","receivedAmountMinor":30000,"receivedAt":"2026-09-27T12:05:00Z","manuallyConfirmed":true}','REJECTED','DUPLICATE_REFERENCE');
+do $$begin
+ if exists(select 1 from servos_v2.records where collection='payments' and data->>'orderId'='order-duplicate') then raise exception 'Duplicate M-Pesa code partially posted';end if;
+end$$;
+
+-- Partial settlement blocks edits and any payment above the remaining balance.
+select pg_temp.pos_command('order.create','orders','order-partial','{"id":"order-partial","outletId":"bar","name":"Partial settlement test"}');
+select pg_temp.pos_command('order.addItem','orders','order-partial','{"orderId":"order-partial","productId":"gin-shot","itemId":"partial-line","quantity":1,"portionId":"double","modifierIds":[]}');
+select pg_temp.pos_command('payment.record','orders','order-partial','{"orderId":"order-partial","amountMinor":5000,"accountId":"cash","cashTenderedMinor":5000}');
+select pg_temp.pos_command('order.addItem','orders','order-partial','{"orderId":"order-partial","productId":"gin-shot","itemId":"late-line","quantity":1,"portionId":"single","modifierIds":[]}','REJECTED','INVALID_STATE');
+select pg_temp.pos_command('payment.record','orders','order-partial','{"orderId":"order-partial","amountMinor":50001,"accountId":"cash","cashTenderedMinor":50001}','REJECTED','VALIDATION_FAILED');
+
+-- Completing a table order releases the table and does not repeat fire consumption.
+select pg_temp.pos_command('order.create','orders','order-table-pay','{"id":"order-table-pay","outletId":"bar","tableId":"t1","name":"Settled table"}');
+select pg_temp.pos_command('order.addItem','orders','order-table-pay','{"orderId":"order-table-pay","productId":"gin-shot","itemId":"table-pay-line","quantity":1,"portionId":"single","modifierIds":[]}');
+select pg_temp.pos_command('order.fire','orders','order-table-pay','{"orderId":"order-table-pay"}');
+select servos_v2.put_record('products','gin-shot',servos_v2.read_record('products','gin-shot')||jsonb_build_object('name','Renamed Gin'));
+select pg_temp.pos_command('payment.record','orders','order-table-pay','{"orderId":"order-table-pay","amountMinor":30000,"accountId":"cash","cashTenderedMinor":30000}');
+do $$declare t jsonb;o jsonb;receipt jsonb;s jsonb;begin
+ t:=servos_v2.read_record('tables','t1');o:=servos_v2.read_record('orders','order-table-pay');s:=servos_v2.read_record('stockItems','gin');
+ select data into receipt from servos_v2.records where collection='receiptDocuments' and data->>'orderId'='order-table-pay';
+ if t->>'state'<>'CLEANING' or nullif(t->>'currentOrderId','') is not null or o->>'state'<>'COMPLETED' then raise exception 'Paid table order was not released';end if;
+ if receipt->'items'->0->>'productName'<>'Gin Shot' then raise exception 'Receipt snapshot changed after catalog rename';end if;
+ if (s->'currentStock'->>'bar-stock')::numeric<>9.85 then raise exception 'Settlement repeated stock consumption';end if;
+ begin update servos_v2.records set data=data||jsonb_build_object('message','mutated') where collection='receiptDocuments' and id=receipt->>'id';raise exception 'Receipt was mutable';exception when others then if sqlerrm<>'Immutable business history' then raise;end if;end;
+end$$;
+
 -- Permission rejection.
 update servos_v2.members set permissions=array['records.view','catalog.view'] where user_id=auth.uid();
 select pg_temp.pos_command('order.create','orders','blocked','{"id":"blocked","outletId":"bar","name":"Blocked"}','REJECTED','PERMISSION_DENIED');
