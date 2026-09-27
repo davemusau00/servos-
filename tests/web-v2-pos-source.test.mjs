@@ -18,16 +18,13 @@ test('11D staged POS domain never self-activates v2 and owns the expected order 
   assert.doesNotMatch(sql,/\|\|\s*[A-Za-z_]+\s*->>/,'JSON extraction concatenation must be parenthesized');
 });
 
-test('web POS uses queued BusinessCommandV2 actions and keeps payments deferred to 11E',()=>{
+test('web POS submits online settlement through queued commands and preserves manual evidence',()=>{
   const ui=readFileSync('src/runtime/web/WebPosView.tsx','utf8');
-  assert.match(ui,/order\.create/);
-  assert.match(ui,/order\.addItem/);
-  assert.match(ui,/order\.fire/);
-  assert.match(ui,/order\.repeatRound/);
-  assert.match(ui,/order\.void/);
+  for(const operation of ['order.create','order.addItem','order.fire','order.repeatRound','order.void','payment.record','payment.split','till.open'])assert.ok(ui.includes(operation),operation);
   assert.match(ui,/useBarcodeScanner/);
-  assert.match(ui,/Payments · 11E/);
-  assert.doesNotMatch(ui,/payment\.record/);
+  assert.match(ui,/receiptDocuments/);
+  assert.match(ui,/manually verified that the funds were received/);
+  assert.match(ui,/offline payment finalization is disabled/i);
   assert.doesNotMatch(ui,/business_records/);
   assert.doesNotMatch(ui,/supabase\.from/);
 });
@@ -38,15 +35,11 @@ test('web business workspace exposes the staged POS tab',()=>{
   assert.match(app,/'POS'/);
 });
 
-test('disposable PostgreSQL harness runs POS acceptance after procurement acceptance',()=>{
+test('disposable PostgreSQL harness runs transactional POS payment acceptance',()=>{
   const harness=readFileSync('scripts/test-supabase.mjs','utf8');
   assert.match(harness,/tests\/supabase\/pos\.sql/);
   const acceptance=readFileSync('tests/supabase/pos.sql','utf8');
-  assert.match(acceptance,/Second device table race did not conflict/);
-  assert.match(acceptance,/POS response-loss replay changed result/);
-  assert.match(acceptance,/Void return did not restore stock/);
-  assert.match(acceptance,/Sale stock movement missing/);
-  assert.match(acceptance,/Open-order price snapshot was rewritten/);
+  for(const invariant of ['Second device table race did not conflict','POS response-loss replay changed result','Void return did not restore stock','Sale stock movement missing','Split did not complete the settled order','Stale second-device payment did not conflict','Receipt snapshot changed after catalog rename'])assert.ok(acceptance.includes(invariant),invariant);
 });
 
 
@@ -58,4 +51,16 @@ test('11D POS stock aggregation explicitly aliases jsonb_each_text key/value col
     'ambiguous jsonb_each_text key must be explicitly aliased'
   );
   assert.match(sql,/jsonb_each_text\(needs\)\s+as\s+e\(key,value\)/i);
+});
+
+
+test('staged payment migration is isolated and posts manual evidence, journals and receipts',()=>{
+  const migration=readFileSync('supabase/expansion/014_pos_payments.sql','utf8');
+  assert.match(migration,/STAGED V2 ONLY/);
+  assert.doesNotMatch(migration,/update\s+servos_v2\.control\s+set\s+enabled\s*=\s*true/i);
+  for(const op of ['payment.record','payment.split','till.open','till.cashMovement','till.close'])assert.ok(migration.includes(op),op);
+  assert.match(migration,/manually confirm external payment/i);
+  assert.match(migration,/DUPLICATE_REFERENCE/);
+  assert.match(migration,/receiptDocuments/);
+  assert.match(migration,/post_journal\(command,journal_id,'PAYMENT',payment_id/);
 });

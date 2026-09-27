@@ -115,6 +115,8 @@ select pg_temp.pos_command('order.addItem','orders','tab-1','{"orderId":"tab-1",
 select pg_temp.pos_command('order.fire','orders','tab-1','{"orderId":"tab-1"}');
 
 -- Online POS settlement: manual evidence, atomic split, receipt and journal.
+select servos_v2.put_record('organization','business','{"name":"Test Business"}');
+select servos_v2.put_record('property','property','{"name":"Test Property","address":"Test Street","phone":"0700000000","currency":"KES","timezone":"Africa/Nairobi","receiptFooter":"Thank you"}');
 select servos_v2.put_record('paymentAccounts','cash',jsonb_build_object('name','Cash till','method','CASH','accountCode','CASH'));
 select servos_v2.put_record('paymentAccounts','mpesa',jsonb_build_object('name','Manual M-Pesa','method','MPESA','number','0700000000','accountCode','MPESA_CLEARING'));
 select servos_v2.put_record('paymentAccounts','card',jsonb_build_object('name','External card','method','CARD','accountCode','CARD_CLEARING'));
@@ -192,7 +194,7 @@ do $$declare t jsonb;o jsonb;receipt jsonb;s jsonb;begin
  t:=servos_v2.read_record('tables','t1');o:=servos_v2.read_record('orders','order-table-pay');s:=servos_v2.read_record('stockItems','gin');
  select data into receipt from servos_v2.records where collection='receiptDocuments' and data->>'orderId'='order-table-pay';
  if t->>'state'<>'CLEANING' or nullif(t->>'currentOrderId','') is not null or o->>'state'<>'COMPLETED' then raise exception 'Paid table order was not released';end if;
- if receipt->'items'->0->>'productName'<>'Gin Shot' then raise exception 'Receipt snapshot changed after catalog rename';end if;
+ if receipt->'items'->0->>'description'<>'Gin Shot' then raise exception 'Receipt snapshot changed after catalog rename';end if;
  if (s->'currentStock'->>'bar-stock')::numeric<>9.85 then raise exception 'Settlement repeated stock consumption';end if;
  begin update servos_v2.records set data=data||jsonb_build_object('message','mutated') where collection='receiptDocuments' and id=receipt->>'id';raise exception 'Receipt was mutable';exception when others then if sqlerrm<>'Immutable business history' then raise;end if;end;
 end$$;

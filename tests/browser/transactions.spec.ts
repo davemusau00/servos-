@@ -6,7 +6,6 @@ import {randomUUID} from 'node:crypto';
 // Test-only authentication/HTTP bridge; all business RPCs run in real PostgreSQL.
 // This does not claim hosted Supabase Auth/PostgREST or production deployment proof.
 test.describe('transactional browser with PostgreSQL',()=>{
- test.skip(process.env.RUN_TRANSACTION_BROWSER_TESTS!=='1','Opt in to disposable Docker persistence tests');
  let container='';let running=false;let loseResponse=true;
  const docker=(args:string[],input?:string)=>{const result=spawnSync('docker',args,{input,encoding:'utf8',maxBuffer:8*1024*1024});if(result.status!==0)throw new Error(result.stderr||result.error?.message||'Docker command failed');return result.stdout};
  const sql=(source:string)=>docker(['exec','-i',container,'psql','-U','postgres','-At','-v','ON_ERROR_STOP=1'],source);
@@ -16,7 +15,17 @@ test.describe('transactional browser with PostgreSQL',()=>{
   for(let i=0;i<30;i++){if(spawnSync('docker',['exec',container,'pg_isready','-U','postgres'],{stdio:'ignore'}).status===0)break;await new Promise(r=>setTimeout(r,1000))}
   const files=['tests/supabase/bootstrap.sql',...['supabase/migrations','supabase/expansion'].flatMap(dir=>readdirSync(dir).filter(f=>f.endsWith('.sql')).sort().map(f=>`${dir}/${f}`))];
   sql(files.map(f=>readFileSync(f,'utf8')).join('\n'));
-  sql(`insert into servos_v2.members values('00000000-0000-4000-8000-000000000001',true,array['*']),('00000000-0000-4000-8000-000000000002',true,array['*']) on conflict(user_id) do update set active=true,permissions=array['*']; update servos_v2.control set enabled=true;`);
+  sql(`
+   insert into servos_v2.members values('00000000-0000-4000-8000-000000000001',true,array['*']),('00000000-0000-4000-8000-000000000002',true,array['*']) on conflict(user_id) do update set active=true,permissions=array['*'];
+   select servos_v2.put_record('organization','business','{"name":"Browser Test Business"}');
+   select servos_v2.put_record('property','property','{"address":"Test Street","phone":"0700000000","currency":"KES","timezone":"Africa/Nairobi","receiptFooter":"Thank you"}');
+   select servos_v2.put_record('posPolicy','policy','{"vatBasisPoints":0,"cateringLevyBasisPoints":0,"taxInclusive":true,"currency":"KES"}');
+   select servos_v2.put_record('stockLocations','web-pos-stock','{"name":"Web POS Stock","code":"WEBPOS","type":"BAR"}');
+   select servos_v2.put_record('outlets','web-pos-outlet','{"name":"Browser Bar","code":"WEBPOS","defaultStockLocationId":"web-pos-stock"}');
+   select servos_v2.put_record('products','web-pos-soda','{"name":"Test Soda","code":"TESTSODA","priceMinor":1250,"category":"DRINKS","portions":[],"modifiers":[],"recipeIngredients":[],"outletIds":[]}');
+   select servos_v2.put_record('paymentAccounts','web-pos-cash','{"name":"Cash","method":"CASH","accountCode":"CASH"}');
+   update servos_v2.control set enabled=true;
+  `);
  });
  test.afterAll(()=>{if(running)docker(['stop',container])});
  const bridge=async(page:Page)=>{
@@ -66,5 +75,24 @@ test.describe('transactional browser with PostgreSQL',()=>{
   await page.screenshot({path:info.outputPath('transactional-assets.png'),fullPage:true});
   await page.reload();await page.getByRole('button',{name:'Remote management',exact:true}).click();await page.getByLabel('Email',{exact:true}).fill('first@example.test');await page.getByLabel('Password',{exact:true}).fill('test-only');await page.getByRole('button',{name:'Sign in',exact:true}).click();await expect(page.getByRole('heading',{name:'Room 101',exact:true})).toBeVisible();
   await context2.close();
+ });
+ test('web POS opens a till, settles cash online and retains the immutable receipt',async({page})=>{
+  await signIn(page,'pos@example.test');
+  await page.getByRole('button',{name:'POS',exact:true}).click();
+  await page.getByLabel('Opening float in KES').fill('100');
+  await page.getByRole('button',{name:'Open till',exact:true}).click();
+  await expect(page.getByText('No open till')).toHaveCount(0);
+  await page.getByRole('button',{name:'Quick tab',exact:true}).click();
+  await page.getByRole('button',{name:/Test Soda/}).click();
+  await expect(page.getByText('KES 12.50')).toBeVisible();
+  await page.getByRole('button',{name:/Take payment/}).click();
+  const dialog=page.getByRole('dialog');
+  await dialog.getByLabel('Payment account').selectOption('web-pos-cash');
+  await dialog.getByRole('button',{name:'Record payment'}).click();
+  await expect(page.getByText('Receipt history (1)')).toBeVisible();
+  await expect(page.getByText('V2-00000001')).toBeVisible();
+  expect(sql("select count(*) from servos_v2.records where collection='payments' and data->>'method'='CASH' and data->>'amountMinor'='1250';").trim()).toBe('1');
+  expect(sql("select count(*) from servos_v2.records where collection='receiptDocuments' and data->>'paidMinor'='1250' and data->>'balanceMinor'='0';").trim()).toBe('1');
+  expect(sql("select count(*) from servos_v2.records where collection='journalEntries' and data->>'sourceType'='PAYMENT' and data->>'totalDebitMinor'=data->>'totalCreditMinor';").trim()).toBe('1');
  });
 });

@@ -120,7 +120,9 @@ begin
    if method='MPESA' then
     received:=servos_v2.minor(leg,'receivedAmountMinor');
     if received<>amount then raise exception 'VALIDATION_FAILED: this payment must allocate the full manually confirmed M-Pesa amount';end if;
-    perform servos_v2.required_text(leg,'receivedAt');perform (leg->>'receivedAt')::timestamptz;
+    perform servos_v2.required_text(leg,'receivedAt');
+    if (leg->>'receivedAt') !~ '(Z|[+-][0-9]{2}:[0-9]{2})$' then raise exception 'VALIDATION_FAILED: M-Pesa timestamp must include timezone';end if;
+    perform (leg->>'receivedAt')::timestamptz;
    end if;
   end if;
   payment_id:='payment-'||(command->>'id')||'-'||line_no;
@@ -163,15 +165,26 @@ begin
  select coalesce((select data from servos_v2.records where collection='outlets' and id=order_data->>'outletId'),'{}'::jsonb) into outlet_data;
  update servos_v2.control set receipt_sequence=receipt_sequence+1 where singleton returning receipt_sequence into receipt_no;
  receipt_id:='receipt-'||(command->>'id');
- select coalesce(jsonb_agg(x order by (x->>'roundNo')::integer,x->>'id'),'[]'::jsonb) into order_items
+ select coalesce(jsonb_agg(jsonb_build_object(
+  'id',x->'id','description',x->'productName','quantity',x->'quantity',
+  'unitPriceMinor',x->'unitPriceMinor','amountMinor',x->'lineTotalMinor','discountMinor',x->'discountMinor',
+  'netMinor',x->'netMinor','taxMinor',x->'vatMinor','levyMinor',x->'levyMinor',
+  'portion',x->'portionSnapshot'->>'name',
+  'modifiers',(select coalesce(jsonb_agg(jsonb_build_object('name',m->>'name')),'[]'::jsonb) from jsonb_array_elements(coalesce(x->'modifiers','[]'::jsonb)) m)
+ ) order by (x->>'roundNo')::integer,x->>'id'),'[]'::jsonb) into order_items
  from jsonb_array_elements(coalesce(order_data->'items','[]'::jsonb)) x where x->>'state'<>'VOIDED';
+ if coalesce(length(trim(identity_data->>'name')),0)=0 or property_data->>'currency' is distinct from 'KES' or coalesce(length(trim(property_data->>'timezone')),0)=0 then
+  raise exception 'VALIDATION_FAILED: business receipt identity and KES property settings are required';
+ end if;
  changed:=changed||servos_v2.put_record('receiptDocuments',receipt_id,jsonb_build_object(
   'schemaVersion',1,'orderId',order_key,'sourceCommandId',command->>'id','number','V2-'||lpad(receipt_no::text,8,'0'),
-  'orderNumber',order_data->>'orderNumber','issuedAt',stamp,'actorId',who,'business',identity_data,'property',property_data,
-  'outlet',outlet_data->>'name','items',order_items,'currency','KES','subtotalMinor',order_data->'subtotalMinor',
+  'orderNumber',order_data->>'orderNumber','issuedAt',stamp,'actorId',who,
+  'business',jsonb_build_object('name',identity_data->>'name','address',property_data->>'address','phone',property_data->>'phone','email',property_data->>'email'),
+  'outlet',outlet_data->>'name','cashierId',who,'table',order_data->>'tableName','tab',order_data->>'tabName',
+  'items',order_items,'currency',property_data->>'currency','timezone',property_data->>'timezone','subtotalMinor',order_data->'subtotalMinor',
   'discountMinor',order_data->'discountTotalMinor','taxMinor',order_data->'taxTotalMinor',
   'levyMinor',order_data->'cateringLevyTotalMinor','totalMinor',total,'paidMinor',paid,'balanceMinor',total-paid,
-  'paymentIds',payment_ids,'payments',(select coalesce(jsonb_agg(r.data order by r.id),'[]'::jsonb) from servos_v2.records r where r.collection='payments' and r.data->>'orderId'=order_key),
+  'paymentIds',payment_ids,'payments',(select coalesce(jsonb_agg(jsonb_build_object('id',r.id,'method',r.data->>'method','amountMinor',r.data->'amountMinor','reference',r.data->'reference','cashTenderedMinor',r.data->'cashTenderedMinor','changeMinor',r.data->'changeMinor','occurredAt',r.data->'occurredAt') order by r.id),'[]'::jsonb) from servos_v2.records r where r.collection='payments' and r.data->>'orderId'=order_key),
   'message',coalesce(property_data->>'receiptFooter','Thank you for your business.')));
  return changed;
 end$$;
