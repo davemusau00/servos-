@@ -86,6 +86,14 @@ Do not change a status to deployment verified unless the complete packaged-devic
 
 ## Verification update — 2026-09-27
 
+### Staged POS settlement, refunds and close-day
+
+Against the current tree, `npm run verify` passed the production build and lint, all 70 Node tests, all 16 desktop/mobile browser cases, all 55 native domain tests, the UI interaction inventory (2,738 controls/handlers/routes), and documentation checks (40 guides/15 core documents). Browser transaction tests exercised till open, online cash settlement, refund and close-day report through the disposable PostgreSQL web bridge. They are local staged acceptance, not hosted Supabase or production browser evidence. The production build reports a 808.12 kB main JavaScript chunk above the configured 500 kB warning threshold; Rust emits two pre-existing unused-assignment warnings.
+
+`node scripts/test-supabase.mjs --expansion` passed migrations 001-015 and all disposable PostgreSQL protocol/domain suites, including cash/split/manual MPesa/card payments, replay/conflict/authorization checks, partial refund, over-refund rejection, full reversal, balanced journal/immutable history, close-day totals and the independent two-connection room-booking race. The harness creates disposable local PostgreSQL infrastructure. It does not connect to or modify the configured Supabase project.
+
+Still unverified: hosted migration/RLS acceptance, real provider payment/refund or MPesa statement reconciliation, room-charge settlement, full close-day void/inventory/system-health coverage, authenticated permissions against configured business roles, desktop adapter, signed offline rights, production cutover, real multi-device trading, target installation and physical printer acceptance. The browser bridge does not establish those properties.
+
 The controlled room CSV UPDATE defect is fixed in the native import planner. Planning keeps the staged row separate and removes the create-only `initialStatus` field from the actual room UPDATE command. `room_csv_imports_apply_through_native_room_commands` now covers stage → plan → apply for create and update, verifies the planned UPDATE omits `initialStatus`, changes floor/wing, and preserves existing housekeeping and maintenance state.
 
 Executed against the final source:

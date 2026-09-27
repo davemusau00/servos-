@@ -72,7 +72,7 @@ test('staged refunds and close-day snapshots preserve immutable financial histor
   assert.match(migration,/STAGED V2 ONLY/);
   assert.doesNotMatch(migration,/update\s+servos_v2\.control\s+set\s+enabled\s*=\s*true/i);
   for(const marker of ['payment.refund','payment.reverse','closeDay.generate','Immutable business history','reports.view','NO_AUTOMATIC_RESTOCK'])assert.ok(migration.includes(marker),marker);
-  for(const marker of ['payment.refund','payment.reverse','manually verified the external refund','Original payment remains immutable'])assert.ok(app.includes(marker),marker);
+  for(const marker of ['payment.refund','payment.reverse','manually verified the external refund','keeps the original payment immutable'])assert.ok(app.includes(marker),marker);
   for(const marker of ['till.cashMovement','till.close','closeDay.generate','Generate close-day snapshot'])assert.ok(finance.includes(marker),marker);
   const acceptance=readFileSync('tests/supabase/pos.sql','utf8');
   for(const invariant of ['Over-refund','Close-day sales or refund totals','Close-day tender totals','Close-day report was mutable'])assert.ok(acceptance.includes(invariant),invariant);
