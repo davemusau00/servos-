@@ -58,14 +58,16 @@ Order firing continues through the established domain commands. The focused Rust
 
 ## Delivery order
 
-1. **Coordination and baseline:** maintain this crosswalk, update source-document baseline labels when their contracts change, and record evidence in the existing completion ledger and test evidence log.
-2. **Task-first foundation:** implement permission-filtered Home/task navigation and Quick Add entry points, then smart empty states, friendly errors, and defaults. Keep every existing route reachable to users with its existing permission. Current partial delivery: Home/Quick Add foundation, catalog/inventory empty states, and common save/movement error translation; room/property/import empty states and broader error coverage remain open.
-3. **Guidance foundation in parallel:** add typed declarative definitions, duplicate/invalid-definition checks, semantic anchors, a small accessible shell tour, Help Center launch/progress, and native per-staff local persistence. Do not author workflow training before its target flow is stable.
-4. **Finish shell-to-action and guide reliability before expanding content:** first implementation slice now provides manage-filtered Quick Add direct actions, per-guide Home progress, permission-checked guide route steps, element-resize tracking, and Escape close. Remaining in this track: centralize/expand anchor definitions, expose article links in tour UI, improve focus handling, and test route/action loss across responsive layouts.
-5. **Product family and physical variants:** preserve old product records as standalone compatible products. Add family identity, package/container quantity and unit, variant label, per-variant barcode and stock link. Support another size within the same family, and represent bottle/glass/single/double formats using existing portions until an evidence-backed normalized model is required. Verify separate stock depletion per physical variant.
-6. **Stock operations:** add location-first count and continuous scanner sessions, then simple receiving. Atomic product + new stock master + opening quantity is a separate native transaction slice and cannot be faked by several frontend saves.
-7. **Other workflows and staff guidance:** simplify room and property creation, imports, and operational summaries. Then add a non-blocking, per-staff welcome and permission-derived recommendations, followed by workflow guides on stabilized screens. Practice advances only on named successful commits.
+The following eight phases are the current implementation sequence from the user review. Update phase status only from checked source and executed evidence. Phase 1 is active; no deployment or physical-terminal evidence is inferred from local tests.
 
+1. **Atomic Add Item + Stock + Starting Quantity (active):** one native transaction creates the sellable product, new stock master, relationship, barcode, and opening movement. Require catalog and inventory permissions. A failed validation must roll back every record; a committed action returns one audit/outbox result.
+2. **Location-first Stock Count:** start from a Storage Place, show counted progress and differences, review, then commit count adjustments using native inventory commands.
+3. **Continuous Scanner Count Session:** retain a local draft count session, map scans to stock items and scan quantities, then review and submit once. Draft scans do not mutate stock or claim a count commit.
+4. **Simple Receive Delivery:** collect supplier/reference and scanned line quantities/costs in a simple screen while preserving native GRN, inventory, weighted-cost, payable/journal, approval, and audit behavior.
+5. **Simple Rooms + Property:** simplify room and property/asset entry with progressive disclosure and inherited defaults; retain native IDs, prerequisite checks, custody and operational protections.
+6. **First-login Staff Onboarding:** non-blocking, per-staff welcome and permission-derived next steps with progress kept separate from business records.
+7. **First Sale + Stock Count interactive guides:** author these only after their workflows stabilize; progress moves on matching successful committed commands, never drafts or failures.
+8. **Friendly Excel/CSV Import:** provide paste/file import and forgiving column mapping on top of the existing staged, previewed, permission-checked native import path. Preserve dry run, validation, approvals, rollback and row-level evidence.
 ## Shared interfaces and invariants
 
 - Guides are typed data: stable guide/step IDs, version, audience permissions, semantic target IDs, optional route, article reference, interaction mode, and explicit success operations. Guide definitions do not contain arbitrary React callbacks or raw CSS selectors.

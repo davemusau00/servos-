@@ -2002,6 +2002,80 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
         return Ok(result);
     }
     match cmd.operation.as_str() {
+        "catalog.createWithOpeningStock" => {
+            if cmd.target_version.is_some() {
+                return Err("A new catalog setup command cannot target an existing record".into());
+            }
+            if !permissions(&user.role).contains(&"catalog.manage") {
+                return Err("Permission required: catalog.manage".into());
+            }
+            if !permissions(&user.role).contains(&"inventory.adjust") {
+                return Err("Permission required: inventory.adjust".into());
+            }
+
+            let mut product=p.get("product").filter(|v|v.is_object()).ok_or("Product data is required")?.clone();
+            let mut stock=p.get("stockItem").filter(|v|v.is_object()).ok_or("Stock item data is required")?.clone();
+            let location_id=text(p,"locationId")?;
+            let starting_quantity=quantity(p,"startingQuantity")?;
+            let location=get(&tx,"stockLocations",location_id)?.1;
+            let product_id=id();
+            let stock_id=id();
+
+            text(&product,"name")?;
+            money(&product,"price")?;
+            let product_code=text(&product,"code")?;
+            if !["BAR","KITCHEN","SERVICE"].contains(&text(&product,"routeTo")?) {
+                return Err("Invalid preparation station".into());
+            }
+            let outlets=product["outletIds"].as_array().filter(|items|!items.is_empty()).ok_or("Assign at least one outlet")?;
+            for outlet in outlets { get(&tx,"outlets",outlet.as_str().ok_or("Invalid outlet")?)?; }
+            let duplicate_product_code:bool=tx.query_row("SELECT EXISTS(SELECT 1 FROM records WHERE collection='products' AND archived=0 AND lower(json_extract(data,'$.code'))=lower(?))",[product_code],|r|r.get(0)).map_err(error)?;
+            if duplicate_product_code { return Err("This code already belongs to another product".into()); }
+
+            let stock_code=text(&stock,"code")?;
+            text(&stock,"name")?;
+            text(&stock,"baseUnit")?;
+            money(&stock,"averageUnitCost")?;
+            if !stock["scanUnitQuantity"].is_null() && quantity(&stock,"scanUnitQuantity")?<=0.0 { return Err("Quantity represented by one scan must be greater than zero".into()); }
+            if !stock["reorderLevel"].is_null() { quantity(&stock,"reorderLevel")?; }
+            let duplicate_stock_code:bool=tx.query_row("SELECT EXISTS(SELECT 1 FROM records WHERE collection='stockItems' AND archived=0 AND lower(json_extract(data,'$.code'))=lower(?))",[stock_code],|r|r.get(0)).map_err(error)?;
+            if duplicate_stock_code { return Err("This code already belongs to another stock item".into()); }
+            let product_barcode=normalize_barcode_value(&mut product)?;
+            validate_unique_barcode(&tx,"products",&product_id,product_barcode.as_deref())?;
+            let stock_barcode=normalize_barcode_value(&mut stock)?;
+            validate_unique_barcode(&tx,"stockItems",&stock_id,stock_barcode.as_deref())?;
+
+            if product.get("productFamilyId").and_then(Value::as_str).is_some_and(|value|!value.trim().is_empty()) {
+                text(&product,"productFamilyName")?;
+                text(&product,"packageType")?;
+                let variant_label=text(&product,"variantLabel")?;
+                text(&product,"containerUnit")?;
+                if quantity(&product,"containerQuantity")?<=0.0 || quantity(&product,"portionVolume")?<=0.0 { return Err("Physical container and stock quantities must be greater than zero".into()); }
+                let portions=product["portions"].as_array().filter(|items|!items.is_empty()).ok_or("Add at least one sale format for this physical size")?;
+                for portion in portions { text(portion,"id")?; text(portion,"name")?; if quantity(portion,"volume")?<=0.0{return Err("Sale format stock quantity must be greater than zero".into());} money(portion,"price")?; }
+                let duplicate_variant:bool=tx.query_row("SELECT EXISTS(SELECT 1 FROM records WHERE collection='products' AND archived=0 AND json_extract(data,'$.productFamilyId')=? AND lower(json_extract(data,'$.variantLabel'))=lower(?))",params![product["productFamilyId"].as_str(),variant_label],|r|r.get(0)).map_err(error)?;
+                if duplicate_variant { return Err("This product family already has that physical size".into()); }
+            }
+
+            product["id"]=json!(product_id);
+            product["stockItemId"]=json!(stock_id);
+            stock["id"]=json!(stock_id);
+            stock["currentStock"]=if starting_quantity>0.0 { json!({location_id:starting_quantity}) } else { json!({}) };
+            put(&tx,"products",&product_id,product.clone(),&mut changes)?;
+            put(&tx,"stockItems",&stock_id,stock.clone(),&mut changes)?;
+            if starting_quantity>0.0 {
+                let movement_id=id();
+                let cost=stock["averageUnitCost"].as_f64().unwrap_or(0.0);
+                put(&tx,"stockMovements",&movement_id,json!({
+                    "id":movement_id,"organizationId":"business","propertyId":"property","stockItemId":stock_id,
+                    "stockItemName":stock["name"],"locationId":location_id,"locationName":location["name"],
+                    "quantityDelta":starting_quantity,"baseUnit":stock["baseUnit"],"movementType":"OPENING_BALANCE",
+                    "sourceId":cmd.id,"reasonCode":"Initial quantity captured with new item",
+                    "occurredAt":now(),"actorUserId":user.staff_id,"actorName":user.name,
+                    "unitCostSnapshot":cost,"totalCostValuation":((starting_quantity*cost*100.0).round())/100.0
+                }),&mut changes)?;
+            }
+        }
         "business.identity" => {
             authorize(&tx,user,"business.configure",p,None)?;
             let (organization_version,mut organization)=get(&tx,"organization","business")?;
