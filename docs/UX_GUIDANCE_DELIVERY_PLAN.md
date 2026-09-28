@@ -17,6 +17,8 @@ Both source documents describe the reviewed `4035337e5d63ba8785e87ba344565cc69c6
 
 A user-supplied review of upstream `main` cites commit `c33762fe29dff5384c61c409979877d9b105bf72`. That remote revision was not fetched in this workspace. The checked-out local `HEAD` at reconciliation is `be83578727d6e0b49fe23c264bc4fb465ffc2a05`, with the current UX implementation changes in the worktree; local source inspection, not the remote commit claim, governs delivery status here.
 
+A follow-up user review sharpened the next priority: product families, physical container variants, and sale formats should precede additional beverage setup; the room and property entry points are improved but their workspaces remain technical; first-login onboarding and operational guides are still absent. The review called recent direct-action verification pending. Since then, the checkout advanced to `1544de44db93946911d89011c5082bff1a3b35a6`, and local verification completed: 79 Node tests, lint, and all 16 browser cases passed, including the item Quick Add route on desktop and mobile. Current evidence below supersedes that pending note. The cited upstream hash remains user-provided and was not fetched.
+
 The review's main architectural assessment aligns with this checkout: task-group navigation and Home are permission-filtered; Help is offline; guide progress uses per-staff local storage; command events are commit-based; new product and stock forms disclose advanced fields progressively; and the domain remains authoritative. The review also calls out work not yet delivered in this checkout:
 
 - Quick Add is still a workspace launcher, not a direct creation action. Creation choices must be filtered by **manage/create** permission, then open the requested form directly.
@@ -35,6 +37,10 @@ These points are a reconciled backlog from the supplied review and inspected loc
 - Guide steps with a route dispatch a shell navigation request. The shell enforces its normal permission-filtered route allowlist and supports an optional action. Anchor tracking observes element resize, and Escape closes the active tour.
 - These are local source changes in the current worktree; exact checks and results are recorded in the test evidence document.
 
+### Next product model slice
+
+The next implementation is an additive product family and physical-variant layer over existing generic JSON product records. Each sellable variant remains a distinct product record with its own identifier/barcode, optional existing stock-item link, and its own embedded sale portions. Family identity and package metadata group variants without rewriting legacy products or introducing a parallel sale ledger. POS must continue to price and consume stock through the existing committed order commands and frozen ingredient snapshots. Avoid claiming atomic creation of a new stock master/opening balance until one native command can enforce it within the existing transaction.
+
 ## Current checkout baseline
 
 - The installed Tauri shell now presents grouped, permission-filtered task navigation; the offline Help Center searches generated Markdown articles and can launch the shell tour.
@@ -49,8 +55,9 @@ These points are a reconciled backlog from the supplied review and inspected loc
 2. **Task-first foundation:** implement permission-filtered Home/task navigation and Quick Add entry points, then smart empty states, friendly errors, and defaults. Keep every existing route reachable to users with its existing permission. Current partial delivery: Home/Quick Add foundation, catalog/inventory empty states, and common save/movement error translation; room/property/import empty states and broader error coverage remain open.
 3. **Guidance foundation in parallel:** add typed declarative definitions, duplicate/invalid-definition checks, semantic anchors, a small accessible shell tour, Help Center launch/progress, and native per-staff local persistence. Do not author workflow training before its target flow is stable.
 4. **Finish shell-to-action and guide reliability before expanding content:** first implementation slice now provides manage-filtered Quick Add direct actions, per-guide Home progress, permission-checked guide route steps, element-resize tracking, and Escape close. Remaining in this track: centralize/expand anchor definitions, expose article links in tour UI, improve focus handling, and test route/action loss across responsive layouts.
-5. **Workflow releases:** continue simplified item/catalog and stock workflows, then rooms/front desk, property/maintenance, imports, and operational summaries. Prioritize product family/physical container variants and sale formats before accumulating variant-dependent stock data; then location-first count and simple receiving. Current product/stock forms are progressive-disclosure foundations; atomic tracked-stock plus opening-balance creation remains outstanding and must stay within one authoritative native operation if added.
-6. **Staff orientation and outcome-based training:** after anchor and route acceptance, add a non-blocking, per-staff welcome and permission-derived recommendations. Author workflow guides only after their screens stabilize; advance practice only on named successful commits, never on drafts, failed commands, or navigation alone.
+5. **Product family and physical variants:** preserve old product records as standalone compatible products. Add family identity, package/container quantity and unit, variant label, per-variant barcode and stock link. Support another size within the same family, and represent bottle/glass/single/double formats using existing portions until an evidence-backed normalized model is required. Verify separate stock depletion per physical variant.
+6. **Stock operations:** add location-first count and continuous scanner sessions, then simple receiving. Atomic product + new stock master + opening quantity is a separate native transaction slice and cannot be faked by several frontend saves.
+7. **Other workflows and staff guidance:** simplify room and property creation, imports, and operational summaries. Then add a non-blocking, per-staff welcome and permission-derived recommendations, followed by workflow guides on stabilized screens. Practice advances only on named successful commits.
 
 ## Shared interfaces and invariants
 
