@@ -1,6 +1,7 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useRuntime, type GuidanceProgress } from '../runtime/RuntimeProvider';
 import { GUIDES, type GuideDefinition } from './core';
+import { matchesGuideCommit, type WorkflowContext } from './workflow';
 
 interface GuidanceContextValue {
   guides: GuideDefinition[];
@@ -29,6 +30,7 @@ export function GuidanceProvider({ children }: { children: React.ReactNode }) {
   const [progress, setProgress] = useState<GuidanceProgress[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [stepIndex, setStepIndex] = useState(0);
+  const context = useRef<WorkflowContext | null>(null);
   const guideById = useMemo(() => new Map(GUIDES.map(guide => [guide.id, guide])), []);
   const activeGuide = activeId ? guideById.get(activeId) || null : null;
 
@@ -53,7 +55,7 @@ export function GuidanceProvider({ children }: { children: React.ReactNode }) {
     if (!guide || (guide.permissions || []).some(permission => !runtime.snapshot?.actor.permissions.includes(permission))) return;
     const saved = progress.find(row => row.guideId === guide.id && row.guideVersion === guide.version && row.state === 'IN_PROGRESS');
     const nextIndex = saved ? Math.max(0, guide.steps.findIndex(step => step.id === saved.currentStepId)) : 0;
-    setActiveId(guide.id); setStepIndex(nextIndex);
+    context.current = null; setActiveId(guide.id); setStepIndex(nextIndex);
     void persist({ guideId: guide.id, guideVersion: guide.version, state: 'IN_PROGRESS', currentStepId: guide.steps[nextIndex]?.id || null, completedStepIds: saved?.completedStepIds || [] });
   };
 
@@ -73,11 +75,19 @@ export function GuidanceProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
+    const selected = (event: Event) => {
+      const detail = (event as CustomEvent<{ guideId: string; context: WorkflowContext }>).detail;
+      if (detail?.guideId === activeGuide?.id) context.current = detail.context;
+    };
+    window.addEventListener('servos:guide-context', selected);
+    return () => window.removeEventListener('servos:guide-context', selected);
+  }, [activeGuide?.id]);
+  useEffect(() => {
   const committed = (event: Event) => {
       if (!activeGuide) return;
-      const operation = (event as CustomEvent<{ operation: string }>).detail?.operation;
+      const detail = (event as CustomEvent<{ operation: string; payload: Record<string, unknown> }>).detail;
       const step = activeGuide.steps[stepIndex];
-      if (operation && step?.successOperations?.includes(operation)) move(stepIndex + 1);
+      if (detail && matchesGuideCommit(step?.successOperations, context.current, detail)) { context.current = null; move(stepIndex + 1); }
     };
     window.addEventListener('servos:command-committed', committed);
     return () => window.removeEventListener('servos:command-committed', committed);
@@ -88,7 +98,7 @@ export function GuidanceProvider({ children }: { children: React.ReactNode }) {
     if (route?.screen) window.dispatchEvent(new CustomEvent('servos:guide-route', { detail: route }));
   }, [activeGuide?.id, stepIndex]);
 
-  const value: GuidanceContextValue = { guides: GUIDES, progress, activeGuide, stepIndex, start, close, next: () => move(stepIndex + 1), back: () => move(stepIndex - 1) };
+  const value: GuidanceContextValue = { guides: GUIDES.filter(guide => (guide.permissions || []).every(permission => runtime.snapshot?.actor.permissions.includes(permission))), progress, activeGuide, stepIndex, start, close, next: () => { if (!activeGuide?.steps[stepIndex]?.successOperations?.length) move(stepIndex + 1); }, back: () => move(stepIndex - 1) };
   return <GuidanceContext.Provider value={value}>{children}<GuidedTour/></GuidanceContext.Provider>;
 }
 

@@ -2055,6 +2055,58 @@ pub fn execute(db: &mut Connection, token: &str, cmd: BusinessCommand) -> Result
     let user = actor(db, token, true)?;
     execute_as(db, &user, cmd)
 }
+fn simple_setup_execute(tx: &Transaction, user: &Session, cmd: &BusinessCommand, changes: &mut Vec<Value>) -> Result<bool> {
+    let p=&cmd.payload;
+    let nested=|operation:&str,payload:Value|BusinessCommand{id:cmd.id.clone(),schema_version:cmd.schema_version,operation:operation.into(),target_version:None,payload};
+    match cmd.operation.as_str() {
+        "room.quickCreate" => {
+            if !permissions(&user.role).contains(&"rooms.manage") { return Err("Permission required: rooms.manage".into()); }
+            let numbers=p["numbers"].as_array().filter(|n|!n.is_empty()&&n.len()<=200).ok_or("Choose between 1 and 200 explicit room numbers")?;
+            let mut seen=std::collections::HashSet::new();
+            for number in numbers {
+                let value=number.as_str().map(str::trim).filter(|s|!s.is_empty()&&s.len()<=40).ok_or("Invalid room number")?;
+                if !seen.insert(value.to_lowercase()) { return Err("Duplicate room number in batch".into()); }
+                room_unique_text(tx,"rooms","number","",value)?;
+            }
+            let type_id=if p["newType"].is_object() {
+                let kind=&p["newType"]; let type_id=id();
+                let name=text(kind,"name")?; let capacity=kind["capacity"].as_i64().ok_or("Capacity is required")?;
+                let price=money(kind,"nightlyPrice")?;
+                room_execute(tx,user,&nested("roomType.save",json!({"id":type_id,"data":{"name":name,"code":format!("TYPE-{}",&type_id[..8]),"maxGuests":capacity}})),changes)?;
+                room_execute(tx,user,&nested("ratePlan.save",json!({"id":id(),"data":{"name":format!("{name} nightly"),"roomTypeId":type_id,"mode":"NIGHTLY","priceMinor":price,"currency":"KES","taxBasisPoints":0}})),changes)?;
+                type_id
+            } else { text(p,"roomTypeId")?.to_string() };
+            let kind=get(tx,"roomTypes",&type_id)?.1;
+            for number in numbers {
+                let mut data=json!({"number":number.as_str().unwrap().trim(),"roomTypeId":type_id,"capacity":kind["maxGuests"],"turnaroundMinutes":30,"initialStatus":"READY"});
+                if let Some(advanced)=p["details"].as_object() {
+                    for (key,value) in advanced {
+                        if !["capacity","turnaroundMinutes","initialStatus","floor","wing","notes"].contains(&key.as_str()) { return Err("Unsupported room detail".into()); }
+                        data[key]=value.clone();
+                    }
+                }
+                room_execute(tx,user,&nested("room.save",json!({"id":id(),"data":data})),changes)?;
+            }
+            Ok(true)
+        }
+        "asset.quickCreate" => {
+            if !permissions(&user.role).contains(&"assets.manage") { return Err("Permission required: assets.manage".into()); }
+            let category_id=if let Some(category)=p["assetCategoryId"].as_str().filter(|s|!s.is_empty()) { category.to_string() } else {
+                let default_id="simple-property-unclassified";
+                if room_any(tx,"assetCategories",default_id)?.is_none() {
+                    asset_execute(tx,user,&nested("assetCategory.save",json!({"id":default_id,"data":{"name":"Unclassified property","code":"UNCLASSIFIED-PROPERTY","depreciationMethod":"NONE","usefulLifeMonths":0}})),changes)?;
+                }
+                get(tx,"assetCategories",default_id)?;
+                default_id.to_string()
+            };
+            let asset_id=id();
+            let data=json!({"name":text(p,"name")?,"tag":format!("PROP-{}",asset_id.to_ascii_uppercase()),"assetCategoryId":category_id,"roomId":p.get("roomId"),"locationId":p.get("locationId"),"purchaseCostMinor":p["purchaseCostMinor"].as_i64().unwrap_or(0),"notes":p.get("notes").cloned().unwrap_or(json!("Existing property registered; acquisition cost not supplied."))});
+            asset_execute(tx,user,&nested("asset.save",json!({"id":asset_id,"data":data})),changes)?;
+            Ok(true)
+        }
+        _=>Ok(false)
+    }
+}
 // Shared procurement primitives run inside the caller's single business transaction.
 fn procurement_create(tx: &Transaction, user: &Session, p: &Value, changes: &mut Vec<Value>) -> Result<String> {
             if !permissions(&user.role).contains(&"procurement.manage") { return Err("Purchase order management permission required".into()); }
@@ -2355,6 +2407,11 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
     let mut changes = vec![];
     let p = &cmd.payload;
     live_required(&tx, &cmd.operation)?;
+    if simple_setup_execute(&tx,user,&cmd,&mut changes)? {
+        let result=finish(&tx,&cmd,&user.staff_id,changes)?;
+        tx.commit().map_err(error)?;
+        return Ok(result);
+    }
     if asset_execute(&tx,user,&cmd,&mut changes)? {
         let result=finish(&tx,&cmd,&user.staff_id,changes)?;
         tx.commit().map_err(error)?;

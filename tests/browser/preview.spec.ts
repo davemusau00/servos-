@@ -199,13 +199,13 @@ test('native checkout, location count, and resumable scanner draft', async ({ pa
   const scannerInput = scannerCount.getByLabel('Scan a barcode or stock code');
   await scannerInput.pressSequentially('WHISKY-350-STOCK', {delay:8});
   await scannerInput.press('Enter');
-  await expect(scannerCount.getByRole('status')).toContainText('Whisky 350 stock +350 ml');
+  await expect(scannerCount.getByRole('status').filter({hasText:'Whisky 350 stock'})).toContainText('Whisky 350 stock +350 ml');
   await scannerInput.pressSequentially('UNKNOWN-BOTTLE-42', {delay:8});
   await scannerInput.press('Enter');
   await expect(scannerCount.getByRole('heading', {name:'Unknown barcodes'})).toBeVisible();
   await scannerCount.getByLabel('Assign UNKNOWN-BOTTLE-42 to stock item').selectOption('whisky-750-stock');
   await scannerCount.getByRole('button', {name:'Assign',exact:true}).click();
-  await expect(scannerCount.getByRole('status')).toContainText('Assigned 1 scan to Whisky 750 stock');
+  await expect(scannerCount.getByRole('status').filter({hasText:'Whisky 350 stock'})).toContainText('Assigned 1 scan to Whisky 750 stock');
   await page.waitForFunction(() => Boolean((window as any).__SERVOS_COUNT_DRAFTS?.main?.counts?.['whisky-350-stock'] === 350 && (window as any).__SERVOS_COUNT_DRAFTS?.main?.counts?.['whisky-750-stock'] === 750));
   await scannerCount.getByRole('button', {name:'Close count'}).click();
 
