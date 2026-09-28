@@ -25,7 +25,7 @@ The review's main architectural assessment aligns with this checkout: task-group
 - Home currently uses the core guide's progress row for every guide card. Resolve progress by each guide ID before adding more guides.
 - `GuideStep.route` is declared but not acted on. Add permission-checked route transitions before authoring cross-workspace steps; expand semantic anchors from a central registry and improve resize/keyboard handling before scaling the guide set.
 - There is one orientation guide, not role-personalized first-use onboarding or workflow training. Keep onboarding non-blocking and permission-derived; add it only after multi-guide state and deep actions work.
-- Inventory still centers its table and item-first adjustments; location-first count and a simple receiving flow remain later workflow work. Product family/physical container variants and sale formats remain a high-priority data-model decision before more beverage setup accumulates.
+- Inventory still centers its table and item-first adjustments; location-first count and a simple receiving flow remain later workflow work. Product family, physical container variants, and sale formats were the next high-priority model slice; that slice is now implemented and recorded below.
 - The existing product, stock, room, and asset creation screens are not all equally simplified. Quick Add may deep-link only to operations that the target screen can safely open; missing prerequisites must produce an actionable setup state, not a false completion.
 
 These points are a reconciled backlog from the supplied review and inspected local files; they do not mean the upstream commit was independently validated.
@@ -37,9 +37,9 @@ These points are a reconciled backlog from the supplied review and inspected loc
 - Guide steps with a route dispatch a shell navigation request. The shell enforces its normal permission-filtered route allowlist and supports an optional action. Anchor tracking observes element resize, and Escape closes the active tour.
 - These are local source changes in the current worktree; exact checks and results are recorded in the test evidence document.
 
-### Next product model slice
+### Product model boundary
 
-The next implementation is an additive product family and physical-variant layer over existing generic JSON product records. Each sellable variant remains a distinct product record with its own identifier/barcode, optional existing stock-item link, and its own embedded sale portions. Family identity and package metadata group variants without rewriting legacy products or introducing a parallel sale ledger. POS must continue to price and consume stock through the existing committed order commands and frozen ingredient snapshots. Avoid claiming atomic creation of a new stock master/opening balance until one native command can enforce it within the existing transaction.
+The delivered implementation is an additive product family and physical-variant layer over existing generic JSON product records. Each sellable variant remains a distinct product record with its own identifier/barcode, optional existing stock-item link, and its own embedded sale portions. Family identity and package metadata group variants without rewriting legacy products or introducing a parallel sale ledger. POS must continue to price and consume stock through the existing committed order commands and frozen ingredient snapshots. Avoid claiming atomic creation of a new stock master/opening balance until one native command can enforce it within the existing transaction.
 
 
 ### Product family and physical variants - implemented slice

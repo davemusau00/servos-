@@ -188,4 +188,4 @@ The native catalog accepts additive product-family metadata on the existing JSON
 - `npm run docs:check` - passed: 40 offline Help articles and 15 core docs.
 - `git diff --check` - passed at check time.
 
-Focused browser coverage for creating a family with two sizes is still being debugged; it is not counted as passed here. Atomic new-stock-plus-opening-balance, location-first stock count, room/property workflow simplification, first-use onboarding, and workflow guides remain open.
+`npx playwright test tests/browser/preview.spec.ts -g "native checkout provides customer and business receipt copies"` - passed, desktop and mobile. It verifies family creation, selecting another family size, unique stock links (the existing stock link is disabled), portions, and continued receipt behavior. This remains browser-mocked UI evidence. Atomic new-stock-plus-opening-balance, location-first stock count, room/property workflow simplification, first-use onboarding, and workflow guides remain open.
