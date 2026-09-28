@@ -18,8 +18,8 @@ export function NativeAssetsView({initialAction=''}:{initialAction?:string}){
   const employees=recordsOf(s,'employees'),rooms=recordsOf(s,'rooms'),locations=recordsOf(s,'stockLocations'),stocks=recordsOf(s,'stockItems'),suppliers=recordsOf(s,'suppliers');
   const [section,setSection]=useState<Section>('REGISTER');const [query,setQuery]=useState('');const [selectedId,setSelectedId]=useState(assets[0]?.id||'');
   const [modal,setModal]=useState<{kind:string;data?:any}|null>(null);const [notice,setNotice]=useState('');
-  useEffect(()=>{if(initialAction==='add-asset'&&canManage)setModal({kind:'ASSET'})},[initialAction,canManage]);
   const canManage=perms.includes('assets.manage');const canOperate=perms.includes('assets.operate');const canMaintain=perms.includes('maintenance.manage');
+  useEffect(()=>{if(initialAction==='add-asset'&&canManage)setModal({kind:'ASSET'})},[initialAction,canManage]);
   const selected=assets.find(a=>a.id===selectedId);
   const filtered=useMemo(()=>assets.filter(a=>{const q=query.trim().toLowerCase();if(!q)return true;const category=categories.find(c=>c.id===a.assetCategoryId)?.name||'';const loc=rooms.find(r=>r.id===a.roomId)?.number||locations.find(l=>l.id===a.locationId)?.name||'';return `${a.tag} ${a.name} ${a.serialNumber||''} ${category} ${loc}`.toLowerCase().includes(q);}),[assets,categories,locations,query,rooms]);
   const openMaintenance=maintenance.filter(m=>!['COMPLETED','CANCELLED'].includes(m.status));
