@@ -13,7 +13,8 @@ This ledger distinguishes source implementation from executed verification.
 | Payments/M-Pesa/split/refund | implemented | implemented | user guide | native execution pending | source implemented |
 | Inventory receipt/count/transfer/waste | implemented | implemented | user guide | native execution pending | source implemented |
 | Till/cash movements/close day | implemented | implemented | user guide | native execution pending | source implemented |
-| Offline Help Center | generated from Markdown | implemented | 30 articles | generator/docs checks executable with Node | locally generatable |
+| Offline Help Center | generated from Markdown | implemented | 40 articles | generator/docs checks executable with Node | locally generatable |
+| Task-first Home, first-run catalog/inventory UX, and guidance foundation | native-only | Home, grouped permission-filtered navigation, Quick Add, task-first new-product form, catalog/inventory empty states, common native error translation, Help tour launcher, shell orientation tour | coordination plan + source specs | lint/build/docs checks passed; see [test evidence](TEST_EVIDENCE.md) | partial foundation and product-create UX; family/variant modeling, atomic tracked-stock setup, stock/place workflow, broader defaults/errors, and guides pending |
 | CI/deploy scripts | source implemented | n/a | runbook | syntax/source checks required | source implemented |
 
 When a target-machine check passes, add the commit, OS/device, exact command, date and result to [TEST_EVIDENCE.md](TEST_EVIDENCE.md).

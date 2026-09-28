@@ -6,6 +6,7 @@ import { barcodeEquals, useBarcodeScanner } from '../hooks/useBarcodeScanner';
 import { recordsOf, fieldClass, buttonClass, primaryButtonClass, money, shortDate } from './records';
 import { ManagerApprovalDialog } from './ManagerApprovalDialog';
 import { ActionDialog } from './ActionDialog';
+import { domainErrorMessage } from './errors/domainErrorMessages';
 
 type StockStatus = 'ALL' | 'LOW' | 'OUT' | 'HEALTHY';
 
@@ -72,9 +73,14 @@ export function NativeInventoryView() {
 
   const act = async (operation: string, payload: Record<string, unknown>, permission: Permission) => {
     const execute = async (token?: string) => {
-      await runtime.command(operation, { ...payload, approvalToken: token });
-      setModal(null);
-      setNotice('Inventory movement committed.');
+      try {
+        await runtime.command(operation, { ...payload, approvalToken: token });
+        setModal(null);
+        setNotice('Inventory movement committed.');
+      } catch (error) {
+        setNotice(domainErrorMessage(error, 'commit this inventory movement'));
+        throw error;
+      }
     };
     if (permissions.includes(permission)) await execute();
     else setApproval({ permission, run: async token => execute(token) });
@@ -147,7 +153,7 @@ export function NativeInventoryView() {
         <div className="overflow-x-auto"><table className="w-full min-w-[900px] text-left text-sm"><thead className="bg-slate-900 text-xs uppercase tracking-wide text-slate-500"><tr><th className="p-3">Stock item</th><th className="p-3">Status</th><th className="p-3 text-right">{locationFilter === 'ALL' ? 'Total on hand' : 'At location'}</th><th className="p-3 text-right">Reorder at</th><th className="p-3 text-right">Avg cost</th><th className="p-3 text-right">Stock value</th></tr></thead>
           <tbody>{filtered.map(row => <tr key={row.stock.id} onClick={() => setSelectedStockId(row.stock.id)} className={`cursor-pointer border-t border-slate-800 transition hover:bg-slate-900 ${selected?.id === row.stock.id ? 'bg-amber-400/5' : ''}`}><td className="p-3"><div className="font-semibold">{row.stock.name}</div><div className="mt-0.5 font-mono text-[11px] text-slate-500">{row.stock.code || 'No SKU'}{row.stock.barcode ? ` · ${row.stock.barcode}` : ''}</div></td><td className="p-3"><span className={`inline-flex rounded-full border px-2 py-1 text-[10px] font-black ${statusClass(row.status)}`}>{row.status}</span></td><td className="p-3 text-right font-mono font-semibold">{row.locationQty.toLocaleString()} <span className="font-sans text-xs text-slate-500">{row.stock.baseUnit}</span></td><td className="p-3 text-right font-mono">{row.reorder > 0 ? `${row.reorder.toLocaleString()} ${row.stock.baseUnit}` : '—'}</td><td className="p-3 text-right">{money(row.stock.averageUnitCost)}</td><td className="p-3 text-right font-semibold">{money(row.value)}</td></tr>)}</tbody>
         </table></div>
-        {filtered.length === 0 && <div className="p-8 text-center text-sm text-slate-500">No stock items match the current filters.</div>}
+        {filtered.length === 0 && <div className="p-8 text-center">{stocks.length===0?<><h2 className="font-semibold text-white">No stock items yet</h2><p className="mx-auto mt-1 max-w-md text-sm text-slate-400">Create a stock master in Catalog before counting, moving or receiving stock. Inventory movements will be recorded in the native ledger.</p></>:<p className="text-sm text-slate-500">No stock items match the current filters. Try clearing the search or selecting another stock state.</p>}</div>}
       </section>
 
       <aside className="rounded-2xl border border-slate-800 bg-slate-900 p-4">

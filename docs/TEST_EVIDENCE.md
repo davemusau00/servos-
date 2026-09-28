@@ -115,3 +115,41 @@ Executed against the final source:
 The production build still reports a main JavaScript chunk above 500 kB. PostgreSQL tests used disposable local infrastructure, not the configured business Supabase project. No v2 activation, live migration, fresh-device rehearsal, or physical acceptance was performed by these checks. A Windows Tauri release executable compiled, but `npm run native:build` exited 1 during MSI bundling because Tauri could not resolve/download its WiX bundle tool (`No such host is known`, OS error 11001). This is an environment/network packaging failure, not installer acceptance.
 
 Windows packaging follow-up: `npm run native:build` compiled the optimized `servos.exe`, then failed before producing the MSI because Tauri attempted to download WiX and DNS resolution failed (`No such host is known`, OS error 11001). Re-run packaging on a host with the required WiX toolchain available; a compiled executable is not an installer or terminal acceptance.
+
+### UX and Guidance foundation — 2026-09-28
+
+Executed against the current working tree after adding the Home/task navigation and native guidance foundation:
+
+- `npm run lint` — passed.
+- `npm test` — 79 passed, including UX/guidance alignment, permission-filtered navigation, commit-event source checks, and executable guide-registry validation.
+- `npm run test:browser` — 16 passed across desktop and mobile-layout projects. The native Tauri mock unlock flow checked Home, the core tour, Quick Add permission filtering, and the existing receipt flow. This is browser-mocked UI evidence, not packaged terminal acceptance.
+- `cargo test --manifest-path src-tauri/Cargo.toml --lib` — 56 passed, including staff-isolated, restart-durable guidance progress kept outside the business outbox and schema 10 acceptance.
+- `npm run test:native:container` — 56 passed.
+- `npm run docs:check` — passed: 40 Help Center articles and 15 core documents.
+- `npm run audit:ui` — inventoried 2,798 controls, handlers, and routes; this is static inventory, not acceptance.
+- `npm run build` — passed. The main JavaScript chunk is 833.26 kB, above the 500 kB warning threshold.
+- `git diff --check` — rerun after the evidence update.
+
+### Simple Operations Release A follow-up — 2026-09-28
+
+Implemented first-run catalog and inventory empty states and translated common version, duplicate, missing-reference, and validation errors into staff-facing messages. This changes UI presentation only; native command payloads and transaction semantics are unchanged.
+
+- `npm run lint` — passed.
+- `npm run build` — passed; generated 40 offline help articles. Main JavaScript chunk is 835.41 kB and still triggers Vite's 500 kB warning.
+- `npm run docs:check` — passed: 40 Help Center guides and 15 core documents.
+- `git diff --check` — passed.
+
+Room/property/import empty states, complete centralized error coverage, smart-default audit, and task workflow acceptance remain open.
+
+### Products & Menu creation follow-up — 2026-09-28
+
+New product creation now starts with a unified Drink/Food/Retail/Service choice, name, selling price and fulfillment destination. It generates an editable item code, offers existing-stock tracking as an explicit opt-in, and defers portions/recipes to later setup. Existing products retain the established advanced edit form. No family/physical-variant data model or atomic new-stock/opening-balance orchestration was added in this UI-only slice.
+
+- `npm run lint` — passed after implementation.
+- `npm run build` — passed (835.41 kB main chunk warning; see above).
+- `npm run docs:check` — passed: 40 Help Center guides and 15 core documents.
+- `git diff --check` — passed after implementation.
+
+Family/variant compatibility, stock setup orchestration, storage-place workflow, and targeted browser/native acceptance remain open.
+
+The source workflows for product/catalog, stock, rooms/property, imports, and operational summaries, along with their task-specific guides, are not implemented by this foundation slice. No target-device, hosted cloud, or production acceptance is claimed.

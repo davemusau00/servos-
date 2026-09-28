@@ -46,3 +46,10 @@
 - Prepared Vercel configuration, authenticated production entry and explicit demo/offline-shell flags.
 - Added staged v2 master-command protocol, legacy-writer fencing, private allocation primitives, IndexedDB queue/change-feed processing and build-versioned shell cache. These are not production multi-writer activation.
 - Added native receipt/settings, browser IndexedDB/print and disposable PostgreSQL protocol/allocation tests. Rooms, Assets and full domain/web integration remain pending.
+# 2026-09-28 - UX and guidance foundation
+
+- Added a coordination plan that links task-first workflow ownership to the Guidance System roadmap and marks the older source-plan checkout hash as a planning baseline.
+- Added a permission-filtered Home workspace, task groups, mobile More menu, and Quick Add links to existing native creation workspaces.
+- Added the initial shell orientation tour, semantic anchor support, and Help Center tour launcher/progress display.
+- Added native staff-scoped SQLite guidance progress outside business records and the business outbox; successful local command commits emit observation events for future workflow guides.
+- Simplified product, stock, rooms, property, imports and operational-summary workflows remain future slices; this entry does not claim their completion.

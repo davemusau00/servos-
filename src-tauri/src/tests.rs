@@ -38,6 +38,28 @@ fn cmd(op: &str, payload: Value) -> BusinessCommand {
 fn run(db: &mut rusqlite::Connection, s: &Session, op: &str, p: Value) -> Value {
     execute(db, &s.token, cmd(op, p)).unwrap()
 }
+
+#[test]
+fn guidance_progress_is_staff_scoped_durable_and_outside_business_outbox() {
+    let (dir, mut db, admin) = setup();
+    let before_outbox: i64 = db.query_row("SELECT COUNT(*) FROM outbox", [], |row| row.get(0)).unwrap();
+    let progress=json!({"guideId":"servos.core","guideVersion":1,"state":"IN_PROGRESS","currentStepId":"help","completedStepIds":["workspace","status"]});
+    save_guidance_progress(&db,&admin.token,progress.clone()).unwrap();
+    assert_eq!(guidance_progress(&db,&admin.token).unwrap()[0]["completedStepIds"],json!(["workspace","status"]));
+    assert_eq!(db.query_row::<i64,_,_>("SELECT COUNT(*) FROM outbox",[],|row|row.get(0)).unwrap(),before_outbox);
+    execute(&mut db,&admin.token,cmd("staff.create",json!({"name":"Server One","role":"Server","pin":"827194"}))).unwrap();
+    let server_id: String=db.query_row("SELECT id FROM staff WHERE name='Server One'",[],|row|row.get(0)).unwrap();
+    let server=login(&db,&server_id,"827194").unwrap();
+    assert!(guidance_progress(&db,&server.token).unwrap().as_array().unwrap().is_empty());
+    assert!(save_guidance_progress(&db,&server.token,json!({"guideId":"servos.core","guideVersion":1,"state":"COMPLETED","currentStepId":null,"completedStepIds":["workspace","status","help","staff"]})).is_ok());
+    assert_eq!(guidance_progress(&db,&admin.token).unwrap()[0]["state"],"IN_PROGRESS");
+    assert_eq!(db.query_row::<i64,_,_>("SELECT COUNT(*) FROM outbox",[],|row|row.get(0)).unwrap(),before_outbox+1);
+    assert!(save_guidance_progress(&db,&admin.token,json!({"guideId":"bad guide","guideVersion":1,"state":"IN_PROGRESS","currentStepId":null,"completedStepIds":[]})).is_err());
+    drop(db);
+    let reopened=open(&dir.path().join("test.sqlite")).unwrap();
+    let admin_again=login(&reopened,&admin.staff_id,"827193").unwrap();
+    assert_eq!(guidance_progress(&reopened,&admin_again.token).unwrap()[0]["guideId"],"servos.core");
+}
 fn order(db: &mut rusqlite::Connection, s: &Session) -> String {
     let product = Uuid::new_v4().to_string();
     run(
@@ -886,10 +908,10 @@ fn classified_asset_quantity_requires_whole_units_and_commissioning_is_live_only
 
 // SERVOS_PATCH_10_TERMINAL_ACCEPTANCE
 #[test]
-fn terminal_acceptance_evidence_is_local_immutable_and_schema_v9() {
+fn terminal_acceptance_evidence_is_local_immutable_and_schema_v10() {
     let (_dir,db,s)=setup();
     let schema:i64=db.query_row("PRAGMA user_version",[],|r|r.get(0)).unwrap();
-    assert_eq!(schema,9);
+    assert_eq!(schema,10);
     let before:(i64,i64,i64)=db.query_row(
         "SELECT (SELECT COUNT(*) FROM records),(SELECT COUNT(*) FROM outbox),(SELECT COUNT(*) FROM commands)",
         [],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?))

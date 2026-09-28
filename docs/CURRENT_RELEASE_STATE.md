@@ -1,5 +1,11 @@
 # Current release state
 
+## UX and Guidance foundation — 2026-09-28
+
+The current native shell now has permission-filtered task groups, a Home screen with operational shortcuts and Quick Add entry points, a compact mobile More menu, and an initial shell orientation tour. The offline Help Center launches the tour and displays per-staff progress. SQLite schema 10 stores guide progress separately from business records/outbox; runtime operation-success events are emitted only after the native command returns successfully. Source plans and sequencing are cross-linked in [UX and Guidance delivery plan](UX_GUIDANCE_DELIVERY_PLAN.md).
+
+This is a foundation slice, not completion of the full Simple Operations UX or Guidance roadmap. Product/catalog, stock, rooms/property, imports, task-specific training guides, target-hardware interaction, and the broader production acceptance remain open. See [completion ledger](COMPLETION_LEDGER.md) and [test evidence](TEST_EVIDENCE.md) for executed checks.
+
 Updated: 2026-09-25. **Bar-first source implementation substantially expanded. Production acceptance is still required on a supported target device.**
 
 ## Expansion update — 2026-09-26

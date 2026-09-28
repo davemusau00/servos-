@@ -89,7 +89,7 @@ pub fn open(path: &std::path::Path) -> Result<Connection> {
     let version: i64 = db
         .query_row("PRAGMA user_version", [], |r| r.get(0))
         .map_err(error)?;
-    if version > 9 {
+    if version > 10 {
         return Err("Database requires a newer ServOS version".into());
     }
     if version < 1 {
@@ -119,6 +119,9 @@ pub fn open(path: &std::path::Path) -> Result<Connection> {
     }
     if version < 9 {
         db.execute_batch(include_str!("../migrations/009_terminal_acceptance.sql")).map_err(error)?;
+    }
+    if version < 10 {
+        db.execute_batch(include_str!("../migrations/010_guidance.sql")).map_err(error)?;
     }
     Ok(db)
 }
@@ -396,6 +399,47 @@ pub fn actor(db: &Connection, token: &str, touch: bool) -> Result<Session> {
         .map_err(error)?;
     }
     Ok(user)
+}
+
+pub fn guidance_progress(db: &Connection, token: &str) -> Result<Value> {
+    let user = actor(db, token, true)?;
+    let mut stmt = db.prepare("SELECT guide_id,guide_version,state,current_step_id,completed_step_ids,updated_at FROM guidance_progress WHERE staff_id=? ORDER BY updated_at DESC").map_err(error)?;
+    let rows = stmt.query_map([user.staff_id], |row| {
+        let completed: String = row.get(4)?;
+        Ok(json!({
+            "guideId":row.get::<_,String>(0)?,
+            "guideVersion":row.get::<_,i64>(1)?,
+            "state":row.get::<_,String>(2)?,
+            "currentStepId":row.get::<_,Option<String>>(3)?,
+            "completedStepIds":serde_json::from_str::<Value>(&completed).unwrap_or(json!([])),
+            "updatedAt":row.get::<_,String>(5)?
+        }))
+    }).map_err(error)?;
+    let items = rows.collect::<std::result::Result<Vec<_>,_>>().map_err(error)?;
+    Ok(json!(items))
+}
+
+pub fn save_guidance_progress(db: &Connection, token: &str, progress: Value) -> Result<Value> {
+    let user = actor(db, token, true)?;
+    let guide_id = progress.get("guideId").and_then(Value::as_str).unwrap_or("").trim();
+    if guide_id.is_empty() || guide_id.len() > 120 || !guide_id.chars().all(|c| c.is_ascii_alphanumeric() || ".-_".contains(c)) {
+        return Err("Invalid guidance guide ID".into());
+    }
+    let guide_version = progress.get("guideVersion").and_then(Value::as_i64).filter(|v| *v > 0).ok_or("Invalid guidance version")?;
+    let state = progress.get("state").and_then(Value::as_str).ok_or("Invalid guidance state")?;
+    if !["IN_PROGRESS","COMPLETED","DISMISSED"].contains(&state) { return Err("Invalid guidance state".into()); }
+    let current_step = progress.get("currentStepId").and_then(Value::as_str).filter(|s| !s.is_empty());
+    if current_step.is_some_and(|s| s.len() > 120 || !s.chars().all(|c| c.is_ascii_alphanumeric() || ".-_".contains(c))) {
+        return Err("Invalid guidance step ID".into());
+    }
+    let completed = progress.get("completedStepIds").and_then(Value::as_array).ok_or("Invalid completed guidance steps")?;
+    if completed.len() > 100 || completed.iter().any(|s| s.as_str().is_none_or(|v| v.is_empty() || v.len() > 120 || !v.chars().all(|c| c.is_ascii_alphanumeric() || ".-_".contains(c)))) {
+        return Err("Invalid completed guidance steps".into());
+    }
+    let completed_json = serde_json::to_string(completed).map_err(error)?;
+    let updated_at = Utc::now().to_rfc3339();
+    db.execute("INSERT INTO guidance_progress(staff_id,guide_id,guide_version,state,current_step_id,completed_step_ids,updated_at) VALUES(?,?,?,?,?,?,?) ON CONFLICT(staff_id,guide_id) DO UPDATE SET guide_version=excluded.guide_version,state=excluded.state,current_step_id=excluded.current_step_id,completed_step_ids=excluded.completed_step_ids,updated_at=excluded.updated_at", params![user.staff_id,guide_id,guide_version,state,current_step,completed_json,updated_at]).map_err(error)?;
+    Ok(json!({"guideId":guide_id,"guideVersion":guide_version,"state":state,"currentStepId":current_step,"completedStepIds":completed,"updatedAt":updated_at}))
 }
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]

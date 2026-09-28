@@ -13,7 +13,7 @@ The acceptance panel records local immutable evidence in `terminal_acceptance_ev
 
 Final acceptance requires:
 
-- SQLite schema v9 and `PRAGMA quick_check = ok`;
+- SQLite schema v10 and `PRAGMA quick_check = ok`;
 - `LIVE` installation stage;
 - terminal identity present;
 - cloud synchronization configured;

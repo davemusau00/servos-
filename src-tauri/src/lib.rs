@@ -121,6 +121,16 @@ fn runtime_snapshot(state: State<Runtime>, token: String) -> store::Result<Value
     store::snapshot(&db, &token)
 }
 #[tauri::command]
+fn runtime_guidance_progress(state: State<Runtime>, token: String) -> store::Result<Value> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    store::guidance_progress(&db, &token)
+}
+#[tauri::command]
+fn runtime_guidance_save_progress(state: State<Runtime>, token: String, progress: Value) -> store::Result<Value> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    store::save_guidance_progress(&db, &token, progress)
+}
+#[tauri::command]
 fn runtime_command(
     state: State<Runtime>,
     token: String,
@@ -977,6 +987,8 @@ pub fn run() {
             runtime_login,
             runtime_lock,
             runtime_snapshot,
+            runtime_guidance_progress,
+            runtime_guidance_save_progress,
             runtime_command,
             runtime_manager_approve,
             runtime_enroll,

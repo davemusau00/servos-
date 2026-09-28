@@ -4,6 +4,15 @@ import type { ReceiptResponse, ReceiptSummary } from '../types/receipt';
 import type { ImportApplyPlan, ImportBatchDetail, ImportBatchSummary, StageImportInput } from '../types/imports';
 import type { BusinessCommand, CommandResult, IntakeProfile, ManagerApproval, Permission, PrinterJobResult, ProductionHealthAudit, ReconciliationReport, RuntimeSession, RuntimeSnapshot, RuntimeStatus, TerminalAcceptanceStatus } from '../types/runtime';
 
+export interface GuidanceProgress {
+  guideId: string;
+  guideVersion: number;
+  state: 'IN_PROGRESS' | 'COMPLETED' | 'DISMISSED';
+  currentStepId: string | null;
+  completedStepIds: string[];
+  updatedAt?: string;
+}
+
 export const isNative = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
 
 interface RuntimeContextValue {
@@ -22,6 +31,8 @@ interface RuntimeContextValue {
   lock: () => Promise<void>;
   refresh: () => Promise<void>;
   command: (operation: string, payload?: Record<string, unknown>, targetVersion?: number) => Promise<CommandResult>;
+  guidanceProgress: () => Promise<GuidanceProgress[]>;
+  saveGuidanceProgress: (progress: GuidanceProgress) => Promise<GuidanceProgress>;
   approve: (approverId: string, pin: string, permission: Permission, target?: string) => Promise<ManagerApproval>;
   sync: () => Promise<void>;
   backup: () => Promise<string>;
@@ -134,8 +145,17 @@ export const RuntimeProvider = ({ children }: { children: React.ReactNode }) => 
     catch (e) { setError(`Saved locally, but refresh failed. Reload before making another change. ${String(e)}`); }
     nextSync.current = 0;
     window.dispatchEvent(new Event('servos:local-commit'));
+    window.dispatchEvent(new CustomEvent('servos:command-committed', { detail: { operation, result } }));
     return result;
   }, [session, refresh, report, reloadStatus]);
+  const guidanceProgress = async () => {
+    if (!session) throw new Error('Unlock the terminal first');
+    return invoke<GuidanceProgress[]>('runtime_guidance_progress', { token: session.token });
+  };
+  const saveGuidanceProgress = async (progress: GuidanceProgress) => {
+    if (!session) throw new Error('Unlock the terminal first');
+    return invoke<GuidanceProgress>('runtime_guidance_save_progress', { token: session.token, progress });
+  };
   const approve = async (approverId: string, pin: string, permission: Permission, target?: string) => {
     if (!session) throw new Error('Unlock the terminal first');
     try { return await invoke<ManagerApproval>('runtime_manager_approve', { token: session.token, approverId, pin, permission, target: target || null }); }
@@ -245,5 +265,5 @@ export const RuntimeProvider = ({ children }: { children: React.ReactNode }) => 
     return () => { clearInterval(timer); window.removeEventListener('pointerdown', active); window.removeEventListener('keydown', active); window.removeEventListener('online', resume); window.removeEventListener('servos:local-commit', resume); document.removeEventListener('visibilitychange', resume); };
   }, [session, sync, lock]);
 
-  return <RuntimeContext.Provider value={{ status, session, snapshot, error, syncing, busy, reloadStatus, saveIntake, completeIntake, reopenIntake, enroll, login, lock, refresh, command, approve, sync, backup, healthAudit, acceptanceStatus, acceptanceAction, importBatches, importBatch, stageImport, cancelImport, planImport, importPlan, applyImport, reconcile, receipt, receiptHistory, printReceipt, testPrinter, retryPrinterJob, printerJobs, clearError: () => setError('') }}>{children}</RuntimeContext.Provider>;
+  return <RuntimeContext.Provider value={{ status, session, snapshot, error, syncing, busy, reloadStatus, saveIntake, completeIntake, reopenIntake, enroll, login, lock, refresh, command, guidanceProgress, saveGuidanceProgress, approve, sync, backup, healthAudit, acceptanceStatus, acceptanceAction, importBatches, importBatch, stageImport, cancelImport, planImport, importPlan, applyImport, reconcile, receipt, receiptHistory, printReceipt, testPrinter, retryPrinterJob, printerJobs, clearError: () => setError('') }}>{children}</RuntimeContext.Provider>;
 };

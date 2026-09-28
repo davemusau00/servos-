@@ -11,6 +11,7 @@ ServOS currently runs one installed authoritative terminal. The accepted expansi
 - [Implementation handoff and remaining boundaries](EXPANSION_HANDOFF.md)
 
 - [Current release state](CURRENT_RELEASE_STATE.md)
+- [UX and Guidance delivery plan](UX_GUIDANCE_DELIVERY_PLAN.md)
 - [Feature coverage](FEATURE_COVERAGE_MATRIX.md)
 - [Implementation plan](IMPLEMENTATION_PLAN.md)
 - [Gap analysis and roadmap](GAP_ANALYSIS_AND_ROADMAP.md)

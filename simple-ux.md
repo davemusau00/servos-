@@ -4,6 +4,9 @@
 **Repository:** `davemusau00/servos-`  
 **Target:** current `main`  
 **Current reviewed HEAD:** `4035337e5d63ba8785e87ba344565cc69c69e68d`
+**Baseline note:** This is the original planning snapshot. Current implementation and acceptance status are tracked in [the UX and Guidance Delivery Plan](docs/UX_GUIDANCE_DELIVERY_PLAN.md) and the release ledger.
+
+> Planning baseline only: this hash identifies the original review snapshot, not the current checkout. The current coordination and delivery order is documented in [docs/UX_GUIDANCE_DELIVERY_PLAN.md](docs/UX_GUIDANCE_DELIVERY_PLAN.md). This document remains authoritative for task-first workflow requirements and safeguards.
 
 ---
 

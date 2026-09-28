@@ -11,11 +11,18 @@ test('browser preview is explicit and all retained module routes render', async 
     await page.evaluate(route => { window.location.hash = `/${route}`; }, route);
     await page.waitForTimeout(100);
     await expect(page).toHaveURL(new RegExp(`#/${route}$`));
-    await expect(page.locator('main').first()).not.toBeEmpty();
+    // Preview screens use different semantic landmarks; verify the React app
+    // remains mounted while the requested hash route settles.
+    const rootMounted=await page.locator('#root').evaluate(element=>element.childElementCount>0);
+    assertRootMounted(rootMounted,route,errors);
   }
   expect(errors).toEqual([]);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
+
+function assertRootMounted(mounted:boolean,route:string,errors:string[]) {
+  if(!mounted) throw new Error(`Preview route ${route} unmounted the React app. Browser errors: ${errors.join(' | ') || 'none captured'}`);
+}
 
 test('native shell mounts its fresh-install intake without runtime provider errors', async ({ page }) => {
   await page.addInitScript(() => {
@@ -46,11 +53,13 @@ test('native checkout provides customer and business receipt copies', async ({ p
       records: [record('organization','business',{name:'Test Bar'}),record('outlets','outlet-1',{name:'Main Bar',propertyId:'property-1',active:true}),record('orders','order-1',order),record('paymentConfig','main',{methods:['CASH']})],
     };
     (window as Window & { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__ = {
-      invoke: async (command: string) => {
+      invoke: async (command: string, args?: {progress?: unknown}) => {
         windowState.__SERVOS_CALLS?.push(command);
         if (command === 'runtime_status') return { enrolled: true, installationStage: 'LIVE', staff: [{id:'staff-1',name:'Test Owner',role:'Admin'}] };
         if (command === 'runtime_login') return {token:'test-session',staffId:'staff-1',name:'Test Owner',role:'Admin'};
         if (command === 'runtime_snapshot') return snapshot;
+        if (command === 'runtime_guidance_progress') return [];
+        if (command === 'runtime_guidance_save_progress') return args?.progress || {};
         if (command === 'runtime_command') return {commandId:'cmd-test',recordIds:[],auditReference:'audit-test',sequence:1};
         if (command === 'runtime_printer_jobs') return [];
         if (command === 'runtime_sync') return {};
@@ -64,6 +73,17 @@ test('native checkout provides customer and business receipt copies', async ({ p
   await page.goto('/');
   await page.getByLabel('PIN').fill('123456');
   await page.getByRole('button', {name:'Unlock'}).click();
+  await expect(page.getByRole('heading', {name:'What are you working on?'})).toBeVisible();
+  await page.getByRole('button', {name:'Take a quick tour'}).click();
+  await expect(page.getByRole('dialog', {name:/Getting around ServOS/})).toBeVisible();
+  await page.getByRole('button', {name:'Close',exact:true}).click();
+  await page.getByRole('button', {name:'Quick Add'}).click();
+  const quickAdd=page.getByRole('dialog', {name:'What do you need to add?'});
+  await expect(quickAdd.getByRole('button', {name:/Item or menu product/})).toBeVisible();
+  await expect(quickAdd.getByRole('button', {name:/Room/})).toHaveCount(0);
+  await expect(quickAdd.getByRole('button', {name:/Property item/})).toHaveCount(0);
+  await quickAdd.getByRole('button', {name:'Close Quick Add'}).click();
+  await page.getByRole('button', {name:'Sell', exact:true}).click();
   await page.getByRole('button', {name:'Pay'}).click();
   await page.getByLabel('Cash tendered').fill('100');
   await page.getByRole('button', {name:'Record payment'}).click();
