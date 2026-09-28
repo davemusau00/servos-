@@ -28,6 +28,13 @@ The review's main architectural assessment aligns with this checkout: task-group
 
 These points are a reconciled backlog from the supplied review and inspected local files; they do not mean the upstream commit was independently validated.
 
+### Delivered after review reconciliation
+
+- Quick Add choices require `catalog.manage`, `rooms.manage`, or `assets.manage`; selecting a choice adds a route action and opens the relevant create flow. Room setup opens room creation when a type exists, or the required room-type setup when it does not. Asset creation checks for a category and physical place and explains missing prerequisites.
+- Home reads each guide card's progress by that guide's ID and version, so one guide cannot incorrectly label another as resumable.
+- Guide steps with a route dispatch a shell navigation request. The shell enforces its normal permission-filtered route allowlist and supports an optional action. Anchor tracking observes element resize, and Escape closes the active tour.
+- These are local source changes in the current worktree; exact checks and results are recorded in the test evidence document.
+
 ## Current checkout baseline
 
 - The installed Tauri shell now presents grouped, permission-filtered task navigation; the offline Help Center searches generated Markdown articles and can launch the shell tour.
@@ -41,9 +48,9 @@ These points are a reconciled backlog from the supplied review and inspected loc
 1. **Coordination and baseline:** maintain this crosswalk, update source-document baseline labels when their contracts change, and record evidence in the existing completion ledger and test evidence log.
 2. **Task-first foundation:** implement permission-filtered Home/task navigation and Quick Add entry points, then smart empty states, friendly errors, and defaults. Keep every existing route reachable to users with its existing permission. Current partial delivery: Home/Quick Add foundation, catalog/inventory empty states, and common save/movement error translation; room/property/import empty states and broader error coverage remain open.
 3. **Guidance foundation in parallel:** add typed declarative definitions, duplicate/invalid-definition checks, semantic anchors, a small accessible shell tour, Help Center launch/progress, and native per-staff local persistence. Do not author workflow training before its target flow is stable.
-4. **Finish shell-to-action and guide reliability before expanding content:** make Quick Add open the requested creation form directly, filter by manage permissions, correct progress display per guide, and implement permission-checked `GuideStep.route` navigation. Add centralized anchors plus resize and keyboard recovery before authoring guides that cross screens.
-5. **Workflow releases:** continue simplified item/catalog and stock workflows, then rooms/front desk, property/maintenance, imports, and operational summaries. Prioritize product family/physical container variants and sale formats before accumulating variant-dependent stock data; then location-first count and simple receiving. The current product/stock forms are progressive-disclosure foundations; atomic tracked-stock plus opening-balance creation remains outstanding and must stay within one authoritative native operation if added.
-6. **Staff orientation and outcome-based training:** after guide routing and multi-guide state are reliable, add a non-blocking, per-staff welcome and permission-derived recommendations. Author workflow guides only after their screens stabilize; advance practice only on named successful commits, never on drafts, failed commands, or navigation alone.
+4. **Finish shell-to-action and guide reliability before expanding content:** first implementation slice now provides manage-filtered Quick Add direct actions, per-guide Home progress, permission-checked guide route steps, element-resize tracking, and Escape close. Remaining in this track: centralize/expand anchor definitions, expose article links in tour UI, improve focus handling, and test route/action loss across responsive layouts.
+5. **Workflow releases:** continue simplified item/catalog and stock workflows, then rooms/front desk, property/maintenance, imports, and operational summaries. Prioritize product family/physical container variants and sale formats before accumulating variant-dependent stock data; then location-first count and simple receiving. Current product/stock forms are progressive-disclosure foundations; atomic tracked-stock plus opening-balance creation remains outstanding and must stay within one authoritative native operation if added.
+6. **Staff orientation and outcome-based training:** after anchor and route acceptance, add a non-blocking, per-staff welcome and permission-derived recommendations. Author workflow guides only after their screens stabilize; advance practice only on named successful commits, never on drafts, failed commands, or navigation alone.
 
 ## Shared interfaces and invariants
 
@@ -58,6 +65,8 @@ These points are a reconciled backlog from the supplied review and inspected loc
 - **Foundation:** navigation remains permission-filtered on desktop and narrow layouts; Home and Quick Add only expose eligible destinations; current modules remain reachable; the Help Center and articles continue to work offline.
 - **Guidance:** definitions reject duplicate IDs and unknown targets; keyboard users can launch, advance, back, and close a guide; target loss is recoverable; staff progress is isolated and survives restart.
 - **Outcome events:** a successful local commit can advance a matching step; command rejection and uncommitted drafts cannot. A refresh error after a committed write must not invite a duplicate transaction or erase the success event.
+- **Quick Add:** each choice requires the target's real creation permission and opens its form directly. Missing prerequisites show a safe next step.
+- **Guide growth:** each Home card reflects its own guide progress; route steps navigate only to permission-allowed workspaces; anchors remain recoverable through resize, mobile layouts, and keyboard close.
 - **Quick Add:** each choice requires the target's real creation permission and opens its form directly. Missing target prerequisites show a safe next step.
 - **Guide growth:** each Home card reflects its own guide progress; route steps navigate only to permission-allowed workspaces; anchors remain recoverable through resize, mobile layouts, and keyboard close.
 - **Each workflow release:** cover existing-record compatibility, permissions, approvals, audit effects, offline commits, and relevant restart/reload behavior with focused native/browser acceptance. Update completion and evidence documents with exact executed results; keep target hardware, live cloud, and deployment claims separate.

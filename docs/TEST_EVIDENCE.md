@@ -162,4 +162,8 @@ Stock master creation now starts with the item name and count unit; item code is
 
 Atomic create-stock-plus-opening-balance, physical product variants, place use across remaining screens, and focused workflow acceptance remain open.
 
+### Quick Add and guide routing follow-up — 2026-09-28
+
+Reconciled the user-supplied upstream-main review against checked-out local source. Quick Add now encodes direct `add-item`, `add-room`, and `add-asset` actions, exposes them only with manage permissions, and opens the matching flow or its prerequisite. Guide cards use their own versioned progress, route steps request shell navigation through the permission-filtered allowlist, and the tour observes target resize and closes on Escape. Focused checks are pending.
+
 The source workflows for product/catalog, stock, rooms/property, imports, and operational summaries, along with their task-specific guides, are not implemented by this foundation slice. No target-device, hosted cloud, or production acceptance is claimed.
