@@ -187,6 +187,7 @@ const ScannerCountSession = ({ stocks, products, locationId, locationName, onBac
   const [saveStatus, setSaveStatus] = useState('Loading draft');
   const [baseline, setBaseline] = useState<InventoryCountDraft['baseline']>({});
   const [pending, setPending] = useState<InventoryCountDraft['pendingCommand']>();
+  const pendingRef = useRef<InventoryCountDraft['pendingCommand']>();
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [scanCounts, setScanCounts] = useState<Record<string, number>>({});
   const [unknownScans, setUnknownScans] = useState<{ barcode: string; count: number }[]>([]);
@@ -219,6 +220,7 @@ const ScannerCountSession = ({ stocks, products, locationId, locationName, onBac
       revision.current = draft?.revision || 0;
       setBaseline(draft?.baseline || (draft ? {} : Object.fromEntries(stocks.map(item => [item.id, snapshotOf(item)]))));
       setPending(draft?.pendingCommand);
+      pendingRef.current = draft?.pendingCommand;
       if (draft?.pendingCommand) { setStage('REVIEW'); setActive(false); }
       setProblem('');
       setLoaded(true);
@@ -303,11 +305,11 @@ const ScannerCountSession = ({ stocks, products, locationId, locationName, onBac
     submitting.current = true; setBusy(true);
     setProblem('');
     try {
-      await flush();
-      const request = pending || { id: crypto.randomUUID(), payload: { locationId, draftSessionId: sessionId.current, draftRevision: ++revision.current, reason: 'Continuous scanner stock count', rows: rows.map(row => ({ stockItemId: row.item.id, expectedQuantity: row.expected, countedQuantity: row.counted })) } };
-      if (!pending) {
+      if (!pendingRef.current) await flush();
+      const request = pendingRef.current || { id: crypto.randomUUID(), payload: { locationId, draftSessionId: sessionId.current, draftRevision: ++revision.current, reason: 'Continuous scanner stock count', rows: rows.map(row => ({ stockItemId: row.item.id, expectedQuantity: row.expected, countedQuantity: row.counted })) } };
+      if (!pendingRef.current || saveFailure.current) {
+        pendingRef.current = request; setPending(request);
         await enqueue({ sessionId: sessionId.current, revision: revision.current, baseline, locationId, counts, scanCounts, unknownScans, pendingCommand: request });
-        setPending(request);
       }
       await onCommit(request.payload, request.id);
       committed.current = true;
@@ -318,6 +320,10 @@ const ScannerCountSession = ({ stocks, products, locationId, locationName, onBac
   if (!loaded) return <div className="rounded-xl bg-slate-950 p-4 text-sm text-slate-400">{problem ? <><p role="alert">Draft could not be loaded: {problem}. Editing is blocked to protect saved work.</p><button className={buttonClass} onClick={() => { setProblem(''); setLoadAttempt(value => value + 1); }}>Retry loading draft</button><button className={buttonClass} onClick={() => { if (window.confirm('Permanently discard the saved count at this Storage Place?')) void runtime.clearInventoryCountDraft(locationId).then(() => setLoadAttempt(value => value + 1)).catch(cause => setProblem(String(cause))); }}>Discard saved draft</button></> : 'Loading saved scanner session…'}</div>;
   return <section className="rounded-xl border border-amber-500/25 bg-slate-950/70 p-3 sm:p-4">
     {problem && <p role="alert" className="mb-3 rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 text-sm text-rose-200">{problem}</p>}
+    {problem && <button className={buttonClass} disabled={busy} onClick={() => {
+      if (!window.confirm('Discard this saved count and recount? This does not undo any count already committed.')) return;
+      void queue.current.then(() => runtime.clearInventoryCountDraft(locationId)).then(() => { committed.current = true; saveFailure.current = null; onBack(); }).catch(cause => setProblem(String(cause)));
+    }}>Discard session and recount</button>}
     {changed.length > 0 && !pending && <p role="alert" className="mb-3 text-amber-200">Inventory or item details changed for {changed.length} items. <button className={buttonClass} onClick={recountChanged}>Recount changed items</button></p>}
     <p role="status" className="mb-2 text-xs text-slate-400">{saveStatus}</p>
     {Boolean(saveFailure.current) && <button className={buttonClass} onClick={() => void enqueue({ sessionId: sessionId.current, revision: revision.current, baseline, locationId, counts, scanCounts, unknownScans, ...(pending ? { pendingCommand: pending } : {}) }).catch(() => {})}>Retry saving draft</button>}

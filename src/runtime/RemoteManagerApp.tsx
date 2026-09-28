@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Activity, ChevronRight, Clock3, Database, RefreshCw, Search, ShieldCheck, Wifi } from 'lucide-react';
+import { RemoteAccountAccess, remoteAuthCall, takeAccountLink } from './RemoteAccountAccess';
 import { WebBusinessApp } from './web/WebBusinessApp';
 import type { WebSession } from './web/session';
 
@@ -51,7 +52,7 @@ const recordValue = (r: RecordRow) => {
 };
 const statusTone = (value: string) => {
   const state = value.toUpperCase();
-  if (/REJECT|VOID|CANCEL|OUT_OF_ORDER|LOST|FAILED/.test(state)) return 'border-rose-500/30 bg-rose-500/10 text-rose-200';
+  if (/CONFLICT|REJECT|VOID|CANCEL|OUT_OF_ORDER|LOST|FAILED/.test(state)) return 'border-rose-500/30 bg-rose-500/10 text-rose-200';
   if (/PENDING|OPEN|DRAFT|RESERVED|LOW|DIRTY|IN_PROGRESS/.test(state)) return 'border-amber-500/30 bg-amber-500/10 text-amber-200';
   return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200';
 };
@@ -72,6 +73,8 @@ export const RemoteManagerApp = ({ onBack }: { onBack: () => void }) => {
   const url = import.meta.env.VITE_SUPABASE_URL;
   const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
   const webV2Enabled = import.meta.env.VITE_ENABLE_WEB_V2 === 'true';
+  const [accountLink, setAccountLink] = useState(takeAccountLink);
+  const [accountNotice, setAccountNotice] = useState('');
   const [auth, setAuth] = useState<Auth | null>(null); const authRef = useRef<Auth | null>(null); const expires = useRef(0);
   const [cloudSession,setCloudSession]=useState<WebSession|null>(null);
   const [email, setEmail] = useState(''); const [password, setPassword] = useState(''); const [error, setError] = useState(''); const [busy, setBusy] = useState(false);
@@ -80,11 +83,15 @@ export const RemoteManagerApp = ({ onBack }: { onBack: () => void }) => {
   const [selected, setSelected] = useState<RecordRow | null>(null); const [name, setName] = useState(''); const [price, setPrice] = useState('');
   const [search, setSearch] = useState(''); const [refreshing, setRefreshing] = useState(false);
   const saveAuth = (next: Auth) => { authRef.current = next; expires.current = Date.now() + next.expires_in * 1000; setAuth(next); };
+  const generation = useRef(0);
+  const clearSession = () => { generation.current++;  authRef.current = null; setAuth(null); setCloudSession(null); setRows([]); setRequests([]); setSelected(null); setLastSeen(null); };
+  const signOut = async () => { setBusy(true); try { if(authRef.current) await remoteAuthCall(url,key,'logout?scope=global',undefined,authRef.current.access_token); clearSession(); setError(''); } catch(cause) { setError(String(cause)); } finally {setBusy(false);} };
+  const recover = async () => { if(!email.trim()) { setError('Enter your account email first.'); return; } setBusy(true); setError(''); try { await remoteAuthCall(url,key,`recover?redirect_to=${encodeURIComponent(window.location.origin + window.location.pathname)}`,{email:email.trim()}); setAccountNotice('If this address has an account, recovery instructions have been sent.'); } catch(cause) { setError(String(cause)); } finally {setBusy(false);} };
   const request = async (path: string, body?: unknown) => {
     if (!authRef.current) throw new Error('Sign in first');
     if (Date.now() >= expires.current - 60_000) {
       const res = await fetch(`${url}/auth/v1/token?grant_type=refresh_token`, { method: 'POST', headers: { apikey: key, 'Content-Type': 'application/json' }, body: JSON.stringify({ refresh_token: authRef.current.refresh_token }) });
-      if (!res.ok) { authRef.current = null; setAuth(null); throw new Error('Session expired. Sign in again.'); }
+      if (!res.ok) { clearSession(); throw new Error('Session expired. Sign in again.'); }
       saveAuth(await res.json());
     }
     const res = await fetch(`${url}/rest/v1/${path}`, { method: body === undefined ? 'GET' : 'POST', headers: { apikey: key, Authorization: `Bearer ${authRef.current!.access_token}`, 'Content-Type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) });
@@ -92,13 +99,16 @@ export const RemoteManagerApp = ({ onBack }: { onBack: () => void }) => {
     const text = await res.text(); return text ? JSON.parse(text) : null;
   };
   const refresh = async () => {
+    const started = generation.current;
     setRefreshing(true);
     try {
+      if(await request('rpc/servos_is_manager', {}) !== true) { clearSession(); throw new Error('Remote Manager access has been revoked.'); }
       const [records, changes, health] = await Promise.all([
         request(`business_records?select=*&archived=eq.false&collection=eq.${encodeURIComponent(collection)}&order=id&limit=100&offset=${offset}`),
         request('remote_change_requests?select=*&order=created_at.desc&limit=100'),
         request('rpc/servos_health', {})
       ]);
+      if(started !== generation.current || !authRef.current) return;
       setRows(records); setRequests(changes); setLastSeen(health?.lastSeen || null); setError('');
     } catch (e) { setError(String(e)); }
     finally { setRefreshing(false); }
@@ -111,12 +121,13 @@ export const RemoteManagerApp = ({ onBack }: { onBack: () => void }) => {
     return rows.filter(row => `${recordName(row)} ${row.id} ${recordState(row)} ${JSON.stringify(row.data)}`.toLowerCase().includes(q));
   }, [rows, search]);
 
-  const pendingRequests = requests.filter(request => !['APPLIED','REJECTED','CANCELLED'].includes(String(request.status || '').toUpperCase())).length;
+  const pendingRequests = requests.filter(request => !['APPLIED','REJECTED','CANCELLED','CONFLICT'].includes(String(request.status || '').toUpperCase())).length;
   const syncAgeMinutes = lastSeen ? Math.max(0, Math.floor((Date.now() - new Date(lastSeen).getTime()) / 60000)) : null;
   const syncState = syncAgeMinutes === null ? 'NO DATA' : syncAgeMinutes <= 5 ? 'FRESH' : syncAgeMinutes <= 30 ? 'DELAYED' : 'STALE';
   const syncTone = syncState === 'FRESH' ? 'text-emerald-300' : syncState === 'DELAYED' ? 'text-amber-300' : 'text-rose-300';
   const activeCollection = collections.find(item => item.id === collection);
 
+  if(accountLink) return <RemoteAccountAccess url={url} publishableKey={key} link={accountLink} onDone={()=>setAccountLink(null)}/>;
   if (!auth) return <div className="min-h-screen bg-slate-950 text-white grid place-items-center p-5"><form className="w-full max-w-md space-y-4 rounded-3xl border border-slate-800 bg-slate-900 p-7 shadow-2xl" onSubmit={async e => {
     e.preventDefault(); setBusy(true); setError('');
     try {
@@ -138,13 +149,15 @@ export const RemoteManagerApp = ({ onBack }: { onBack: () => void }) => {
     <label className="block text-sm">Email<input required type="email" autoComplete="username" className={`${field} mt-1 w-full`} value={email} onChange={e => setEmail(e.target.value)} /></label>
     <label className="block text-sm">Password<input required type="password" autoComplete="current-password" className={`${field} mt-1 w-full`} value={password} onChange={e => setPassword(e.target.value)} /></label>
     {error && <p role="alert" className="rounded-xl border border-rose-800 bg-rose-950/40 p-3 text-sm text-rose-200">{error}</p>}
+    {accountNotice&&<p role="status" className="text-sm text-emerald-200">{accountNotice}</p>}
+    <button type="button" disabled={busy} className="text-sm text-amber-200 underline" onClick={()=>void recover()}>Forgot password?</button>
     <div className="flex gap-2"><button disabled={busy} className={primary}>{busy?'Signing in…':'Sign in'}</button><button type="button" className={button} onClick={onBack}>Back</button></div>
   </form></div>;
 
-  if(cloudSession?.enabled)return <WebBusinessApp initialSession={cloudSession} rpc={request} onSignOut={()=>{authRef.current=null;setAuth(null);setCloudSession(null);setRows([]);setRequests([])}}/>;
+  if(cloudSession?.enabled)return <WebBusinessApp initialSession={cloudSession} rpc={request} onSignOut={()=>void signOut()}/>;
 
   return <div className="min-h-screen bg-slate-950 text-slate-100">
-    <header className="sticky top-0 z-20 border-b border-slate-800 bg-slate-950/95 px-4 py-4 backdrop-blur sm:px-6"><div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-3"><div><div className="text-[10px] font-black uppercase tracking-[0.24em] text-amber-400">ServOS Remote</div><h1 className="text-xl font-black">Business control</h1></div><div className="flex items-center gap-2"><button className={button} disabled={refreshing} onClick={() => void refresh()}><RefreshCw className={`mr-1 inline h-4 w-4 ${refreshing?'animate-spin':''}`}/>Refresh</button><button className={button} onClick={() => { authRef.current = null; setAuth(null); setRows([]); setRequests([]); setSelected(null); }}>Sign out</button></div></div></header>
+    <header className="sticky top-0 z-20 border-b border-slate-800 bg-slate-950/95 px-4 py-4 backdrop-blur sm:px-6"><div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-3"><div><div className="text-[10px] font-black uppercase tracking-[0.24em] text-amber-400">ServOS Remote</div><h1 className="text-xl font-black">Business control</h1></div><div className="flex items-center gap-2"><button className={button} disabled={refreshing} onClick={() => void refresh()}><RefreshCw className={`mr-1 inline h-4 w-4 ${refreshing?'animate-spin':''}`}/>Refresh</button><button className={button} disabled={busy} onClick={() => void signOut()}>Sign out</button></div></div></header>
 
     <main className="mx-auto max-w-[1600px] p-4 sm:p-6">
       <section className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">

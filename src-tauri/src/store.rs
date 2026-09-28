@@ -3769,6 +3769,7 @@ pub fn production_health_audit(db: &Connection, token: &str) -> Result<Value> {
     let last_sync = meta(db, "last_sync")?;
     let last_backup = meta(db, "last_backup")?;
     let cloud_configured = meta(db, "cloud_url")?.is_some();
+    let project_hostname=meta(db,"cloud_url")?.and_then(|url|url.strip_prefix("https://").map(str::to_string)).and_then(|url|url.split('/').next().map(str::to_string)).filter(|host|host.chars().all(|c|c.is_ascii_alphanumeric()||c=='.'||c=='-'));
 
     let staff_total: i64 = db.query_row("SELECT COUNT(*) FROM staff", [], |r| r.get(0)).map_err(error)?;
     let staff_active: i64 = db.query_row("SELECT COUNT(*) FROM staff WHERE active=1", [], |r| r.get(0)).map_err(error)?;
@@ -3827,7 +3828,7 @@ pub fn production_health_audit(db: &Connection, token: &str) -> Result<Value> {
         "generatedAt": now(),
         "appVersion": env!("CARGO_PKG_VERSION"),
         "database": {"schemaVersion": schema_version, "quickCheck": quick_check},
-        "installation": {"stage": stage, "terminalId": terminal_id, "cloudConfigured": cloud_configured, "lastSync": last_sync, "lastBackup": last_backup},
+        "installation": {"stage": stage, "terminalId": terminal_id, "cloudConfigured": cloud_configured, "projectHostname":project_hostname, "lastSync": last_sync, "lastBackup": last_backup},
         "staff": {"total": staff_total, "active": staff_active},
         "operations": {"commands": commands, "auditEntries": audit_entries, "firstAuditSequence": first_audit, "lastAuditSequence": last_audit, "outboxTotal": outbox_total, "outboxPending": outbox_pending, "outboxAcknowledged": outbox_acknowledged, "lastOutboxSequence": last_outbox, "remoteRequests": remote_requests, "openTills": open_tills},
         "records": {"total": record_total, "active": record_active, "archived": record_archived, "collections": collections, "manifest": manifest},
