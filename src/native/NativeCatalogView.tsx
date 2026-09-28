@@ -1,14 +1,15 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { parseCatalogCsv } from './csvImport';
 import { useRuntime } from '../runtime/RuntimeProvider';
 import { recordsOf, recordOf, fieldClass, buttonClass, primaryButtonClass, money } from './records';
 import { ActionDialog } from './ActionDialog';
 import { domainErrorMessage } from './errors/domainErrorMessages';
 
-export function NativeCatalogView(){
+export function NativeCatalogView({initialAction=''}:{initialAction?:string}){
   const runtime=useRuntime(); const s=runtime.snapshot!; const products=recordsOf(s,'products'); const stocks=recordsOf(s,'stockItems'); const outlets=recordsOf(s,'outlets'); const rules=recordsOf(s,'priceRules'); const suppliers=recordsOf(s,'suppliers'); const locations=recordsOf(s,'stockLocations');
   const canManage=s.actor.permissions.includes('catalog.manage'); const canPrice=s.actor.permissions.includes('pricing.manage'); const canImport=canManage&&s.actor.permissions.includes('inventory.adjust');
   const [modal,setModal]=useState<string|null>(null); const [edit,setEdit]=useState<any>(null); const [notice,setNotice]=useState('');
+  useEffect(()=>{if(initialAction==='add-item'&&canManage){setEdit(null);setModal('PRODUCT')}},[initialAction,canManage]);
   const save=async(collection:string,data:any)=>{const id=data.id||crypto.randomUUID();const rec=recordOf(s,collection,id);setNotice('');try{await runtime.command('record.save',{collection,id,data:{...data,id}},rec?.version);setModal(null);setEdit(null)}catch(error){setNotice(domainErrorMessage(error,'save this record'))}};
   const importCsv=async({rows,outletId,locationId,mode,supplierId,reference}:{rows:any[];outletId:string;locationId:string;mode:string;supplierId?:string;reference?:string})=>{
     const key=(value:any)=>String(value||'').trim().toLowerCase();
