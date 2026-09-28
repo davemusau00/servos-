@@ -462,6 +462,26 @@ pub fn inventory_count_draft(db: &Connection, token: &str, location_id: &str) ->
 
 pub fn save_inventory_count_draft(db: &Connection, token: &str, location_id: &str, draft: Value) -> Result<Value> {
     let user=actor(db,token,true)?;
+    let tx=db.unchecked_transaction().map_err(error)?;
+    let session_id=text(&draft,"sessionId")?;
+    if session_id.len()>120 { return Err("Invalid count session identity".into()); }
+    let revision=draft["revision"].as_u64().filter(|n|*n>0 && *n<i64::MAX as u64).ok_or("Count session revision is required")?;
+    let closed:bool=tx.query_row("SELECT EXISTS(SELECT 1 FROM inventory_count_closed_sessions WHERE staff_id=? AND session_id=?)",params![user.staff_id,session_id],|r|r.get(0)).map_err(error)?;
+    if closed { return Err("This count session is already closed".into()); }
+    let previous=inventory_count_draft(&tx,token,location_id)?;
+    if !previous.is_null() && !previous["sessionId"].is_null() {
+        if previous["sessionId"]!=draft["sessionId"] { return Err("Another count session exists at this Storage Place".into()); }
+        let old_revision=previous["revision"].as_u64().unwrap_or(0);
+        if revision<=old_revision {
+            let mut old=previous.clone(); let mut incoming=draft.clone();
+            old.as_object_mut().unwrap().remove("updatedAt");
+            incoming.as_object_mut().ok_or("Invalid draft")?.remove("updatedAt");
+            incoming["locationId"]=json!(location_id);
+            if revision==old_revision && old==incoming { return Ok(previous); }
+            return Err("CONFLICT: count draft revision changed".into());
+        }
+        if !previous["pendingCommand"].is_null() { return Err("Retry the reviewed count before editing this session".into()); }
+    }
     if location_id.trim().is_empty() || location_id.len()>120 { return Err("Invalid Storage Place".into()); }
     get(db,"stockLocations",location_id)?;
     let counts=draft.get("counts").and_then(Value::as_object).ok_or("Count draft quantities are required")?;
@@ -492,15 +512,35 @@ pub fn save_inventory_count_draft(db: &Connection, token: &str, location_id: &st
         clean_unknown.push(json!({"barcode":barcode,"count":count}));
     }
     let updated_at=now();
-    let clean=json!({"locationId":location_id,"counts":clean_counts,"scanCounts":clean_scans,"unknownScans":clean_unknown,"updatedAt":updated_at});
+    let baseline=draft["baseline"].as_object().filter(|b|b.len()<=5000).ok_or("Count baseline is required")?;
+    for (stock_id,entry) in baseline {
+        if stock_id.len()>120 { return Err("Invalid count item identity".into()); }
+        quantity(entry,"expectedQuantity")?;
+        text(entry,"name")?; text(entry,"baseUnit")?;
+        if quantity(entry,"scanUnitQuantity")?<=0.0 { return Err("Invalid scan quantity".into()); }
+    }
+    if counts.keys().any(|key|!baseline.contains_key(key)) { return Err("Counted items require a saved baseline".into()); }
+    let mut clean=json!({"sessionId":session_id,"revision":revision,"baseline":baseline,"locationId":location_id,"counts":clean_counts,"scanCounts":clean_scans,"unknownScans":clean_unknown,"updatedAt":updated_at});
+    if let Some(pending)=draft.get("pendingCommand").filter(|p|!p.is_null()) {
+        text(pending,"id")?;
+        if pending["payload"]["draftSessionId"]!=session_id || pending["payload"]["draftRevision"]!=revision || pending["payload"]["locationId"]!=location_id { return Err("Reviewed count does not match its draft".into()); }
+        clean["pendingCommand"]=pending.clone();
+    }
     let encoded=serde_json::to_string(&clean).map_err(error)?;
-    db.execute("INSERT INTO inventory_count_drafts(staff_id,location_id,payload,updated_at) VALUES(?,?,?,?) ON CONFLICT(staff_id,location_id) DO UPDATE SET payload=excluded.payload,updated_at=excluded.updated_at",params![user.staff_id,location_id,encoded,updated_at]).map_err(error)?;
+    tx.execute("INSERT INTO inventory_count_drafts(staff_id,location_id,payload,updated_at) VALUES(?,?,?,?) ON CONFLICT(staff_id,location_id) DO UPDATE SET payload=excluded.payload,updated_at=excluded.updated_at",params![user.staff_id,location_id,encoded,updated_at]).map_err(error)?;
+    tx.commit().map_err(error)?;
     Ok(clean)
 }
 
 pub fn clear_inventory_count_draft(db: &Connection, token: &str, location_id: &str) -> Result<()> {
     let user=actor(db,token,true)?;
-    db.execute("DELETE FROM inventory_count_drafts WHERE staff_id=? AND location_id=?",params![user.staff_id,location_id]).map_err(error)?;
+    let tx=db.unchecked_transaction().map_err(error)?;
+    let draft=inventory_count_draft(&tx,token,location_id)?;
+    if let Some(session_id)=draft["sessionId"].as_str() {
+        tx.execute("INSERT OR IGNORE INTO inventory_count_closed_sessions(staff_id,session_id,closed_at) VALUES(?,?,?)",params![user.staff_id,session_id,now()]).map_err(error)?;
+    }
+    tx.execute("DELETE FROM inventory_count_drafts WHERE staff_id=? AND location_id=?",params![user.staff_id,location_id]).map_err(error)?;
+    tx.commit().map_err(error)?;
     Ok(())
 }
 #[derive(Serialize, Deserialize, Clone)]
@@ -2818,6 +2858,14 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
             let location_id=text(p,"locationId")?;
             let location=get(&tx,"stockLocations",location_id)?.1;
             let rows=p["rows"].as_array().filter(|rows|!rows.is_empty()&&rows.len()<=5000).ok_or("Count must include between 1 and 5000 stock items")?;
+            let draft = if let Some(session_id)=p["draftSessionId"].as_str() {
+                let encoded:String=tx.query_row("SELECT payload FROM inventory_count_drafts WHERE staff_id=? AND location_id=?",params![user.staff_id,location_id],|r|r.get(0)).map_err(|_|"Count session is missing; reload before confirming".to_string())?;
+                let saved:Value=serde_json::from_str(&encoded).map_err(error)?;
+                if saved["sessionId"]!=session_id || saved["revision"]!=p["draftRevision"] { return Err("CONFLICT: count session changed before confirmation".into()); }
+                if saved["pendingCommand"]["id"]!=cmd.id || saved["pendingCommand"]["payload"]!=*p { return Err("Confirm the exact reviewed count command".into()); }
+                if !saved["unknownScans"].as_array().is_some_and(|entries|entries.is_empty()) { return Err("Resolve unknown scans before confirming".into()); }
+                Some(saved)
+            } else { None };
             let active_stock_ids:Vec<String>=list(&tx,"stockItems")?.iter().filter_map(|record|record["id"].as_str().map(str::to_string)).collect();
             if rows.len()!=active_stock_ids.len() { return Err("Count must include every active stock item".into()); }
             let reason=p.get("reason").and_then(Value::as_str).map(str::trim).filter(|reason|!reason.is_empty()).unwrap_or("Location stock count");
@@ -2832,6 +2880,13 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
                 let expected=quantity(row,"expectedQuantity")?;
                 let actual=quantity(row,"countedQuantity")?;
                 let (_,stock)=get(&tx,"stockItems",&stock_id)?;
+                if let Some(saved)=&draft {
+                    let baseline=&saved["baseline"][&stock_id];
+                    if baseline["expectedQuantity"]!=row["expectedQuantity"] || saved["counts"][&stock_id]!=row["countedQuantity"] { return Err("Count quantities differ from the reviewed draft".into()); }
+                    if baseline["name"]!=stock["name"] || baseline["baseUnit"]!=stock["baseUnit"] || baseline["scanUnitQuantity"].as_f64()!=Some(stock["scanUnitQuantity"].as_f64().filter(|q|*q>0.0).unwrap_or(1.0)) {
+                        return Err("CONFLICT: stock catalog changed; recount the affected items".into());
+                    }
+                }
                 let current=stock["currentStock"][location_id].as_f64().unwrap_or(0.0);
                 if (current-expected).abs()>0.000001 { return Err(format!("CONFLICT: {} changed while this count was open; review the location again",stock["name"].as_str().unwrap_or("Stock item"))); }
                 counted.push((stock_id,stock,expected,actual));
@@ -2849,6 +2904,10 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
             for (stock_id,_,expected,actual) in counted {
                 let variance=((actual-expected)*1_000_000.0).round()/1_000_000.0;
                 if variance!=0.0 { stock_delta(&tx,user,&stock_id,location_id,variance,"COUNT_ADJUSTMENT",&cmd.id,reason,&mut changes)?; }
+            }
+            if let Some(saved)=draft {
+                tx.execute("INSERT INTO inventory_count_closed_sessions(staff_id,session_id,closed_at) VALUES(?,?,?)",params![user.staff_id,text(&saved,"sessionId")?,now()]).map_err(error)?;
+                tx.execute("DELETE FROM inventory_count_drafts WHERE staff_id=? AND location_id=?",params![user.staff_id,location_id]).map_err(error)?;
             }
         }
         "inventory.openingBalance" | "inventory.receive" | "inventory.adjust" | "inventory.waste" | "inventory.transfer" => {
