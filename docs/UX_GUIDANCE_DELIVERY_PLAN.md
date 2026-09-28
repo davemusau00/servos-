@@ -13,6 +13,21 @@ This document sequences the two existing product plans without replacing them:
 
 Both source documents describe the reviewed `4035337e5d63ba8785e87ba344565cc69c69e68d` checkout. Treat that hash as their original planning baseline, not the current checkout. Verify all proposed capabilities against current source and [release state](CURRENT_RELEASE_STATE.md) before implementation; source presence and staged database tests do not establish production acceptance.
 
+## External review reconciliation — 2026-09-28
+
+A user-supplied review of upstream `main` cites commit `c33762fe29dff5384c61c409979877d9b105bf72`. That remote revision was not fetched in this workspace. The checked-out local `HEAD` at reconciliation is `be83578727d6e0b49fe23c264bc4fb465ffc2a05`, with the current UX implementation changes in the worktree; local source inspection, not the remote commit claim, governs delivery status here.
+
+The review's main architectural assessment aligns with this checkout: task-group navigation and Home are permission-filtered; Help is offline; guide progress uses per-staff local storage; command events are commit-based; new product and stock forms disclose advanced fields progressively; and the domain remains authoritative. The review also calls out work not yet delivered in this checkout:
+
+- Quick Add is still a workspace launcher, not a direct creation action. Creation choices must be filtered by **manage/create** permission, then open the requested form directly.
+- Home currently uses the core guide's progress row for every guide card. Resolve progress by each guide ID before adding more guides.
+- `GuideStep.route` is declared but not acted on. Add permission-checked route transitions before authoring cross-workspace steps; expand semantic anchors from a central registry and improve resize/keyboard handling before scaling the guide set.
+- There is one orientation guide, not role-personalized first-use onboarding or workflow training. Keep onboarding non-blocking and permission-derived; add it only after multi-guide state and deep actions work.
+- Inventory still centers its table and item-first adjustments; location-first count and a simple receiving flow remain later workflow work. Product family/physical container variants and sale formats remain a high-priority data-model decision before more beverage setup accumulates.
+- The existing product, stock, room, and asset creation screens are not all equally simplified. Quick Add may deep-link only to operations that the target screen can safely open; missing prerequisites must produce an actionable setup state, not a false completion.
+
+These points are a reconciled backlog from the supplied review and inspected local files; they do not mean the upstream commit was independently validated.
+
 ## Current checkout baseline
 
 - The installed Tauri shell now presents grouped, permission-filtered task navigation; the offline Help Center searches generated Markdown articles and can launch the shell tour.
@@ -26,8 +41,9 @@ Both source documents describe the reviewed `4035337e5d63ba8785e87ba344565cc69c6
 1. **Coordination and baseline:** maintain this crosswalk, update source-document baseline labels when their contracts change, and record evidence in the existing completion ledger and test evidence log.
 2. **Task-first foundation:** implement permission-filtered Home/task navigation and Quick Add entry points, then smart empty states, friendly errors, and defaults. Keep every existing route reachable to users with its existing permission. Current partial delivery: Home/Quick Add foundation, catalog/inventory empty states, and common save/movement error translation; room/property/import empty states and broader error coverage remain open.
 3. **Guidance foundation in parallel:** add typed declarative definitions, duplicate/invalid-definition checks, semantic anchors, a small accessible shell tour, Help Center launch/progress, and native per-staff local persistence. Do not author workflow training before its target flow is stable.
-4. **Workflow releases:** simplify item/catalog and stock workflows first, then rooms/front desk, property/maintenance, imports, and operational summaries following the source plan. Add anchors in each new surface; author that surface’s guides after behavior and wording settle. Product creation now has a task-first Drink/Food/Retail/Service form. Stock master creation now asks for the item name and count unit first, with generated code and operational controls in progressive disclosure. Master Data calls stock locations “Storage Places” and generates a code when omitted. Family/physical-variant modeling and atomic tracked-stock plus opening-balance creation remain outstanding; no partial multi-command write is used to claim those requirements.
-5. **Outcome-based training:** connect guide steps only to named successful command commits. Drafts, failed operations, navigation alone, and stale UI state never count as successful completion. Continue the existing permission, audit, approval, offline, and local-authority acceptance for every workflow.
+4. **Finish shell-to-action and guide reliability before expanding content:** make Quick Add open the requested creation form directly, filter by manage permissions, correct progress display per guide, and implement permission-checked `GuideStep.route` navigation. Add centralized anchors plus resize and keyboard recovery before authoring guides that cross screens.
+5. **Workflow releases:** continue simplified item/catalog and stock workflows, then rooms/front desk, property/maintenance, imports, and operational summaries. Prioritize product family/physical container variants and sale formats before accumulating variant-dependent stock data; then location-first count and simple receiving. The current product/stock forms are progressive-disclosure foundations; atomic tracked-stock plus opening-balance creation remains outstanding and must stay within one authoritative native operation if added.
+6. **Staff orientation and outcome-based training:** after guide routing and multi-guide state are reliable, add a non-blocking, per-staff welcome and permission-derived recommendations. Author workflow guides only after their screens stabilize; advance practice only on named successful commits, never on drafts, failed commands, or navigation alone.
 
 ## Shared interfaces and invariants
 
@@ -42,6 +58,8 @@ Both source documents describe the reviewed `4035337e5d63ba8785e87ba344565cc69c6
 - **Foundation:** navigation remains permission-filtered on desktop and narrow layouts; Home and Quick Add only expose eligible destinations; current modules remain reachable; the Help Center and articles continue to work offline.
 - **Guidance:** definitions reject duplicate IDs and unknown targets; keyboard users can launch, advance, back, and close a guide; target loss is recoverable; staff progress is isolated and survives restart.
 - **Outcome events:** a successful local commit can advance a matching step; command rejection and uncommitted drafts cannot. A refresh error after a committed write must not invite a duplicate transaction or erase the success event.
+- **Quick Add:** each choice requires the target's real creation permission and opens its form directly. Missing target prerequisites show a safe next step.
+- **Guide growth:** each Home card reflects its own guide progress; route steps navigate only to permission-allowed workspaces; anchors remain recoverable through resize, mobile layouts, and keyboard close.
 - **Each workflow release:** cover existing-record compatibility, permissions, approvals, audit effects, offline commits, and relevant restart/reload behavior with focused native/browser acceptance. Update completion and evidence documents with exact executed results; keep target hardware, live cloud, and deployment claims separate.
 
 ## Assumptions
