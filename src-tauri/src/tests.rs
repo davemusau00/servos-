@@ -1270,6 +1270,46 @@ fn product_families_keep_container_variants_and_sale_formats_on_separate_stock()
 }
 
 #[test]
+fn atomic_catalog_setup_creates_linked_stock_and_opening_movement_once() {
+    let (_,mut db,s)=setup();
+    let outbox_before:i64=db.query_row("SELECT COUNT(*) FROM outbox",[],|row|row.get(0)).unwrap();
+    let product=json!({"name":"Atomic Whisky 750 ml bottle","code":"ATOMIC-WHISKY-750","price":1800,"routeTo":"BAR","category":"SPIRITS","outletIds":["main"],"barcode":"5012345678900","productFamilyId":"atomic-whisky","productFamilyName":"Atomic Whisky","packageType":"Bottle","containerQuantity":750,"containerUnit":"ml","variantLabel":"750 ml bottle","portionVolume":750,"portions":[{"id":"atomic-whole","name":"Whole bottle","volume":750,"price":1800}]});
+    let payload=json!({"product":product,"stockItem":{"name":"Atomic Whisky 750 ml","code":"ATOMIC-STOCK-750","barcode":"5012345678900","baseUnit":"ml","scanUnitQuantity":750,"averageUnitCost":0.25,"reorderLevel":1500},"locationId":"main","startingQuantity":9000});
+    let command=cmd("catalog.createWithOpeningStock",payload);
+    let result=execute(&mut db,&s.token,command.clone()).unwrap();
+    assert_eq!(result["recordIds"].as_array().unwrap().len(),3);
+    let products=list(&db,"products").unwrap();
+    let product=products.iter().find(|row|row["data"]["code"]=="ATOMIC-WHISKY-750").unwrap();
+    let stock_id=product["data"]["stockItemId"].as_str().unwrap();
+    let stock=get(&db,"stockItems",stock_id).unwrap().1;
+    assert_eq!(stock["currentStock"]["main"],9000.0);
+    assert_eq!(stock["barcode"],"5012345678900");
+    let movements=list(&db,"stockMovements").unwrap();
+    let opening=movements.iter().find(|row|row["data"]["sourceId"]==command.id).unwrap();
+    assert_eq!(opening["data"]["movementType"],"OPENING_BALANCE");
+    assert_eq!(opening["data"]["quantityDelta"],9000.0);
+    assert_eq!(opening["data"]["totalCostValuation"],2250.0);
+    assert_eq!(execute(&mut db,&s.token,command).unwrap(),result);
+    assert_eq!(db.query_row::<i64,_,_>("SELECT COUNT(*) FROM outbox",[],|row|row.get(0)).unwrap(),outbox_before+1);
+    assert_eq!(list(&db,"stockMovements").unwrap().iter().filter(|row|row["data"]["sourceId"]==opening["data"]["sourceId"]).count(),1);
+}
+
+#[test]
+fn atomic_catalog_setup_rolls_back_and_requires_both_permissions() {
+    let (_,mut db,s)=setup();
+    let mut payload=json!({"product":{"name":"Atomic item","code":"ATOMIC-ITEM","price":100,"routeTo":"BAR","category":"TEST","outletIds":["main"]},"stockItem":{"name":"Atomic stock","code":"ATOMIC-STOCK","baseUnit":"piece","averageUnitCost":0,"scanUnitQuantity":1,"reorderLevel":0},"locationId":"missing-location","startingQuantity":4});
+    assert!(execute(&mut db,&s.token,cmd("catalog.createWithOpeningStock",payload.clone())).is_err());
+    assert!(!list(&db,"products").unwrap().iter().any(|row|row["data"]["code"]=="ATOMIC-ITEM"));
+    assert!(!list(&db,"stockItems").unwrap().iter().any(|row|row["data"]["code"]=="ATOMIC-STOCK"));
+    payload["locationId"]=json!("main");
+    execute(&mut db,&s.token,cmd("staff.create",json!({"name":"Server One","role":"Server","pin":"827194"}))).unwrap();
+    let server_id:String=db.query_row("SELECT id FROM staff WHERE name='Server One'",[],|row|row.get(0)).unwrap();
+    let server=login(&db,&server_id,"827194").unwrap();
+    let error=execute(&mut db,&server.token,cmd("catalog.createWithOpeningStock",payload)).unwrap_err();
+    assert!(error.contains("catalog.manage")||error.contains("inventory.adjust"));
+}
+
+#[test]
 fn refund_reverses_money_without_automatic_stock_return() {
     let (_, mut db, s)=setup();
     run(&mut db,&s,"record.save",json!({"collection":"stockItems","id":"beer-stock","data":{"name":"Beer","code":"BEER-STOCK","baseUnit":"bottle","averageUnitCost":100,"currentStock":{}}}));
