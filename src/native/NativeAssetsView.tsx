@@ -1,4 +1,4 @@
-import React,{useMemo,useState} from 'react';
+import React,{useEffect,useMemo,useState} from 'react';
 import {Archive,Barcode,Boxes,ClipboardCheck,MapPin,Plus,Search,ShieldCheck,Tag,UserCheck,Wrench} from 'lucide-react';
 import {useRuntime} from '../runtime/RuntimeProvider';
 import {barcodeEquals,useBarcodeScanner} from '../hooks/useBarcodeScanner';
@@ -11,13 +11,14 @@ const terminal=(status:string)=>['LOST','RETIRED','DISPOSED'].includes(status);
 const tone=(value:string)=>value==='ACTIVE'||value==='COMPLETED'||value==='GOOD'?'text-emerald-300':value==='CRITICAL'||value==='BROKEN'||value==='LOST'||value==='DISPOSED'?'text-rose-300':value==='IN_PROGRESS'||value==='POOR'?'text-amber-300':'text-slate-300';
 const kesMinor=(minor:unknown)=>money(Number(minor||0)/100);
 
-export function NativeAssetsView(){
+export function NativeAssetsView({initialAction=''}:{initialAction?:string}){
   const runtime=useRuntime();const s=runtime.snapshot!;const perms=s.actor.permissions;
   const assets=recordsOf(s,'assets'),categories=recordsOf(s,'assetCategories'),acquisitions=recordsOf(s,'assetAcquisitions');
   const events=recordsOf(s,'assetEvents'),maintenance=recordsOf(s,'maintenanceOrders'),maintenanceEvents=recordsOf(s,'maintenanceEvents');
   const employees=recordsOf(s,'employees'),rooms=recordsOf(s,'rooms'),locations=recordsOf(s,'stockLocations'),stocks=recordsOf(s,'stockItems'),suppliers=recordsOf(s,'suppliers');
   const [section,setSection]=useState<Section>('REGISTER');const [query,setQuery]=useState('');const [selectedId,setSelectedId]=useState(assets[0]?.id||'');
   const [modal,setModal]=useState<{kind:string;data?:any}|null>(null);const [notice,setNotice]=useState('');
+  useEffect(()=>{if(initialAction==='add-asset'&&canManage)setModal({kind:'ASSET'})},[initialAction,canManage]);
   const canManage=perms.includes('assets.manage');const canOperate=perms.includes('assets.operate');const canMaintain=perms.includes('maintenance.manage');
   const selected=assets.find(a=>a.id===selectedId);
   const filtered=useMemo(()=>assets.filter(a=>{const q=query.trim().toLowerCase();if(!q)return true;const category=categories.find(c=>c.id===a.assetCategoryId)?.name||'';const loc=rooms.find(r=>r.id===a.roomId)?.number||locations.find(l=>l.id===a.locationId)?.name||'';return `${a.tag} ${a.name} ${a.serialNumber||''} ${category} ${loc}`.toLowerCase().includes(q);}),[assets,categories,locations,query,rooms]);

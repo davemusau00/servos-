@@ -1,4 +1,4 @@
-import React,{useMemo,useState} from 'react';
+import React,{useEffect,useMemo,useState} from 'react';
 import {BedDouble,CalendarDays,DoorOpen,Plus,ShieldAlert} from 'lucide-react';
 import {useRuntime} from '../runtime/RuntimeProvider';
 import {ActionDialog} from './ActionDialog';
@@ -9,12 +9,13 @@ const localInput=(iso?:string)=>{if(!iso)return'';const d=new Date(iso);return n
 const iso=(local:string)=>new Date(local).toISOString();
 const pill=(value:string)=>value==='RESERVED'?'text-sky-300':value==='ACTIVE'||value==='AVAILABLE'||value==='CLEAN'?'text-emerald-300':value==='OUT_OF_ORDER'||value==='DIRTY'?'text-rose-300':'text-amber-300';
 
-export function NativeRoomsView(){
+export function NativeRoomsView({initialAction=''}:{initialAction?:string}){
   const runtime=useRuntime();const s=runtime.snapshot!;
   const canManage=s.actor.permissions.includes('rooms.manage');const canOperate=s.actor.permissions.includes('rooms.operate');
   const roomTypes=recordsOf(s,'roomTypes'),rooms=recordsOf(s,'rooms'),rates=recordsOf(s,'ratePlans');
   const reservations=recordsOf(s,'roomReservations'),blocks=recordsOf(s,'roomBlocks'),customers=recordsOf(s,'customers');
   const [modal,setModal]=useState<string|null>(null);const [edit,setEdit]=useState<any>(null);const [message,setMessage]=useState('');
+  useEffect(()=>{if(initialAction==='add-room'&&canManage){setEdit(null);setModal(roomTypes.length?'ROOM':'TYPE')}},[initialAction,canManage,roomTypes.length]);
   const activeReservations=useMemo(()=>reservations.filter(r=>['RESERVED','CHECKED_IN'].includes(r.status)),[reservations]);
   const roomTypeName=(id:string)=>roomTypes.find(x=>x.id===id)?.name||id;
   const activeForRoom=(id:string)=>activeReservations.filter(r=>r.roomId===id);
