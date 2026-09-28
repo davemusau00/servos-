@@ -1,4 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import { invoke } from '@tauri-apps/api/core';
 import { flushLocalWork } from './localWork';
 import type { ReceiptResponse, ReceiptSummary } from '../types/receipt';
@@ -80,6 +81,18 @@ export const useRuntime = () => {
 };
 
 export const RuntimeProvider = ({ children }: { children: React.ReactNode }) => {
+  useEffect(() => {
+    if (!isNative) return;
+    let allowClose = false, disposed = false;
+    const registered = getCurrentWindow().onCloseRequested(async event => {
+      if (allowClose) return;
+      event.preventDefault();
+      try { await flushLocalWork(); allowClose = true; await getCurrentWindow().close(); }
+      catch (cause) { allowClose = false; window.alert(`Local work could not be saved: ${String(cause)}`); }
+    });
+    void registered.then(unlisten => { if (disposed) unlisten(); }).catch(() => {});
+    return () => { disposed = true; void registered.then(unlisten => { if (!disposed) return; unlisten(); }).catch(() => {}); };
+  }, []);
   const [status, setStatus] = useState<RuntimeStatus | null>(null);
   const [session, setSession] = useState<RuntimeSession | null>(null);
   const [snapshot, setSnapshot] = useState<RuntimeSnapshot | null>(null);

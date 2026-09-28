@@ -9,10 +9,10 @@ test('native inventory exposes stock health, valuation, filtering and safe movem
   assert.match(source,/reorderLevel/);
   assert.match(source,/Out of stock/);
   assert.match(source,/useBarcodeScanner/);
-  assert.match(source,/inventory\.adjust/);
+  assert.match(source,/inventory\.countLocation/);
   assert.match(source,/inventory\.transfer/);
   assert.match(source,/inventory\.waste/);
-  assert.match(source,/Commit physical count/);
+  assert.match(source,/Confirm Count/);
   assert.doesNotMatch(source,/inventory\.receive/);
 });
 

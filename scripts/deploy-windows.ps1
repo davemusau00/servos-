@@ -2,12 +2,13 @@
 param(
     [ValidateSet('Check', 'Package', 'Install')]
     [string]$Mode = 'Package',
-    [string]$Repo = (Split-Path -Parent $PSScriptRoot),
+    [string]$Repo = "",
     [switch]$SkipTests,
     [switch]$Msi
 )
 
 $ErrorActionPreference = 'Stop'
+if ([string]::IsNullOrWhiteSpace($Repo)) { $Repo = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path) }
 Set-Location -LiteralPath $Repo
 
 function Write-Section {
@@ -197,6 +198,7 @@ if (-not $SkipTests) {
 }
 
 Write-Section 'Build Windows installer'
+$packageStarted = (Get-Date).ToUniversalTime()
 $bundle = if ($Msi) { 'msi' } else { 'nsis' }
 Invoke-Checked -Command 'npm.cmd' -Arguments @('run', 'native:build', '--', '--bundles', $bundle)
 
@@ -210,6 +212,7 @@ $installer = Get-ChildItem -LiteralPath $bundleDirectory -File -Recurse -ErrorAc
         if ($Msi) { $_.Extension -eq '.msi' }
         else { $_.Extension -eq '.exe' -and $_.Name -match '(?i)setup' }
     } |
+    Where-Object { $_.LastWriteTimeUtc -ge $packageStarted } |
     Sort-Object LastWriteTime -Descending |
     Select-Object -First 1
 if (-not $installer) { throw "Tauri build returned, but no $bundle installer was found under $bundleDirectory." }

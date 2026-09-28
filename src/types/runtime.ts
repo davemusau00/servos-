@@ -61,7 +61,7 @@ export interface ProductionHealthAudit {
   generatedAt: string;
   appVersion: string;
   database: { schemaVersion: number; quickCheck: string };
-  installation: { stage: InstallationStage; terminalId: string | null; cloudConfigured: boolean; lastSync: string | null; lastBackup: string | null };
+  installation: { stage: InstallationStage; terminalId: string | null; cloudConfigured: boolean; projectHostname?: string | null; lastSync: string | null; lastBackup: string | null };
   staff: { total: number; active: number };
   operations: { commands: number; auditEntries: number; firstAuditSequence: number | null; lastAuditSequence: number | null; outboxTotal: number; outboxPending: number; outboxAcknowledged: number; lastOutboxSequence: number; remoteRequests: number; openTills: number };
   records: { total: number; active: number; archived: number; collections: ProductionHealthCollection[]; manifest: ProductionHealthRecordVersion[] };

@@ -3,5 +3,5 @@
   "identifier": "main",
   "description": "Business commands only; no SQL, shell or arbitrary filesystem access",
   "windows": ["main"],
-  "permissions": ["core:default"]
+  "permissions": ["core:default", "core:window:allow-close"]
 }

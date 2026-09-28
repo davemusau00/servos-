@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 
 test('asset register exposes scan-to-open, custody, maintenance and commissioning surfaces',()=>{
   const view=readFileSync('src/native/NativeAssetsView.tsx','utf8');
-  for(const token of ['Asset Register','useBarcodeScanner','asset.assign','asset.return','asset.transfer','asset.inspect','maintenance.report','maintenance.complete','asset.commission','Pending capital assets']){
+  for(const token of ['Add Property','useBarcodeScanner','asset.assign','asset.return','asset.transfer','asset.inspect','maintenance.report','maintenance.complete','asset.commission','Pending capital assets']){
     assert.ok(view.includes(token),token);
   }
 });
