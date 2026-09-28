@@ -1243,6 +1243,33 @@ fn portion_modifier_recipe_snapshot_depletes_stock_once() {
 }
 
 #[test]
+fn product_families_keep_container_variants_and_sale_formats_on_separate_stock() {
+    let (_, mut db, s)=setup();
+    for (id,code,name) in [("whisky-350-stock","WHISKY-350-STOCK","Whisky 350 stock"),("whisky-750-stock","WHISKY-750-STOCK","Whisky 750 stock")] {
+        run(&mut db,&s,"record.save",json!({"collection":"stockItems","id":id,"data":{"name":name,"code":code,"baseUnit":"ml","averageUnitCost":1,"currentStock":{}}}));
+    }
+    run(&mut db,&s,"inventory.adjust",json!({"stockItemId":"whisky-350-stock","locationId":"main","countedQty":1000,"reason":"Opening count"}));
+    run(&mut db,&s,"inventory.adjust",json!({"stockItemId":"whisky-750-stock","locationId":"main","countedQty":2000,"reason":"Opening count"}));
+    let small=json!({"name":"Whisky 350 ml bottle","code":"WHISKY-350","price":900,"routeTo":"BAR","category":"SPIRITS","outletIds":["main"],"stockItemId":"whisky-350-stock","productFamilyId":"whisky-family","productFamilyName":"Whisky","packageType":"Bottle","containerQuantity":350,"containerUnit":"ml","variantLabel":"350 ml bottle","portionVolume":350,"portions":[{"id":"small-whole","name":"Whole bottle","volume":350,"price":900},{"id":"small-single","name":"Single","volume":30,"price":100}]});
+    run(&mut db,&s,"record.save",json!({"collection":"products","id":"whisky-350","data":small}));
+    let large=json!({"name":"Whisky 750 ml bottle","code":"WHISKY-750","price":1800,"routeTo":"BAR","category":"SPIRITS","outletIds":["main"],"stockItemId":"whisky-750-stock","productFamilyId":"whisky-family","productFamilyName":"Whisky","packageType":"Bottle","containerQuantity":750,"containerUnit":"ml","variantLabel":"750 ml bottle","portionVolume":750,"portions":[{"id":"large-whole","name":"Whole bottle","volume":750,"price":1800},{"id":"large-single","name":"Single","volume":30,"price":150}]});
+    run(&mut db,&s,"record.save",json!({"collection":"products","id":"whisky-750","data":large}));
+    let mut duplicate_size=small.clone(); duplicate_size["code"]=json!("WHISKY-DUP-SIZE"); duplicate_size["stockItemId"]=Value::Null;
+    let duplicate_size=execute(&mut db,&s.token,cmd("record.save",json!({"collection":"products","id":"whisky-duplicate-size","data":duplicate_size}))).unwrap_err();
+    assert!(duplicate_size.to_string().contains("already has that physical size"));
+    let mut shared_stock=large.clone(); shared_stock["code"]=json!("WHISKY-SHARED"); shared_stock["variantLabel"]=json!("1 L bottle");
+    let shared_stock=execute(&mut db,&s.token,cmd("record.save",json!({"collection":"products","id":"whisky-shared-stock","data":shared_stock}))).unwrap_err();
+    assert!(shared_stock.to_string().contains("needs its own stock item"));
+
+    let order_id=run(&mut db,&s,"order.create",json!({"outletId":"main","name":"Variant stock check"}))["recordIds"][0].as_str().unwrap().to_string();
+    run(&mut db,&s,"order.addItem",json!({"orderId":order_id,"productId":"whisky-350","portionId":"small-single"}));
+    run(&mut db,&s,"order.addItem",json!({"orderId":order_id,"productId":"whisky-750","portionId":"large-whole"}));
+    run(&mut db,&s,"order.fire",json!({"orderId":order_id}));
+    assert_eq!(get(&db,"stockItems","whisky-350-stock").unwrap().1["currentStock"]["main"],970.0);
+    assert_eq!(get(&db,"stockItems","whisky-750-stock").unwrap().1["currentStock"]["main"],1250.0);
+}
+
+#[test]
 fn refund_reverses_money_without_automatic_stock_return() {
     let (_, mut db, s)=setup();
     run(&mut db,&s,"record.save",json!({"collection":"stockItems","id":"beer-stock","data":{"name":"Beer","code":"BEER-STOCK","baseUnit":"bottle","averageUnitCost":100,"currentStock":{}}}));

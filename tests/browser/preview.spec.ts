@@ -42,25 +42,36 @@ test('native shell mounts its fresh-install intake without runtime provider erro
 
 test('native checkout provides customer and business receipt copies', async ({ page }) => {
   await page.addInitScript(() => {
-    const windowState = window as Window & { __SERVOS_CALLS?: string[] };
+    const windowState = window as Window & { __SERVOS_CALLS?: string[]; __SERVOS_COMMANDS?: any[] };
     windowState.__SERVOS_CALLS = [];
+    windowState.__SERVOS_COMMANDS = [];
     window.print = () => undefined;
     const order = { id: 'order-1', outletId: 'outlet-1', state: 'OPEN', orderNumber: 'SO-1001', subtotal: 100, taxTotal: 0, cateringLevyTotal: 0, grandTotal: 100, amountPaid: 0, items: [{ id: 'item-1', productName: 'Test Lager', quantity: 1, lineTotal: 100, courseStatus: 'HELD' }] };
     const record = (collection: string, id: string, data: Record<string, unknown>) => ({ collection, id, version: 1, archived: false, data });
     const snapshot = {
       terminalId: 'terminal-test', installationStage: 'LIVE', pendingCount: 0, lastSync: null, lastBackup: null,
       actor: { id: 'staff-1', name: 'Test Owner', role: 'Admin', permissions: ['pos.sell','kds.view','inventory.view','catalog.view','catalog.manage','mpesa.reconcile','payment.record','floorplan.view','till.close','reports.view','backup.create','help.view','sync.manual'] },
-      records: [record('organization','business',{name:'Test Bar'}),record('outlets','outlet-1',{name:'Main Bar',propertyId:'property-1',active:true}),record('orders','order-1',order),record('paymentConfig','main',{methods:['CASH']})],
+      records: [record('organization','business',{name:'Test Bar'}),record('outlets','outlet-1',{name:'Main Bar',propertyId:'property-1',active:true}),record('orders','order-1',order),record('paymentConfig','main',{methods:['CASH']}),record('stockItems','whisky-350-stock',{name:'Whisky 350 stock',code:'WHISKY-350-STOCK',baseUnit:'ml',currentStock:{}}),record('stockItems','whisky-750-stock',{name:'Whisky 750 stock',code:'WHISKY-750-STOCK',baseUnit:'ml',currentStock:{}})],
     };
     (window as Window & { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__ = {
-      invoke: async (command: string, args?: {progress?: unknown}) => {
+      invoke: async (command: string, args?: any) => {
         windowState.__SERVOS_CALLS?.push(command);
+        if (command === 'runtime_command') windowState.__SERVOS_COMMANDS?.push(args?.command);
         if (command === 'runtime_status') return { enrolled: true, installationStage: 'LIVE', staff: [{id:'staff-1',name:'Test Owner',role:'Admin'}] };
         if (command === 'runtime_login') return {token:'test-session',staffId:'staff-1',name:'Test Owner',role:'Admin'};
         if (command === 'runtime_snapshot') return snapshot;
         if (command === 'runtime_guidance_progress') return [];
         if (command === 'runtime_guidance_save_progress') return args?.progress || {};
-        if (command === 'runtime_command') return {commandId:'cmd-test',recordIds:[],auditReference:'audit-test',sequence:1};
+        if (command === 'runtime_command') {
+          const request=args?.command;
+          if(request?.operation==='record.save'){
+            const {collection,id,data}=request.payload;
+            const index=snapshot.records.findIndex((row:any)=>row.collection===collection&&row.id===id);
+            const saved={collection,id,version:index>=0?snapshot.records[index].version+1:1,archived:false,data};
+            if(index>=0)snapshot.records[index]=saved;else snapshot.records.push(saved);
+          }
+          return {commandId:'cmd-test',recordIds:[],auditReference:'audit-test',sequence:1};
+        }
         if (command === 'runtime_printer_jobs') return [];
         if (command === 'runtime_sync') return {};
         if (command === 'runtime_receipt') return {document:{id:'receipt-1',schemaVersion:1,orderId:'order-1',sourceCommandId:'command-1',deviceId:'device-1',number:'D1-1001',orderNumber:'SO-1001',issuedAt:'2026-09-26T10:00:00Z',currency:'KES',timezone:'Africa/Nairobi',business:{name:'Test Bar',address:'Nairobi',phone:'0700000000'},cashier:'Test Owner',outlet:'Main Bar',items:[{id:'item-1',description:'Test Lager',quantity:1,unitPriceMinor:10000,amountMinor:10000,modifiers:[]}],subtotalMinor:10000,discountMinor:0,netMinor:10000,taxMinor:0,levyMinor:0,totalMinor:10000,paidMinor:10000,balanceMinor:0,payments:[{id:'payment-1',tenderType:'CASH',amountMinor:10000,cashTenderedMinor:10000,changeMinor:0,currentPayment:true}]},customerLines:['CUSTOMER COPY'],businessLines:['BUSINESS RECORD COPY']};
@@ -86,7 +97,36 @@ test('native checkout provides customer and business receipt copies', async ({ p
   const addProduct=page.getByRole('dialog', {name:'Add product or menu item'});
   await expect(addProduct).toBeVisible();
   await expect(page).toHaveURL(/#\/catalog\?action=add-item$/);
-  await addProduct.getByRole('button').first().click();
+  await addProduct.getByLabel('Name').fill('Jameson');
+  await addProduct.getByRole('checkbox', {name:'This item has physical package sizes'}).check();
+  await addProduct.getByRole('button', {name:'350ml'}).click();
+  await addProduct.getByLabel('Product family name').fill('Jameson');
+  await addProduct.getByLabel('Whole-container selling price (KES)').fill('1200');
+  await addProduct.getByLabel('Serving price').fill('250');
+  await addProduct.getByRole('button', {name:'Add serving'}).click();
+  await addProduct.getByText('More setup').click();
+  await addProduct.getByRole('checkbox', {name:'Track sales against an existing stock item'}).check();
+  await addProduct.getByLabel('Stock item', {exact:true}).selectOption('whisky-350-stock');
+  await addProduct.getByRole('button', {name:'Add size'}).click();
+  await expect(addProduct).toHaveCount(0);
+  await expect(page.getByRole('button', {name:'Add another size'})).toBeVisible();
+  await page.getByRole('button', {name:'Add another size'}).click();
+  const addVariant=page.getByRole('dialog', {name:'Add another size'});
+  await addVariant.getByLabel('Product family').selectOption({label:'Jameson · 1 size(s)'});
+  await addVariant.getByRole('button', {name:'750ml'}).click();
+  await addVariant.getByLabel('Whole-container selling price (KES)').fill('1900');
+  await addVariant.getByText('More setup').click();
+  await addVariant.getByRole('checkbox', {name:'Track sales against an existing stock item'}).check();
+  await expect(addVariant.getByLabel('Stock item', {exact:true}).locator('option').filter({hasText:'WHISKY-350-STOCK'})).toBeDisabled();
+  await addVariant.getByLabel('Stock item', {exact:true}).selectOption('whisky-750-stock');
+  await addVariant.getByRole('button', {name:'Add size'}).click();
+  const variants=await page.evaluate(()=>((window as any).__SERVOS_COMMANDS||[]).filter((command:any)=>command.operation==='record.save'&&command.payload.collection==='products').map((command:any)=>command.payload.data));
+  expect(variants).toHaveLength(2);
+  expect(variants[0].productFamilyId).toBeTruthy();
+  expect(variants[1].productFamilyId).toBe(variants[0].productFamilyId);
+  expect(variants.map((variant:any)=>variant.variantLabel)).toEqual(['350 ml bottle','750 ml bottle']);
+  expect(variants.map((variant:any)=>variant.stockItemId)).toEqual(['whisky-350-stock','whisky-750-stock']);
+  expect(variants[0].portions.map((portion:any)=>portion.name)).toEqual(['Whole bottle','Single']);
   await page.getByRole('button', {name:'Sell', exact:true}).click();
   await page.getByRole('button', {name:'Pay'}).click();
   await page.getByLabel('Cash tendered').fill('100');

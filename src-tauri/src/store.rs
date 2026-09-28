@@ -2166,6 +2166,13 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
                         if quantity(&data,"containerQuantity")?<=0.0 || quantity(&data,"portionVolume")?<=0.0 {
                             return Err("Physical container and stock quantities must be greater than zero".into());
                         }
+                        let portions=data["portions"].as_array().filter(|items|!items.is_empty()).ok_or("Add at least one sale format for this physical size")?;
+                        for portion in portions {
+                            text(portion,"id")?;
+                            text(portion,"name")?;
+                            if quantity(portion,"volume")?<=0.0 { return Err("Sale format stock quantity must be greater than zero".into()); }
+                            money(portion,"price")?;
+                        }
                         let duplicate_variant:bool=tx.query_row(
                             "SELECT EXISTS(SELECT 1 FROM records WHERE collection='products' AND id<>? AND archived=0 AND json_extract(data,'$.productFamilyId')=? AND lower(json_extract(data,'$.variantLabel'))=lower(?))",
                             params![record_id,family_id,variant_label],|r|r.get(0)
