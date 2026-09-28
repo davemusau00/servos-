@@ -2,7 +2,6 @@ import React, { useMemo, useState } from 'react';
 import { AlertTriangle, ArrowRightLeft, Boxes, PackageCheck, Search, Trash2 } from 'lucide-react';
 import { useRuntime } from '../runtime/RuntimeProvider';
 import type { Permission } from '../types/runtime';
-import { barcodeEquals, useBarcodeScanner } from '../hooks/useBarcodeScanner';
 import { recordsOf, fieldClass, buttonClass, primaryButtonClass, money, shortDate } from './records';
 import { ManagerApprovalDialog } from './ManagerApprovalDialog';
 import { ActionDialog } from './ActionDialog';
@@ -40,11 +39,12 @@ export function NativeInventoryView() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<StockStatus>('ALL');
   const [locationFilter, setLocationFilter] = useState('ALL');
+  const [countLocationId, setCountLocationId] = useState('');
   const [selectedStockId, setSelectedStockId] = useState(stocks[0]?.id || '');
   const permissions = snapshot.actor.permissions;
   const [form, setForm] = useState({
     stockItemId: stocks[0]?.id || '', locationId: locations[0]?.id || '', toLocationId: locations[1]?.id || '',
-    quantity: 1, countedQty: 0, reason: '', scanBarcode: '',
+    quantity: 1, reason: '',
   });
 
   const rows = useMemo(() => stocks.map((stock: any) => {
@@ -86,36 +86,15 @@ export function NativeInventoryView() {
     else setApproval({ permission, run: async token => execute(token) });
   };
 
-  const openMovement = (kind: 'COUNT' | 'TRANSFER' | 'WASTE', stockId?: string, locationId?: string) => {
+  const openMovement = (kind: 'TRANSFER' | 'WASTE', stockId?: string, locationId?: string) => {
     const targetId = stockId || selected?.id || stocks[0]?.id || '';
     const sourceLocation = locationId || form.locationId || locations[0]?.id || '';
     const destination = locations.find((location: any) => location.id !== sourceLocation)?.id || '';
     setNotice('');
-    setForm(previous => ({ ...previous, stockItemId: targetId, locationId: sourceLocation, toLocationId: destination, countedQty: 0, quantity: 1, reason: '', scanBarcode: '' }));
+    setForm(previous => ({ ...previous, stockItemId: targetId, locationId: sourceLocation, toLocationId: destination, quantity: 1, reason: '' }));
     setModal(kind);
   };
-
-  const resolveBarcode = (raw: string) => {
-    const code = raw.trim();
-    if (!code) return;
-    const matches = stocks.filter((item: any) => barcodeEquals(item.barcode, code) || barcodeEquals(item.code, code));
-    setForm(previous => ({ ...previous, scanBarcode: '' }));
-    if (matches.length !== 1) {
-      setNotice(matches.length ? `Barcode ${code} matches more than one stock item.` : `Unknown stock barcode: ${code}`);
-      return;
-    }
-    const item = matches[0];
-    if (form.countedQty > 0 && form.stockItemId !== item.id) {
-      setNotice(`Finish the count for ${stocks.find((stock: any) => stock.id === form.stockItemId)?.name || 'the selected item'} before scanning another stock item.`);
-      return;
-    }
-    const increment = Number(item.scanUnitQuantity) || 1;
-    setForm(previous => ({ ...previous, stockItemId: item.id, countedQty: Number(previous.stockItemId === item.id ? previous.countedQty : 0) + increment, scanBarcode: '' }));
-    setSelectedStockId(item.id);
-    setNotice(`Count draft: +${increment.toLocaleString()} ${item.baseUnit} for ${item.name}. Nothing changes until you commit.`);
-  };
-
-  useBarcodeScanner({ enabled: modal === 'COUNT', onScan: resolveBarcode });
+  const openLocationCount = (locationId = '') => { setCountLocationId(locationId); setModal('LOCATION_COUNT'); setNotice(''); };
 
   return <div className="h-full overflow-auto bg-slate-950 p-5 text-white">
     <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
@@ -125,7 +104,7 @@ export function NativeInventoryView() {
         <p className="mt-1 max-w-3xl text-sm text-slate-400">One location-driven stock truth. Count, transfer and waste actions post through the native ledger. Supplier receipts are posted through Procurement so stock, GRN, payable and journal remain one atomic chain.</p>
       </div>
       <div className="flex flex-wrap gap-2">
-        <button className={primaryButtonClass} onClick={() => openMovement('COUNT')}>Count stock</button>
+        <button className={primaryButtonClass} onClick={() => openLocationCount()}>Count stock</button>
         <button className={buttonClass} onClick={() => openMovement('TRANSFER')}>Transfer</button>
         <button className={buttonClass} onClick={() => openMovement('WASTE')}>Record waste</button>
       </div>
@@ -160,15 +139,15 @@ export function NativeInventoryView() {
         {!selected ? <p className="text-sm text-slate-500">Select a stock item to inspect quantities and movements.</p> : <>
           <div className="flex items-start justify-between gap-3"><div><div className="text-xs uppercase tracking-wide text-slate-500">Selected stock</div><h2 className="mt-1 text-lg font-bold">{selected.name}</h2><div className="font-mono text-xs text-slate-500">{selected.code}</div></div><span className={`rounded-full border px-2 py-1 text-[10px] font-black ${statusClass(statusOf(selected))}`}>{statusOf(selected)}</span></div>
           <div className="mt-4 grid grid-cols-2 gap-2 text-sm"><SmallFact label="Total on hand" value={`${totalStock(selected).toLocaleString()} ${selected.baseUnit}`}/><SmallFact label="Reorder level" value={Number(selected.reorderLevel || 0) > 0 ? `${Number(selected.reorderLevel).toLocaleString()} ${selected.baseUnit}` : 'Not set'}/><SmallFact label="Avg unit cost" value={money(selected.averageUnitCost)}/><SmallFact label="Scan quantity" value={`${Number(selected.scanUnitQuantity || 1).toLocaleString()} ${selected.baseUnit}`}/></div>
-          <div className="mt-4"><div className="mb-2 text-xs font-black uppercase tracking-wide text-slate-500">By location</div><div className="space-y-2">{locations.map((location: any) => { const qty = Number(selected.currentStock?.[location.id] || 0); return <button key={location.id} onClick={() => openMovement('COUNT', selected.id, location.id)} className="flex w-full items-center justify-between rounded-xl border border-slate-800 bg-slate-950 p-3 text-left hover:border-slate-700"><span><b className="text-sm">{location.name}</b><span className="block text-[11px] text-slate-500">Click to count this location</span></span><span className="font-mono text-sm">{qty.toLocaleString()} {selected.baseUnit}</span></button>; })}</div></div>
-          <div className="mt-4 grid grid-cols-3 gap-2"><button className={buttonClass} onClick={() => openMovement('COUNT', selected.id)}>Count</button><button className={buttonClass} onClick={() => openMovement('TRANSFER', selected.id)}><ArrowRightLeft className="mr-1 inline h-3.5 w-3.5"/>Move</button><button className={buttonClass} onClick={() => openMovement('WASTE', selected.id)}>Waste</button></div>
+          <div className="mt-4"><div className="mb-2 text-xs font-black uppercase tracking-wide text-slate-500">By location</div><div className="space-y-2">{locations.map((location: any) => { const qty = Number(selected.currentStock?.[location.id] || 0); return <button key={location.id} onClick={() => openLocationCount(location.id)} className="flex w-full items-center justify-between rounded-xl border border-slate-800 bg-slate-950 p-3 text-left hover:border-slate-700"><span><b className="text-sm">{location.name}</b><span className="block text-[11px] text-slate-500">Start a full count at this Storage Place</span></span><span className="font-mono text-sm">{qty.toLocaleString()} {selected.baseUnit}</span></button>; })}</div></div>
+          <div className="mt-4 grid grid-cols-2 gap-2"><button className={buttonClass} onClick={() => openLocationCount()}>Count location</button><button className={buttonClass} onClick={() => openMovement('TRANSFER', selected.id)}><ArrowRightLeft className="mr-1 inline h-3.5 w-3.5"/>Move</button><button className={buttonClass} onClick={() => openMovement('WASTE', selected.id)}>Waste</button></div>
           <div className="mt-5"><div className="mb-2 text-xs font-black uppercase tracking-wide text-slate-500">Recent movement history</div><div className="max-h-72 space-y-2 overflow-auto">{selectedMovements.map((movement: any) => <div key={movement.id} className="rounded-xl border border-slate-800 bg-slate-950 p-3 text-xs"><div className="flex justify-between gap-3"><b>{movement.locationName || 'Stock location'}</b><span className={Number(movement.quantityDelta) >= 0 ? 'text-emerald-300' : 'text-rose-300'}>{Number(movement.quantityDelta) > 0 ? '+' : ''}{Number(movement.quantityDelta).toLocaleString()} {movement.baseUnit}</span></div><div className="mt-1 text-slate-500">{movement.movementType} · {movement.reasonCode || movement.reason || 'Movement'}</div><div className="mt-1 text-slate-600">{shortDate(movement.occurredAt || movement.createdAt)}{movement.actorName ? ` · ${movement.actorName}` : ''}</div></div>)}{selectedMovements.length === 0 && <p className="text-xs text-slate-500">No movement history for this stock item yet.</p>}</div></div>
         </>}
       </aside>
     </div>
 
-    {modal && <ActionDialog title={{ COUNT: 'Physical stock count', TRANSFER: 'Transfer stock', WASTE: 'Record waste' }[modal] || modal} onClose={() => setModal(null)}><InventoryForm modal={modal} form={form} setForm={setForm} stocks={stocks} locations={locations} onResolveBarcode={resolveBarcode} onSubmit={async () => {
-      if (modal === 'COUNT') await act('inventory.adjust', { stockItemId: form.stockItemId, locationId: form.locationId, countedQty: form.countedQty, reason: form.reason || 'Physical stock count' }, 'inventory.count');
+    {modal === 'LOCATION_COUNT' && <LocationStockCountDialog stocks={stocks} locations={locations} initialLocationId={countLocationId} onClose={() => setModal(null)} onCommit={async payload => { await act('inventory.countLocation', payload, 'inventory.count'); }}/ >}
+    {modal && modal !== 'LOCATION_COUNT' && <ActionDialog title={{ TRANSFER: 'Transfer stock', WASTE: 'Record waste' }[modal] || modal} onClose={() => setModal(null)}><InventoryForm modal={modal} form={form} setForm={setForm} stocks={stocks} locations={locations} onSubmit={async () => {
       if (modal === 'WASTE') await act('inventory.waste', { stockItemId: form.stockItemId, locationId: form.locationId, quantity: form.quantity, reason: form.reason || 'Declared waste' }, 'inventory.waste');
       if (modal === 'TRANSFER') await act('inventory.transfer', { stockItemId: form.stockItemId, locationId: form.locationId, toLocationId: form.toLocationId, quantity: form.quantity, reason: form.reason || 'Internal transfer' }, 'inventory.transfer');
     }} /></ActionDialog>}

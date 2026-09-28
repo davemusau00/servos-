@@ -182,7 +182,7 @@ fn live_required(tx: &Transaction, operation: &str) -> Result<()> {
         "till.open","till.cashMovement","till.close","order.create","order.addItem","order.updateItem",
         "order.removeItem","order.fire","order.kds","order.repeatRound","order.transfer","order.merge","order.void","order.discount",
         "order.compItem","payment.record","payment.split","payment.refund","payment.reverse","mpesa.reconcile","mpesa.discrepancy","mpesa.discrepancy.resolve",
-        "inventory.receive","inventory.adjust","inventory.waste","inventory.transfer","purchaseOrder.create","purchaseOrder.receive","supplierPayable.matchInvoice","supplierPayable.pay","table.ready","closeDay.generate","roomReservation.create","roomReservation.update","roomReservation.cancel","roomReservation.noShow","stay.checkIn","stay.move","stay.extend","stay.checkOut","folio.open","folio.postAccommodation","folio.postService","folio.deposit","folio.pay","folio.applyDeposit","folio.refundDeposit","folio.reverse","pos.roomCharge","asset.commission","asset.assign","asset.return","asset.transfer","asset.inspect","asset.lose","asset.retire","asset.dispose","maintenance.report","maintenance.assign","maintenance.start","maintenance.complete","maintenance.cancel"];
+        "inventory.receive","inventory.adjust","inventory.countLocation","inventory.waste","inventory.transfer","purchaseOrder.create","purchaseOrder.receive","supplierPayable.matchInvoice","supplierPayable.pay","table.ready","closeDay.generate","roomReservation.create","roomReservation.update","roomReservation.cancel","roomReservation.noShow","stay.checkIn","stay.move","stay.extend","stay.checkOut","folio.open","folio.postAccommodation","folio.postService","folio.deposit","folio.pay","folio.applyDeposit","folio.refundDeposit","folio.reverse","pos.roomCharge","asset.commission","asset.assign","asset.return","asset.transfer","asset.inspect","asset.lose","asset.retire","asset.dispose","maintenance.report","maintenance.assign","maintenance.start","maintenance.complete","maintenance.cancel"];
     if TRADING.contains(&operation) && installation_stage(tx)? != "LIVE" {
         return Err("Complete business setup and approve Go Live before trading".into());
     }
@@ -2750,6 +2750,40 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
             payable["status"]=json!(if remaining==0 {"PAID"} else {"PARTIALLY_PAID"});
             payable["lastPaymentAt"]=json!(stamp);
             put(&tx,"supplierPayables",&payable_id,payable,&mut changes)?;
+        }
+        "inventory.countLocation" => {
+            authorize(&tx,user,"inventory.count",p,None)?;
+            let location_id=text(p,"locationId")?;
+            let location=get(&tx,"stockLocations",location_id)?.1;
+            let rows=p["rows"].as_array().filter(|rows|!rows.is_empty()&&rows.len()<=5000).ok_or("Count must include between 1 and 5000 stock items")?;
+            let reason=p.get("reason").and_then(Value::as_str).map(str::trim).filter(|reason|!reason.is_empty()).unwrap_or("Location stock count");
+            if reason.len()>500 { return Err("Count note cannot exceed 500 characters".into()); }
+            let mut seen=Vec::<String>::new();
+            let mut counted=Vec::<(String,Value,f64,f64)>::with_capacity(rows.len());
+            for row in rows {
+                let stock_id=text(row,"stockItemId")?.to_string();
+                if seen.contains(&stock_id) { return Err("A stock item can appear only once in a location count".into()); }
+                seen.push(stock_id.clone());
+                let expected=quantity(row,"expectedQuantity")?;
+                let actual=quantity(row,"countedQuantity")?;
+                let (_,stock)=get(&tx,"stockItems",&stock_id)?;
+                let current=stock["currentStock"][location_id].as_f64().unwrap_or(0.0);
+                if (current-expected).abs()>0.000001 { return Err(format!("CONFLICT: {} changed while this count was open; review the location again",stock["name"].as_str().unwrap_or("Stock item"))); }
+                counted.push((stock_id,stock,expected,actual));
+            }
+            let count_id=id();
+            let mut matches=0usize; let mut short=0usize; let mut over=0usize;
+            let mut count_rows=Vec::with_capacity(counted.len());
+            for (stock_id,stock,expected,actual) in &counted {
+                let variance=((actual-expected)*1_000_000.0).round()/1_000_000.0;
+                if variance==0.0 { matches+=1; } else if variance<0.0 { short+=1; } else { over+=1; }
+                count_rows.push(json!({"stockItemId":stock_id,"stockItemName":stock["name"],"baseUnit":stock["baseUnit"],"expectedQuantity":expected,"countedQuantity":actual,"variance":variance}));
+            }
+            put(&tx,"stockCounts",&count_id,json!({"id":count_id,"locationId":location_id,"locationName":location["name"],"rows":count_rows,"itemCount":counted.len(),"matches":matches,"short":short,"over":over,"reason":reason,"status":"COMMITTED","createdAt":now(),"createdBy":user.staff_id,"createdByName":user.name}),&mut changes)?;
+            for (stock_id,_,expected,actual) in counted {
+                let variance=((actual-expected)*1_000_000.0).round()/1_000_000.0;
+                if variance!=0.0 { stock_delta(&tx,user,&stock_id,location_id,variance,"COUNT_ADJUSTMENT",&cmd.id,reason,&mut changes)?; }
+            }
         }
         "inventory.openingBalance" | "inventory.receive" | "inventory.adjust" | "inventory.waste" | "inventory.transfer" => {
             let permission=match cmd.operation.as_str(){"inventory.receive"=>"inventory.receive","inventory.transfer"=>"inventory.transfer","inventory.waste"=>"inventory.waste","inventory.adjust"=>"inventory.count",_=>"inventory.adjust"};

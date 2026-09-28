@@ -1317,6 +1317,57 @@ fn atomic_catalog_setup_rolls_back_and_requires_both_permissions() {
 }
 
 #[test]
+fn location_count_commits_full_review_as_one_audited_inventory_transaction() {
+    let (_,mut db,s)=setup();
+    for (stock_id,name,code,opening) in [("count-beer","Beer","COUNT-BEER",24.0),("count-soda","Soda","COUNT-SODA",12.0)] {
+        run(&mut db,&s,"record.save",json!({"collection":"stockItems","id":stock_id,"data":{"name":name,"code":code,"baseUnit":"bottle","averageUnitCost":10,"currentStock":{}}}));
+        run(&mut db,&s,"inventory.adjust",json!({"stockItemId":stock_id,"locationId":"main","countedQty":opening,"reason":"Setup"}));
+    }
+    let before_outbox:i64=db.query_row("SELECT COUNT(*) FROM outbox",[],|row|row.get(0)).unwrap();
+    let command=cmd("inventory.countLocation",json!({"locationId":"main","reason":"Weekly count","rows":[{"stockItemId":"count-beer","expectedQuantity":24,"countedQuantity":26},{"stockItemId":"count-soda","expectedQuantity":12,"countedQuantity":12}]}));
+    let result=execute(&mut db,&s.token,command.clone()).unwrap();
+    assert_eq!(get(&db,"stockItems","count-beer").unwrap().1["currentStock"]["main"],26.0);
+    assert_eq!(get(&db,"stockItems","count-soda").unwrap().1["currentStock"]["main"],12.0);
+    let counts=list(&db,"stockCounts").unwrap();
+    assert_eq!(counts.len(),1);
+    assert_eq!(counts[0]["data"]["itemCount"],2);
+    assert_eq!(counts[0]["data"]["matches"],1);
+    assert_eq!(counts[0]["data"]["short"],0);
+    assert_eq!(counts[0]["data"]["over"],1);
+    assert_eq!(counts[0]["data"]["rows"][0]["variance"],2.0);
+    assert_eq!(list(&db,"stockMovements").unwrap().iter().filter(|row|row["data"]["sourceId"]==command.id).count(),1);
+    assert_eq!(execute(&mut db,&s.token,command).unwrap(),result);
+    assert_eq!(db.query_row::<i64,_,_>("SELECT COUNT(*) FROM outbox",[],|row|row.get(0)).unwrap(),before_outbox+1);
+}
+
+#[test]
+fn location_count_rejects_stale_partial_and_failed_multi_item_writes() {
+    let (_,mut db,s)=setup();
+    for (stock_id,name,code) in [("count-one","Count One","COUNT-ONE"),("count-two","Count Two","COUNT-TWO")] {
+        run(&mut db,&s,"record.save",json!({"collection":"stockItems","id":stock_id,"data":{"name":name,"code":code,"baseUnit":"piece","averageUnitCost":0,"currentStock":{}}}));
+        run(&mut db,&s,"inventory.adjust",json!({"stockItemId":stock_id,"locationId":"main","countedQty":5,"reason":"Setup"}));
+    }
+    let outbox_before:i64=db.query_row("SELECT COUNT(*) FROM outbox",[],|row|row.get(0)).unwrap();
+    let partial=cmd("inventory.countLocation",json!({"locationId":"main","rows":[{"stockItemId":"count-one","expectedQuantity":5,"countedQuantity":8}]}));
+    assert!(execute(&mut db,&s.token,partial).unwrap_err().contains("every active stock item"));
+    let stale=cmd("inventory.countLocation",json!({"locationId":"main","rows":[{"stockItemId":"count-one","expectedQuantity":4,"countedQuantity":8},{"stockItemId":"count-two","expectedQuantity":5,"countedQuantity":5}]}));
+    assert!(execute(&mut db,&s.token,stale).unwrap_err().contains("changed while this count was open"));
+    db.execute_batch("CREATE TRIGGER reject_second_count BEFORE INSERT ON records WHEN NEW.collection='stockMovements' AND json_extract(NEW.data,'$.stockItemId')='count-two' BEGIN SELECT RAISE(ABORT,'forced second variance failure'); END;").unwrap();
+    let failed=cmd("inventory.countLocation",json!({"locationId":"main","rows":[{"stockItemId":"count-one","expectedQuantity":5,"countedQuantity":8},{"stockItemId":"count-two","expectedQuantity":5,"countedQuantity":2}]}));
+    assert!(execute(&mut db,&s.token,failed).is_err());
+    assert_eq!(get(&db,"stockItems","count-one").unwrap().1["currentStock"]["main"],5.0);
+    assert_eq!(get(&db,"stockItems","count-two").unwrap().1["currentStock"]["main"],5.0);
+    assert!(list(&db,"stockCounts").unwrap().is_empty());
+    assert_eq!(db.query_row::<i64,_,_>("SELECT COUNT(*) FROM outbox",[],|row|row.get(0)).unwrap(),outbox_before);
+    db.execute_batch("DROP TRIGGER reject_second_count;").unwrap();
+    run(&mut db,&s,"staff.create",json!({"name":"Count Server","role":"Server","pin":"827195"}));
+    let server_id:String=db.query_row("SELECT id FROM staff WHERE name='Count Server'",[],|row|row.get(0)).unwrap();
+    let server=login(&db,&server_id,"827195").unwrap();
+    let denied=cmd("inventory.countLocation",json!({"locationId":"main","rows":[{"stockItemId":"count-one","expectedQuantity":5,"countedQuantity":5},{"stockItemId":"count-two","expectedQuantity":5,"countedQuantity":5}]}));
+    assert!(execute(&mut db,&server.token,denied).unwrap_err().contains("inventory.count"));
+}
+
+#[test]
 fn refund_reverses_money_without_automatic_stock_return() {
     let (_, mut db, s)=setup();
     run(&mut db,&s,"record.save",json!({"collection":"stockItems","id":"beer-stock","data":{"name":"Beer","code":"BEER-STOCK","baseUnit":"bottle","averageUnitCost":100,"currentStock":{}}}));
