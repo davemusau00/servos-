@@ -24,10 +24,10 @@ const DEFINITIONS: Array<{
     {key:'contactPerson',label:'Contact person'},{key:'kraPin',label:'KRA PIN'},{key:'paymentTermsDays',label:'Payment terms (days)',type:'number'},{key:'paymentTerms',label:'Payment terms / notes',type:'textarea'}
   ]},
   { collection:'outlets', label:'Service Areas', permission:'business.configure', description:'Operational service areas. Generic archive is disabled.', archivable:false, defaults:{name:'',code:'',description:'',defaultStockLocationId:''}, fields:[
-    {key:'name',label:'Service area name',required:true},{key:'code',label:'Code'},{key:'defaultStockLocationId',label:'Default stock location',type:'select',required:true,optionsFrom:'stockLocations'},{key:'description',label:'Description',type:'textarea'}
+    {key:'name',label:'Service area name',required:true},{key:'code',label:'Code'},{key:'defaultStockLocationId',label:'Default storage place',type:'select',required:true,optionsFrom:'stockLocations'},{key:'description',label:'Description',type:'textarea'}
   ]},
-  { collection:'stockLocations', label:'Stock Locations', permission:'inventory.adjust', description:'Physical stock locations. Archiving is blocked while stock or service-area references remain.', archivable:true, defaults:{name:'',code:'',description:''}, fields:[
-    {key:'name',label:'Location name',required:true},{key:'code',label:'Code'},{key:'description',label:'Description',type:'textarea'}
+  { collection:'stockLocations', label:'Storage Places', permission:'inventory.adjust', description:'Places where stock is kept, such as Main Store, Bar, Kitchen or Cellar. Archiving is blocked while stock or service-area references remain.', archivable:true, defaults:{name:'',code:'',description:''}, fields:[
+    {key:'name',label:'What do staff call this place?',required:true},{key:'code',label:'Place code (optional)'},{key:'description',label:'Where is it? (optional)',type:'textarea'}
   ]},
 ];
 
@@ -50,9 +50,10 @@ export function NativeMasterDataView(){
   const save=async(data:any)=>{
     setNotice('');
     const id=data.id||crypto.randomUUID();
+    const saveData=def.collection==='stockLocations'&&!String(data.code||'').trim()?{...data,code:`PLACE-${crypto.randomUUID().slice(0,6).toUpperCase()}`}:{...data};
     const rec=recordOf(s,def.collection,id);
     try{
-      await runtime.command('record.save',{collection:def.collection,id,data:{...data,id}},rec?.version);
+      await runtime.command('record.save',{collection:def.collection,id,data:{...saveData,id}},rec?.version);
       setEditing(null);setNotice(`${def.label} saved locally.`);
     }catch(error){setNotice(String(error))}
   };
@@ -82,7 +83,7 @@ export function NativeMasterDataView(){
         <div><div className="font-bold">{record.name||record.code||record.id}</div><div className="text-xs text-slate-500">{[record.code,record.phone,record.email,record.description].filter(Boolean).join(' · ')}</div></div>
         <div className="flex gap-2"><button className={buttonClass} onClick={()=>setEditing(record)}>Edit</button>{def.archivable&&<button className={buttonClass} onClick={()=>setArchiving(record)}>Archive</button>}</div>
       </article>)}
-      {records.length===0&&<div className="rounded-xl border border-dashed border-slate-700 p-8 text-center text-slate-500">No {def.label.toLowerCase()} found.</div>}
+      {records.length===0&&<div className="rounded-xl border border-dashed border-slate-700 p-8 text-center"><p className="text-sm text-slate-300">{def.collection==='stockLocations'?'No storage places yet. Add where staff keep stock so service areas and inventory movements can use it.':`No ${def.label.toLowerCase()} found.`}</p>{def.collection==='stockLocations'&&<button className={primaryButtonClass+' mt-3'} onClick={()=>setEditing({...def.defaults})}>Add first storage place</button>}</div>}
     </div>
     {editing&&<MasterEditor definition={def} value={editing} stockLocations={stockLocations} onClose={()=>setEditing(null)} onSave={save}/>}
     {archiving&&<ActionDialog title={`Archive ${archiving.name||archiving.code||'record'}`} onClose={()=>setArchiving(null)}><p className="text-sm text-slate-300">The record remains in history but disappears from active master data. ServOS will reject the archive if live references make it unsafe.</p><div className="mt-4 flex gap-2"><button className={buttonClass} onClick={()=>setArchiving(null)}>Cancel</button><button className={primaryButtonClass} onClick={()=>void archive(archiving)}>Archive record</button></div></ActionDialog>}

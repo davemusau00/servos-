@@ -152,4 +152,14 @@ New product creation now starts with a unified Drink/Food/Retail/Service choice,
 
 Family/variant compatibility, stock setup orchestration, storage-place workflow, and targeted browser/native acceptance remain open.
 
+### Stock master and Storage Places follow-up — 2026-09-28
+
+Stock master creation now starts with the item name and count unit; item code is generated and editable under advanced controls with barcode, scan quantity, average cost and reorder level. The form explicitly says it creates a master only and directs opening quantities to ledger-backed receiving/opening-balance flows. Master Data labels stock locations as Storage Places, offers an optional location description, generates an internal place code when omitted, and gives an actionable empty state. The existing `stockLocations` collection, `inventory.adjust` permission, and archive reference protections remain in force.
+
+- `npm run lint` — passed.
+- `npm run docs:check` — passed: 40 Help Center guides and 15 core documents.
+- `git diff --check` — passed.
+
+Atomic create-stock-plus-opening-balance, physical product variants, place use across remaining screens, and focused workflow acceptance remain open.
+
 The source workflows for product/catalog, stock, rooms/property, imports, and operational summaries, along with their task-specific guides, are not implemented by this foundation slice. No target-device, hosted cloud, or production acceptance is claimed.
