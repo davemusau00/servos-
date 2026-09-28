@@ -57,7 +57,7 @@ export function GuidanceProvider({ children }: { children: React.ReactNode }) {
     void persist({ guideId: guide.id, guideVersion: guide.version, state: 'IN_PROGRESS', currentStepId: guide.steps[nextIndex]?.id || null, completedStepIds: saved?.completedStepIds || [] });
   };
 
-  const close = () => setActiveId(null);
+  const close = useCallback(() => setActiveId(null), []);
   const move = (nextIndex: number) => {
     if (!activeGuide) return;
     if (nextIndex >= activeGuide.steps.length) {
@@ -73,7 +73,7 @@ export function GuidanceProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    const committed = (event: Event) => {
+  const committed = (event: Event) => {
       if (!activeGuide) return;
       const operation = (event as CustomEvent<{ operation: string }>).detail?.operation;
       const step = activeGuide.steps[stepIndex];
@@ -82,6 +82,11 @@ export function GuidanceProvider({ children }: { children: React.ReactNode }) {
     window.addEventListener('servos:command-committed', committed);
     return () => window.removeEventListener('servos:command-committed', committed);
   }, [activeGuide, stepIndex, progress]);
+
+  useEffect(() => {
+    const route = activeGuide?.steps[stepIndex]?.route;
+    if (route?.screen) window.dispatchEvent(new CustomEvent('servos:guide-route', { detail: route }));
+  }, [activeGuide?.id, stepIndex]);
 
   const value: GuidanceContextValue = { guides: GUIDES, progress, activeGuide, stepIndex, start, close, next: () => move(stepIndex + 1), back: () => move(stepIndex - 1) };
   return <GuidanceContext.Provider value={value}>{children}<GuidedTour/></GuidanceContext.Provider>;
@@ -99,8 +104,17 @@ function GuidedTour() {
     };
     locate(); window.addEventListener('resize', locate); window.addEventListener('scroll', locate, true);
     const observer = new MutationObserver(locate); observer.observe(document.body, { childList: true, subtree: true });
-    return () => { window.removeEventListener('resize', locate); window.removeEventListener('scroll', locate, true); observer.disconnect(); };
+    const resizeObserver = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(locate);
+    const targets = Array.from(document.querySelectorAll<HTMLElement>('[data-guide-anchor]')).filter(target => target.dataset.guideAnchor === step.target);
+    targets.forEach(target => resizeObserver?.observe(target));
+    return () => { window.removeEventListener('resize', locate); window.removeEventListener('scroll', locate, true); observer.disconnect(); resizeObserver?.disconnect(); };
   }, [step?.target, stepIndex]);
+  useEffect(() => {
+    if (!activeGuide) return;
+    const onKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') close(); };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [activeGuide?.id, close]);
   if (!activeGuide) return null;
   const complete = stepIndex >= activeGuide.steps.length;
   return <>

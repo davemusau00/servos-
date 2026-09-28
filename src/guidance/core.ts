@@ -4,7 +4,7 @@ export interface GuideStep {
   description: string;
   interaction?: 'inform' | 'observe' | 'practice';
   target?: string;
-  route?: { screen: string; resourceId?: string; tab?: string };
+  route?: { screen: string; resourceId?: string; tab?: string; action?: string };
   articleId?: string;
   successOperations?: string[];
 }
