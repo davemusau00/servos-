@@ -39,7 +39,7 @@ These points are a reconciled backlog from the supplied review and inspected loc
 
 ### Product model boundary
 
-The delivered implementation is an additive product family and physical-variant layer over existing generic JSON product records. Each sellable variant remains a distinct product record with its own identifier/barcode, optional existing stock-item link, and its own embedded sale portions. Family identity and package metadata group variants without rewriting legacy products or introducing a parallel sale ledger. POS must continue to price and consume stock through the existing committed order commands and frozen ingredient snapshots. Avoid claiming atomic creation of a new stock master/opening balance until one native command can enforce it within the existing transaction.
+The delivered implementation is an additive product family and physical-variant layer over existing generic JSON product records. Each sellable variant remains a distinct product record with its own identifier/barcode, optional existing stock-item link, and its own embedded sale portions. Family identity and package metadata group variants without rewriting legacy products or introducing a parallel sale ledger. POS must continue to price and consume stock through the existing committed order commands and frozen ingredient snapshots. The dedicated native `catalog.createWithOpeningStock` command enforces product, stock master, link, and opening movement in one transaction; its UI and local acceptance evidence are recorded under Phase 1.
 
 
 ### Product family and physical variants - implemented slice
@@ -58,9 +58,9 @@ Order firing continues through the established domain commands. The focused Rust
 
 ## Delivery order
 
-The following eight phases are the current implementation sequence from the user review. Update phase status only from checked source and executed evidence. Phase 1 is active; no deployment or physical-terminal evidence is inferred from local tests.
+The following eight phases are the current implementation sequence from the user review. Update phase status only from checked source and executed evidence. Phase 1 is implemented and locally verified; physical-terminal and deployment evidence are not inferred from local tests.
 
-1. **Atomic Add Item + Stock + Starting Quantity (active):** one native transaction creates the sellable product, new stock master, relationship, barcode, and opening movement. Require catalog and inventory permissions. A failed validation must roll back every record; a committed action returns one audit/outbox result.
+1. **Atomic Add Item + Stock + Starting Quantity (implemented):** `catalog.createWithOpeningStock` creates the sellable product, new stock master, relationship, barcode, and opening movement in one native transaction. It requires both catalog and inventory permissions. Local Rust tests verify rollback, idempotency, one audit/outbox entry, and opening valuation; desktop/mobile browser mocks verify the Quick Add payload. Physical-terminal acceptance remains open.
 2. **Location-first Stock Count:** start from a Storage Place, show counted progress and differences, review, then commit count adjustments using native inventory commands.
 3. **Continuous Scanner Count Session:** retain a local draft count session, map scans to stock items and scan quantities, then review and submit once. Draft scans do not mutate stock or claim a count commit.
 4. **Simple Receive Delivery:** collect supplier/reference and scanned line quantities/costs in a simple screen while preserving native GRN, inventory, weighted-cost, payable/journal, approval, and audit behavior.
@@ -69,6 +69,8 @@ The following eight phases are the current implementation sequence from the user
 7. **First Sale + Stock Count interactive guides:** author these only after their workflows stabilize; progress moves on matching successful committed commands, never drafts or failures.
 8. **Friendly Excel/CSV Import:** provide paste/file import and forgiving column mapping on top of the existing staged, previewed, permission-checked native import path. Preserve dry run, validation, approvals, rollback and row-level evidence.
 ## Shared interfaces and invariants
+
+- Atomic catalog setup creates native IDs and links the product to its new stock record inside one transaction. The starting container count is converted to the stock base unit before submission. The command emits one audit/outbox result; failures do not leave partial product or stock records.
 
 - Guides are typed data: stable guide/step IDs, version, audience permissions, semantic target IDs, optional route, article reference, interaction mode, and explicit success operations. Guide definitions do not contain arbitrary React callbacks or raw CSS selectors.
 - UI anchors use `data-guide-anchor` through a small anchor component; IDs are namespaced by shell or domain. Missing targets produce a readable fallback and never block the operation.

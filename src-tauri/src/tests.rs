@@ -1289,6 +1289,8 @@ fn atomic_catalog_setup_creates_linked_stock_and_opening_movement_once() {
     assert_eq!(opening["data"]["movementType"],"OPENING_BALANCE");
     assert_eq!(opening["data"]["quantityDelta"],9000.0);
     assert_eq!(opening["data"]["totalCostValuation"],2250.0);
+    let audit_count:i64=db.query_row("SELECT COUNT(*) FROM audit WHERE command_id=?",[command.id.as_str()],|row|row.get(0)).unwrap();
+    assert_eq!(audit_count,1);
     assert_eq!(execute(&mut db,&s.token,command).unwrap(),result);
     assert_eq!(db.query_row::<i64,_,_>("SELECT COUNT(*) FROM outbox",[],|row|row.get(0)).unwrap(),outbox_before+1);
     assert_eq!(list(&db,"stockMovements").unwrap().iter().filter(|row|row["data"]["sourceId"]==opening["data"]["sourceId"]).count(),1);
@@ -1302,6 +1304,11 @@ fn atomic_catalog_setup_rolls_back_and_requires_both_permissions() {
     assert!(!list(&db,"products").unwrap().iter().any(|row|row["data"]["code"]=="ATOMIC-ITEM"));
     assert!(!list(&db,"stockItems").unwrap().iter().any(|row|row["data"]["code"]=="ATOMIC-STOCK"));
     payload["locationId"]=json!("main");
+    db.execute_batch("CREATE TRIGGER reject_atomic_opening BEFORE INSERT ON records WHEN NEW.collection='stockMovements' BEGIN SELECT RAISE(ABORT,'forced opening movement failure'); END;").unwrap();
+    assert!(execute(&mut db,&s.token,cmd("catalog.createWithOpeningStock",payload.clone())).is_err());
+    assert!(!list(&db,"products").unwrap().iter().any(|row|row["data"]["code"]=="ATOMIC-ITEM"));
+    assert!(!list(&db,"stockItems").unwrap().iter().any(|row|row["data"]["code"]=="ATOMIC-STOCK"));
+    db.execute_batch("DROP TRIGGER reject_atomic_opening;").unwrap();
     execute(&mut db,&s.token,cmd("staff.create",json!({"name":"Server One","role":"Server","pin":"827194"}))).unwrap();
     let server_id:String=db.query_row("SELECT id FROM staff WHERE name='Server One'",[],|row|row.get(0)).unwrap();
     let server=login(&db,&server_id,"827194").unwrap();

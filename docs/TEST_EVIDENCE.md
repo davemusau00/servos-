@@ -160,7 +160,7 @@ Stock master creation now starts with the item name and count unit; item code is
 - `npm run docs:check` — passed: 40 Help Center guides and 15 core documents.
 - `git diff --check` — passed.
 
-Atomic create-stock-plus-opening-balance, physical product variants, place use across remaining screens, and focused workflow acceptance remain open.
+Atomic create-stock-plus-opening-balance was implemented in Phase 1 below; location-first count, place use across remaining screens, and focused workflow acceptance remain open.
 
 ### Quick Add and guide routing follow-up — 2026-09-28
 
@@ -188,4 +188,17 @@ The native catalog accepts additive product-family metadata on the existing JSON
 - `npm run docs:check` - passed: 40 offline Help articles and 15 core docs.
 - `git diff --check` - passed at check time.
 
-`npx playwright test tests/browser/preview.spec.ts -g "native checkout provides customer and business receipt copies"` - passed, desktop and mobile. It verifies family creation, selecting another family size, unique stock links (the existing stock link is disabled), portions, and continued receipt behavior. This remains browser-mocked UI evidence. Atomic new-stock-plus-opening-balance, location-first stock count, room/property workflow simplification, first-use onboarding, and workflow guides remain open.
+`npx playwright test tests/browser/preview.spec.ts -g "native checkout provides customer and business receipt copies"` - passed, desktop and mobile. It verifies family creation, selecting another family size, unique stock links (the existing stock link is disabled), portions, and continued receipt behavior. This remains browser-mocked UI evidence. Location-first stock count, room/property workflow simplification, first-use onboarding, and workflow guides remain open.
+
+
+### Phase 1 - Atomic Add Item + Stock + Starting Quantity - 2026-09-28
+
+The Quick Product dialog can now create a product and new stock master together, choose a Storage Place, enter whole starting containers, and convert that count into the stock item's base unit. The native `catalog.createWithOpeningStock` command generates both record IDs, links the product to its stock master, stores the barcode, initializes on-hand quantity, and records a valued `OPENING_BALANCE` movement. The complete write is one native transaction, audit entry, command result, and outbox envelope. Both `catalog.manage` and `inventory.adjust` are required. Existing product-only and existing-stock-link paths remain available.
+
+- `cargo test --manifest-path src-tauri/Cargo.toml --lib` - passed, 59 tests. This full run preceded the final audit-count assertion; the two focused Phase 1 tests were rerun afterward.
+- `cargo test --manifest-path src-tauri/Cargo.toml --lib atomic_catalog_setup` - passed, 2 tests. Covers linked records and converted opening stock/cost, single audit/outbox result and idempotent retry; invalid location leaves no partial records; Server role is denied.
+- `npx playwright test tests/browser/preview.spec.ts -g "native checkout provides customer and business receipt copies"` - passed on desktop and mobile. Browser mock verified 12 x 1,000 ml becomes 12,000 ml and the UI sends one atomic native command.
+- `npm test` - passed, 79 tests.
+- `npm run lint` - passed.
+
+This is local native/domain and browser-mocked UI evidence. A packaged terminal run remains open. Phases 2-8 remain queued in the order listed in the delivery plan.
