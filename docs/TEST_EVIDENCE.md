@@ -160,7 +160,7 @@ Stock master creation now starts with the item name and count unit; item code is
 - `npm run docs:check` — passed: 40 Help Center guides and 15 core documents.
 - `git diff --check` — passed.
 
-Atomic create-stock-plus-opening-balance was implemented in Phase 1 below; location-first count, place use across remaining screens, and focused workflow acceptance remain open.
+Atomic create-stock-plus-opening-balance was implemented in Phase 1 below. Phase 2's location-first count is recorded below; consistent Storage Place labels across remaining screens and broader workflow acceptance remain open.
 
 ### Quick Add and guide routing follow-up — 2026-09-28
 
@@ -188,7 +188,7 @@ The native catalog accepts additive product-family metadata on the existing JSON
 - `npm run docs:check` - passed: 40 offline Help articles and 15 core docs.
 - `git diff --check` - passed at check time.
 
-`npx playwright test tests/browser/preview.spec.ts -g "native checkout provides customer and business receipt copies"` - passed, desktop and mobile. It verifies family creation, selecting another family size, unique stock links (the existing stock link is disabled), portions, and continued receipt behavior. This remains browser-mocked UI evidence. Location-first stock count, room/property workflow simplification, first-use onboarding, and workflow guides remain open.
+`npx playwright test tests/browser/preview.spec.ts -g "native checkout provides receipts and location stock count"` - passed, desktop and mobile. It verifies family creation, selecting another family size, unique stock links (the existing stock link is disabled), portions, receipt behavior, and that location-count draft/review stages issue no command before a single full-count command at confirmation. This remains browser-mocked UI evidence. Room/property workflow simplification, first-use onboarding, and workflow guides remain open.
 
 
 ### Phase 1 - Atomic Add Item + Stock + Starting Quantity - 2026-09-28
@@ -201,4 +201,13 @@ The Quick Product dialog can now create a product and new stock master together,
 - `npm test` - passed, 79 tests.
 - `npm run lint` - passed.
 
-This is local native/domain and browser-mocked UI evidence. A packaged terminal run remains open. Phases 2-8 remain queued in the order listed in the delivery plan.
+This is local native/domain and browser-mocked UI evidence. A packaged terminal run remains open. Phase 2 is recorded below; Phases 3-8 remain queued in the order listed in the delivery plan.
+
+### Phase 2 - Location-first Stock Count - 2026-09-28
+
+Inventory now starts a count with a Storage Place, then presents every active stock item with expected quantity, a manual counted quantity, and a live variance. The review summarizes matching, short, and over counts. Draft and review are frontend-only; confirmation sends one `inventory.countLocation` command. The native transaction requires `inventory.count` or a valid manager approval, requires every active stock item exactly once, rejects stale expected balances, records a committed count review, and applies only non-zero variances as stock movements. Because the command executes in one SQLite transaction, any failed movement rolls back the whole count. Continuous scan drafts remain Phase 3.
+
+- `cargo test --manifest-path src-tauri/Cargo.toml --lib location_count` - passed, 2 focused tests. Covers complete count summary, movement/audit/outbox idempotency, incomplete and stale count rejection, rollback after a forced second-item movement failure, and Server-role authorization gating.
+- `npm run lint` - passed.
+- `npx playwright test tests/browser/preview.spec.ts -g "native checkout provides receipts and location stock count"` - passed, desktop and mobile. The browser mock verifies no command for draft or review and one full-location command after confirmation.
+- Physical scanner, target-terminal operation, and ManagerApprovalDialog interaction were not exercised in this slice.

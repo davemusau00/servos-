@@ -76,9 +76,9 @@ export function NativeInventoryView() {
       try {
         await runtime.command(operation, { ...payload, approvalToken: token });
         setModal(null);
-        setNotice('Inventory movement committed.');
+        setNotice(operation === 'inventory.countLocation' ? 'Stock count committed.' : 'Inventory movement committed.');
       } catch (error) {
-        setNotice(domainErrorMessage(error, 'commit this inventory movement'));
+        setNotice(domainErrorMessage(error, operation === 'inventory.countLocation' ? 'commit this stock count' : 'commit this inventory movement'));
         throw error;
       }
     };

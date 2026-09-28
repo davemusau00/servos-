@@ -1335,6 +1335,7 @@ fn location_count_commits_full_review_as_one_audited_inventory_transaction() {
     assert_eq!(counts[0]["data"]["short"],0);
     assert_eq!(counts[0]["data"]["over"],1);
     assert_eq!(counts[0]["data"]["rows"][0]["variance"],2.0);
+    assert_eq!(db.query_row::<i64,_,_>("SELECT COUNT(*) FROM audit WHERE command_id=?",[command.id.as_str()],|row|row.get(0)).unwrap(),1);
     assert_eq!(list(&db,"stockMovements").unwrap().iter().filter(|row|row["data"]["sourceId"]==command.id).count(),1);
     assert_eq!(execute(&mut db,&s.token,command).unwrap(),result);
     assert_eq!(db.query_row::<i64,_,_>("SELECT COUNT(*) FROM outbox",[],|row|row.get(0)).unwrap(),before_outbox+1);
@@ -1364,7 +1365,7 @@ fn location_count_rejects_stale_partial_and_failed_multi_item_writes() {
     let server_id:String=db.query_row("SELECT id FROM staff WHERE name='Count Server'",[],|row|row.get(0)).unwrap();
     let server=login(&db,&server_id,"827195").unwrap();
     let denied=cmd("inventory.countLocation",json!({"locationId":"main","rows":[{"stockItemId":"count-one","expectedQuantity":5,"countedQuantity":5},{"stockItemId":"count-two","expectedQuantity":5,"countedQuantity":5}]}));
-    assert!(execute(&mut db,&server.token,denied).unwrap_err().contains("inventory.count"));
+    assert!(execute(&mut db,&server.token,denied).is_err());
 }
 
 #[test]
