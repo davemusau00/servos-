@@ -56,9 +56,19 @@ Order firing continues through the established domain commands. The focused Rust
 - Implemented foundation: task-group navigation, permission-aware Home/Quick Add destinations, the core shell tour, Help Center tour launch/progress, a native progress table, and commit-only guidance events. The current follow-up adds first-run catalog and inventory empty states plus human-readable common native errors. Detailed task workflows and their guides remain pending.
 - The current release ledger remains authoritative for what is implemented and verified. This plan does not claim completion of the web expansion, production rollout, or target-device acceptance.
 
+## Condensed finish train
+
+Remaining Simple Operations work is governed by [the condensed finish train](SIMPLE_OPERATIONS_FINISH_TRAIN.md).
+
+1. **F1 Operations Complete** — Simple Receive Delivery plus receive guide and focused acceptance.
+2. **F2 Hospitality + First Use** — Simple Rooms, Property/Report Problem, first-login onboarding and stabilized workflow guides.
+3. **F3 Data Intake + Release Hardening** — friendly CSV/paste intake, mapping, usability and target-device acceptance.
+
+Implemented Phases 1–3 remain unchanged. This changes sequencing, not domain safety. Web-v2 authority/cutover remains separate.
+
 ## Delivery order
 
-The following eight phases are the current implementation sequence from the user review. Update phase status only from checked source and executed evidence. Phase 1 is implemented and locally verified; physical-terminal and deployment evidence are not inferred from local tests.
+The following eight-phase list is the historical decomposition from the earlier review. Use the condensed finish train above for remaining implementation order. Update phase status only from checked source and executed evidence. Phase 1 is implemented and locally verified; physical-terminal and deployment evidence are not inferred from local tests.
 
 1. **Atomic Add Item + Stock + Starting Quantity (implemented):** `catalog.createWithOpeningStock` creates the sellable product, new stock master, relationship, barcode, and opening movement in one native transaction. It requires both catalog and inventory permissions. Local Rust tests verify rollback, idempotency, one audit/outbox entry, and opening valuation; desktop/mobile browser mocks verify the Quick Add payload. Physical-terminal acceptance remains open.
 2. **Location-first Stock Count (implemented; locally verified):** choose a Storage Place, count every active stock item, review match/short/over totals, then submit one native transaction. Draft quantities do not mutate stock. Native commit checks permissions, complete item coverage, and unchanged expected balances; stale or failed writes roll back the count and all adjustments. Scanner-session drafts remain Phase 3.
