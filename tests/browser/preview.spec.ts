@@ -51,7 +51,7 @@ test('native checkout provides customer and business receipt copies', async ({ p
     const snapshot = {
       terminalId: 'terminal-test', installationStage: 'LIVE', pendingCount: 0, lastSync: null, lastBackup: null,
       actor: { id: 'staff-1', name: 'Test Owner', role: 'Admin', permissions: ['pos.sell','kds.view','inventory.view','catalog.view','catalog.manage','mpesa.reconcile','payment.record','floorplan.view','till.close','reports.view','backup.create','help.view','sync.manual'] },
-      records: [record('organization','business',{name:'Test Bar'}),record('outlets','outlet-1',{name:'Main Bar',propertyId:'property-1',active:true}),record('orders','order-1',order),record('paymentConfig','main',{methods:['CASH']}),record('stockItems','whisky-350-stock',{name:'Whisky 350 stock',code:'WHISKY-350-STOCK',baseUnit:'ml',currentStock:{}}),record('stockItems','whisky-750-stock',{name:'Whisky 750 stock',code:'WHISKY-750-STOCK',baseUnit:'ml',currentStock:{}})],
+      records: [record('organization','business',{name:'Test Bar'}),record('outlets','outlet-1',{name:'Main Bar',propertyId:'property-1',active:true}),record('orders','order-1',order),record('paymentConfig','main',{methods:['CASH']}),record('stockItems','whisky-350-stock',{id:'whisky-350-stock',name:'Whisky 350 stock',code:'WHISKY-350-STOCK',baseUnit:'ml',currentStock:{}}),record('stockItems','whisky-750-stock',{id:'whisky-750-stock',name:'Whisky 750 stock',code:'WHISKY-750-STOCK',baseUnit:'ml',currentStock:{}})],
     };
     (window as Window & { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__ = {
       invoke: async (command: string, args?: any) => {
@@ -112,7 +112,7 @@ test('native checkout provides customer and business receipt copies', async ({ p
   await expect(page.getByRole('button', {name:'Add another size'})).toBeVisible();
   await page.getByRole('button', {name:'Add another size'}).click();
   const addVariant=page.getByRole('dialog', {name:'Add another size'});
-  await addVariant.getByLabel('Product family').selectOption({label:'Jameson · 1 size(s)'});
+  await addVariant.locator('select').first().selectOption({label:'Jameson Â· 1 size(s)'});
   await addVariant.getByRole('button', {name:'750ml'}).click();
   await addVariant.getByLabel('Whole-container selling price (KES)').fill('1900');
   await addVariant.getByText('More setup').click();
