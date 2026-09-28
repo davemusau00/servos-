@@ -79,6 +79,16 @@ Fixed the controlled room CSV UPDATE contract: `initialStatus` remains in the st
 
 The README now starts with the active single-terminal authority and disabled v2 status and documents developer commands and their evidence limits. The implementation remains incomplete: signed offline grants, web/desktop domain integration, full shared multi-device acceptance, migration rehearsal, production cutover, and packaged target acceptance remain outstanding. No live project was changed.
 
+## 0.2.0 release candidate closure — 2026-09-28
+
+ServOS is now version **0.2.0** with local SQLite schema **12**. The Simple Operations source set is substantially complete: task Home/Quick Add, product families and variants, atomic opening stock, location-first counts, resumable scanner counts, Simple Receive Delivery, simple Rooms, simple Property, Report Problem, per-staff welcome/guides, and Friendly CSV / Excel-paste import.
+
+This release is a **release candidate**, not yet physically accepted. Browser/native/source verification does not substitute for packaged-terminal evidence. Physical terminal acceptance remains open for the real USB scanner, 80 mm printer, existing-terminal migration, offline/restart behavior and final operator workflow.
+
+The staged PostgreSQL/web-v2 expansion remains non-authoritative and must not be activated as part of 0.2.0 terminal deployment.
+
+See [Existing Terminal Upgrade](EXISTING_TERMINAL_UPGRADE.md) and [0.2.0 Release Acceptance](RELEASE_0.2_ACCEPTANCE.md).
+
 The release executable compiled on this Windows host, but the installer bundle step failed because Tauri could not resolve its WiX download host. Installer creation and target-machine acceptance remain open; see [test evidence](TEST_EVIDENCE.md).
 
 ## 2026-09-27 staged settlement continuation

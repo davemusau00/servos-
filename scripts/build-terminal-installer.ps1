@@ -151,6 +151,7 @@ Copy-Item -LiteralPath (Join-Path $Repo 'scripts\install-windows-pos.ps1') -Dest
 Copy-Item -LiteralPath (Join-Path $Repo 'scripts\servos-terminal-doctor.ps1') -Destination $releaseDir
 Copy-Item -LiteralPath (Join-Path $Repo 'scripts\run-terminal-tests.ps1') -Destination $releaseDir
 Copy-Item -LiteralPath (Join-Path $Repo 'docs\EXISTING_TERMINAL_UPGRADE.md') -Destination $releaseDir
+Copy-Item -LiteralPath (Join-Path $Repo 'docs\RELEASE_0.2_ACCEPTANCE.md') -Destination $releaseDir
 
 $manifest = [ordered]@{
     Product = $tauri.productName

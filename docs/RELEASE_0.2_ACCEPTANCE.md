@@ -1,0 +1,112 @@
+# ServOS 0.2.0 Release Acceptance
+
+This worksheet is the final acceptance record for the installed **ServOS 0.2.0** terminal. Source/browser/native verification does not replace target-device acceptance.
+
+## Release identity
+
+```text
+Git commit:
+Version:                 0.2.0
+Application identifier:  ke.servos.business
+SQLite schema:           12
+Release folder:
+Installer:
+Installer SHA-256:
+Windows version/build:
+Terminal hardware:
+Scanner:
+Receipt printer:
+Tested by:
+Date:
+```
+
+## Gate A — release package
+
+- [ ] Packaging tree was clean.
+- [ ] Release manifest commit matches source.
+- [ ] Package/Cargo/Tauri versions equal 0.2.0.
+- [ ] Identifier is `ke.servos.business`.
+- [ ] Installer SHA-256 matches.
+- [ ] `ExistingEnrollmentPreserved` is true.
+- [ ] Manifest reports SQLite schema 12.
+- [ ] No database, PIN, service-role key or `.env.local` is packaged.
+
+## Gate B — existing-terminal migration
+
+- [ ] Pre-upgrade checkpoint backup created.
+- [ ] Pre-upgrade Production Health audit exported.
+- [ ] Same Windows user and application data preserved.
+- [ ] Intake not repeated.
+- [ ] Terminal ID and device enrollment preserved.
+- [ ] Installation stage remains LIVE.
+- [ ] Database opens at schema 12.
+- [ ] SQLite quick_check healthy.
+- [ ] Business record counts reconcile.
+- [ ] Pending outbox preserved.
+- [ ] Existing scanner draft preserved where applicable.
+- [ ] Post-upgrade Production Health audit exported.
+
+## Gate C — physical Simple Operations
+
+### Stock count
+- [ ] Known barcode repeated scans.
+- [ ] `scanUnitQuantity` applied.
+- [ ] Unknown barcode causes no stock mutation.
+- [ ] Pause/restart/resume draft.
+- [ ] Review causes no mutation.
+- [ ] Confirm once creates one committed count.
+
+### Receive Delivery
+- [ ] Approved-PO receipt.
+- [ ] Known barcode and scan conversion.
+- [ ] Unknown barcode requires explicit selection.
+- [ ] Review causes no mutation.
+- [ ] Confirm produces GRN/stock/payable/journal.
+- [ ] Authorized ad-hoc delivery.
+- [ ] Separate-manager over-receive approval.
+
+### POS / printer
+- [ ] Normal sale and payment.
+- [ ] Customer and business receipt copies.
+- [ ] 80 mm width/legibility/cut verified.
+- [ ] No accidental duplicate receipt.
+
+### Rooms / property
+- [ ] Add room with existing type.
+- [ ] Add room while creating type/default rate.
+- [ ] Small bulk-room range.
+- [ ] Conflict blocks whole batch.
+- [ ] Add property by name/location.
+- [ ] Report Problem reaches maintenance workflow.
+
+### Friendly import
+- [ ] Paste Excel tab-delimited rows.
+- [ ] `001` remains `001`.
+- [ ] Auto and manual mapping.
+- [ ] Validate/stage/dry-run.
+- [ ] No mutation before reviewed Apply.
+- [ ] Cancel a test batch.
+
+## Gate D — offline/restart
+
+- [ ] Offline launch/trading.
+- [ ] Count draft survives restart.
+- [ ] Local sale works.
+- [ ] Unsafe close is blocked if local work cannot flush.
+- [ ] Reconnect/sync state is sane.
+
+## Release decision
+
+```text
+[ ] ACCEPTED FOR PRODUCTION
+[ ] REJECTED — remediation required
+```
+
+Notes:
+
+```text
+
+
+```
+
+`PhysicalAcceptance` remains pending until this worksheet is actually completed on the target terminal.

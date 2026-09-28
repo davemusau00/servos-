@@ -41,3 +41,14 @@ When a target-machine check passes, add the commit, OS/device, exact command, da
 | Multi-device cutover/recovery | not performed | live migration, real two-device trading and replacement-device rehearsal pending |
 
 Baseline and executed checks are recorded in [test evidence](TEST_EVIDENCE.md). See [phase gates](EXPANSION_PLAN.md). The expansion is not complete or deployed.
+
+## ServOS 0.2.0 Simple Operations closure
+
+| Slice | Backend | Installed UI | RC evidence | Acceptance |
+|---|---|---|---|---|
+| Simple Receive Delivery | existing PO receive + atomic ad-hoc orchestration | scanner/search/review/confirm | source contract + desktop/mobile RC browser test | local verification required; physical scanner pending |
+| Simple Rooms + bulk rooms | room.quickCreate | minimal room/type/rate + batch review | source/native coverage + RC browser flow | local verification required; terminal acceptance pending |
+| Simple Property + Report Problem | asset.quickCreate + maintenance.report | name/location-first property and plain-language report | source/native coverage + RC browser property flow | local verification required |
+| Staff Welcome + workflow guides | per-staff guidance persistence | permission-aware welcome + committed-operation guides | source guide checks + RC browser welcome flow | local verification required |
+| Friendly CSV / Excel-paste import | controlled import pipeline | mapping + preview + stage | parser/source coverage + RC browser paste/stage flow | local verification required; XLSX out of scope |
+| Existing-terminal 0.2.0 upgrade | additive schema 12 migration | no Intake reset | upgrade + acceptance runbooks | rehearsal and physical acceptance pending |

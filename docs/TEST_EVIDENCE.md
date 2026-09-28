@@ -222,3 +222,20 @@ SQLite migration 011 adds a dedicated scanner-draft table scoped to signed-in st
 - `npx playwright test tests/browser/preview.spec.ts -g "native checkout, location count, and resumable scanner draft"` - passed, desktop and mobile. Browser mock exercises scanner keyboard input, 350 ml and 750 ml scan quantities, unknown-code assignment, close/reopen resume, and confirms scans do not issue another stock-count command.
 - `npm run lint` - passed.
 - Physical barcode scanner, packaged-terminal migration rehearsal, and actual SQLite terminal restart remain open.
+
+
+### 0.2.0 release-candidate gate — PENDING EXECUTION
+
+Baseline: `c946ee1493067e6bcca2bccd8ebfcf40ad9920c4` or a reviewed descendant.
+
+This patch adds source-contract tests, desktop/mobile Simple Operations browser acceptance, an existing-terminal upgrade runbook, a target-device acceptance worksheet and `scripts/verify-release-0.2.ps1`.
+
+Run while uncommitted:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\verify-release-0.2.ps1 -Repo C:\Users\Admin\Downloads\servos -AllowDirty
+```
+
+After commit, rerun without `-AllowDirty`.
+
+Do not mark this section passed until command output has been reviewed. Physical acceptance remains pending until `RELEASE_0.2_ACCEPTANCE.md` is completed on the packaged terminal.

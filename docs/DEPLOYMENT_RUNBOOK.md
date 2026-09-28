@@ -1,5 +1,21 @@
 # Deployment and recovery runbook
 
+## ServOS 0.2.0 existing-terminal deployment
+
+For an already-enrolled business, deployment is an **upgrade**, not a fresh install.
+
+1. Complete `EXISTING_TERMINAL_UPGRADE.md`.
+2. Build only from a clean committed tree.
+3. Run `scripts/build-terminal-installer.ps1` without `-SkipTests`.
+4. Prefer the default NSIS package for the first accepted 0.2.0 release.
+5. Rehearse schema-12 migration on an isolated copy of existing application data.
+6. Install under the same Windows user and preserve `ke.servos.business` data.
+7. Do not repeat Intake.
+8. Complete `RELEASE_0.2_ACCEPTANCE.md` on the real scanner/printer terminal.
+9. Do not activate staged PostgreSQL/web-v2 authority during this release.
+
+The release manifest must continue to report physical acceptance as pending until target-device acceptance is actually completed.
+
 ## Configuration
 
 Create `.env.local` from `.env.example` with the dedicated business Supabase project URL and publishable key. Never put a privileged service key in the client.
@@ -57,7 +73,7 @@ Use the exact queue name printed by the setup helper. The test slip sends no cas
 Install ServOS:
 
 ```powershell
-.\scripts\install-windows-pos.ps1 -InstallerPath .\ServOS_0.1.0_x64-setup.exe
+.\scripts\install-windows-pos.ps1 -InstallerPath .\ServOS_0.2.0_x64-setup.exe
 ```
 
 Use the exact installer filename produced by the build. Complete Intake → owner enrollment → Business Setup → Go Live with real business data. In Till Setup choose the exact USB queue or configure the XP-80T LAN address, then print and inspect the test slip and customer/business receipt pair. This terminal will not use a cash drawer. Follow [BAR_PRODUCTION_ACCEPTANCE.md](BAR_PRODUCTION_ACCEPTANCE.md) before live trading and the [XP-80T guide](user-guide/31-xprinter-xp-80t.md) for hardware checks.

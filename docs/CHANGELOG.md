@@ -1,5 +1,16 @@
 ## 2026-09-26 - Bar production hardening 01
 
+## 0.2.0 — release candidate
+
+- Simplified Add, Count, Scan, Receive, Rooms, Property and data-intake workflows.
+- Added atomic ad-hoc delivery receiving while preserving procurement/accounting controls.
+- Added simple single/bulk room creation and minimal property registration.
+- Added per-staff welcome and committed-operation workflow guides.
+- Added Friendly CSV and Excel-paste mapping over the controlled importer.
+- Hardened resumable scanner-count work through SQLite schema 12.
+- Added existing-terminal upgrade and physical acceptance requirements.
+- Web-v2/PostgreSQL authority remains staged and disabled for this terminal release.
+
 - Fixed the fresh-setup service-area/stock-location sequencing regression by allowing unresolved outlet stock location only before Go Live and enforcing the relation at Go Live.
 - Made the local backup step a required first-Go-Live gate.
 - Added pre-enrollment Intake reopening for legacy or incomplete commissioning profiles.
