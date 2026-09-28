@@ -7,7 +7,7 @@ Screen: Business Admin → Physical terminal acceptance
 
 ## Overview
 
-Patch 10 is the final installed-terminal rehearsal. It does not certify a theoretical build or a browser preview. Evidence belongs to the specific native terminal, database schema and local installation.
+Patch 11 is the final installed-terminal rehearsal. It does not certify a theoretical build or a browser preview. Evidence belongs to the specific native terminal, database schema and local installation.
 
 The acceptance panel records local immutable evidence in `terminal_acceptance_evidence`. These rows are not business records, are not added to the transactional outbox, and cannot be edited or deleted.
 

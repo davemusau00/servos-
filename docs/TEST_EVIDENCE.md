@@ -201,7 +201,7 @@ The Quick Product dialog can now create a product and new stock master together,
 - `npm test` - passed, 79 tests.
 - `npm run lint` - passed.
 
-This is local native/domain and browser-mocked UI evidence. A packaged terminal run remains open. Phase 2 is recorded below; Phases 3-8 remain queued in the order listed in the delivery plan.
+This is local native/domain and browser-mocked UI evidence. A packaged terminal run remains open. Phases 2 and 3 are recorded below; Phases 4-8 remain queued in the order listed in the delivery plan.
 
 ### Phase 2 - Location-first Stock Count - 2026-09-28
 
@@ -211,3 +211,14 @@ Inventory now starts a count with a Storage Place, then presents every active st
 - `npm run lint` - passed.
 - `npx playwright test tests/browser/preview.spec.ts -g "native checkout provides receipts and location stock count"` - passed, desktop and mobile. The browser mock verifies no command for draft or review and one full-location command after confirmation.
 - Physical scanner, target-terminal operation, and ManagerApprovalDialog interaction were not exercised in this slice.
+
+### Phase 3 - Continuous Scanner Count Session - 2026-09-28
+
+Inventory now offers a continuous scanner session from a selected Storage Place. USB keyboard-wedge barcodes and stock codes resolve to stock masters; each scan adds `scanUnitQuantity` (or one base unit when unset). Unrecognized or ambiguous codes remain visible in the draft; a cashier can assign a code to a stock item or dismiss it. Manual count edits remain available for stock not represented by a barcode. Every item must have an explicit quantity and unknown codes must be resolved or dismissed before review. The native review still calls Phase 2's single `inventory.countLocation` transaction.
+
+SQLite migration 011 adds a dedicated scanner-draft table scoped to signed-in staff and Storage Place. Native read/save/clear APIs validate the session, item IDs, and quantities. They do not create business commands, audit entries, stock movements, or outbox records. Drafts persist through app restart and one staff member cannot read another's session. A successful count clears the local draft; failed or stale commits retain it for correction.
+
+- `cargo test --manifest-path src-tauri/Cargo.toml --lib inventory_scanner_draft` - passed; verifies local quantity accuracy, invalid item/precision rejection, staff isolation, restart resume, discard, unchanged stock/movements, and no business outbox effect from draft writes.
+- `npx playwright test tests/browser/preview.spec.ts -g "native checkout, location count, and resumable scanner draft"` - passed, desktop and mobile. Browser mock exercises scanner keyboard input, 350 ml and 750 ml scan quantities, unknown-code assignment, close/reopen resume, and confirms scans do not issue another stock-count command.
+- `npm run lint` - passed.
+- Physical barcode scanner, packaged-terminal migration rehearsal, and actual SQLite terminal restart remain open.

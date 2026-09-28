@@ -69,6 +69,8 @@ fn inventory_scanner_draft_is_persistent_staff_scoped_and_outside_business_outbo
     let outbox_before:i64=db.query_row("SELECT COUNT(*) FROM outbox",[],|row|row.get(0)).unwrap();
     let saved=save_inventory_count_draft(&db,&admin.token,"main",draft.clone()).unwrap();
     assert_eq!(saved["counts"]["draft-stock"],12.0);
+    assert_eq!(get(&db,"stockItems","draft-stock").unwrap().1["currentStock"]["main"],20.0);
+    assert!(list(&db,"stockMovements").unwrap().is_empty());
     assert_eq!(inventory_count_draft(&db,&admin.token,"main").unwrap()["unknownScans"][0]["count"],3);
     assert!(save_inventory_count_draft(&db,&admin.token,"main",json!({"counts":{"missing":1},"scanCounts":{},"unknownScans":[]})).is_err());
     assert!(save_inventory_count_draft(&db,&admin.token,"main",json!({"counts":{"draft-stock":0.0000001},"scanCounts":{},"unknownScans":[]})).is_err());
@@ -89,6 +91,19 @@ fn inventory_scanner_draft_is_persistent_staff_scoped_and_outside_business_outbo
     clear_inventory_count_draft(&reopened,&admin_again.token,"main").unwrap();
     assert!(inventory_count_draft(&reopened,&admin_again.token,"main").unwrap().is_null());
     assert_eq!(reopened.query_row::<i64,_,_>("SELECT COUNT(*) FROM outbox",[],|row|row.get(0)).unwrap(),outbox_before+1);
+}
+
+#[test]
+fn schema_ten_upgrades_to_eleven_for_scanner_drafts() {
+    let dir=tempfile::tempdir().unwrap();
+    let path=dir.path().join("upgrade.sqlite");
+    let mut db=open(&path).unwrap();
+    db.execute_batch("DROP TABLE inventory_count_drafts; PRAGMA user_version=10;").unwrap();
+    drop(db);
+    let upgraded=open(&path).unwrap();
+    let version:i64=upgraded.query_row("PRAGMA user_version",[],|row|row.get(0)).unwrap();
+    assert_eq!(version,11);
+    assert!(upgraded.query_row("SELECT name FROM sqlite_master WHERE type='table' AND name='inventory_count_drafts'",[],|row|row.get::<_,String>(0)).is_ok());
 }
 fn order(db: &mut rusqlite::Connection, s: &Session) -> String {
     let product = Uuid::new_v4().to_string();
