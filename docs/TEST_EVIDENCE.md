@@ -164,6 +164,14 @@ Atomic create-stock-plus-opening-balance, physical product variants, place use a
 
 ### Quick Add and guide routing follow-up — 2026-09-28
 
-Reconciled the user-supplied upstream-main review against checked-out local source. Quick Add now encodes direct `add-item`, `add-room`, and `add-asset` actions, exposes them only with manage permissions, and opens the matching flow or its prerequisite. Guide cards use their own versioned progress, route steps request shell navigation through the permission-filtered allowlist, and the tour observes target resize and closes on Escape. Focused checks are pending.
+Reconciled the user-supplied upstream-main review against checked-out local source. Quick Add now encodes direct `add-item`, `add-room`, and `add-asset` actions, exposes them only with manage permissions, and opens the matching flow or its prerequisite. Guide cards use their own versioned progress, route steps request shell navigation through the permission-filtered allowlist, and the tour observes target resize and closes on Escape.
+
+- `npm test` — passed, 79 tests.
+- `npm run lint` — passed.
+- `npx playwright test tests/browser/preview.spec.ts -g "native checkout provides customer and business receipt copies"` — passed, desktop and mobile. This verifies the item Quick Add deep link opens the create form and that a user without room/property create permission sees no such choices.
+- `npm run test:browser` — passed, 16 cases across desktop and mobile layouts.
+- `git diff --check` — passed.
+
+Guide route transition behavior has source coverage but no cross-workspace route-step browser scenario yet. Room and asset Quick Add prerequisite branches also need targeted browser coverage. First-login welcome, role-specific guide recommendations, larger workflow guides, and the complete anchor/focus refinements remain pending.
 
 The source workflows for product/catalog, stock, rooms/property, imports, and operational summaries, along with their task-specific guides, are not implemented by this foundation slice. No target-device, hosted cloud, or production acceptance is claimed.
