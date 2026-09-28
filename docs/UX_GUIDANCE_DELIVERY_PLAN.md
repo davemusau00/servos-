@@ -41,6 +41,13 @@ These points are a reconciled backlog from the supplied review and inspected loc
 
 The next implementation is an additive product family and physical-variant layer over existing generic JSON product records. Each sellable variant remains a distinct product record with its own identifier/barcode, optional existing stock-item link, and its own embedded sale portions. Family identity and package metadata group variants without rewriting legacy products or introducing a parallel sale ledger. POS must continue to price and consume stock through the existing committed order commands and frozen ingredient snapshots. Avoid claiming atomic creation of a new stock master/opening balance until one native command can enforce it within the existing transaction.
 
+
+### Product family and physical variants - implemented slice
+
+The catalog now groups additive physical variants with `productFamilyId`, `productFamilyName`, package type, container quantity/unit, and a canonical variant label. Each size remains its own legacy-compatible product record with its own generated/editable code, optional barcode, optional existing stock link, and existing embedded portions for whole-container and serving formats. The Add another size flow creates within an existing family. Native `record.save` validation requires complete physical metadata, positive quantities and valid portions, rejects duplicate sizes, and prevents reuse of the same stock item inside one family. Existing products without family metadata remain valid.
+
+Order firing continues through the established domain commands. The focused Rust regression creates two stock masters, sets opening quantities through existing inventory commands, saves two physical sizes, rejects duplicate size/stock links, and verifies whole-container and serving portions consume their own committed stock quantities. This does not implement atomic creation of a new stock master and its opening balance; that remains a separate native transaction slice. Location-first counts, receiving, and workflow-specific training remain open.
+
 ## Current checkout baseline
 
 - The installed Tauri shell now presents grouped, permission-filtered task navigation; the offline Help Center searches generated Markdown articles and can launch the shell tour.

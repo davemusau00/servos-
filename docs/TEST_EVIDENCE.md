@@ -175,3 +175,17 @@ Reconciled the user-supplied upstream-main review against checked-out local sour
 Guide route transition behavior has source coverage but no cross-workspace route-step browser scenario yet. Room and asset Quick Add prerequisite branches also need targeted browser coverage. First-login welcome, role-specific guide recommendations, larger workflow guides, and the complete anchor/focus refinements remain pending.
 
 The source workflows for product/catalog, stock, rooms/property, imports, and operational summaries, along with their task-specific guides, are not implemented by this foundation slice. No target-device, hosted cloud, or production acceptance is claimed.
+
+
+
+### Product families and physical variants - 2026-09-28
+
+The native catalog accepts additive product-family metadata on the existing JSON product records. Each sellable size keeps its own product ID/code/barcode and can link a distinct existing stock item. Whole-container and embedded serving formats reuse existing product portions and the committed order-fire inventory path. Native validation rejects incomplete/invalid family metadata, duplicate size labels, and reuse of one stock item across sizes in the same family. Products without family metadata remain compatible.
+
+- `cargo test --manifest-path src-tauri/Cargo.toml --lib product_families_keep_container_variants_and_sale_formats_on_separate_stock` - passed (1 test; 56 filtered). It verified separate stock balances, portions, duplicate size rejection, and duplicate stock-link rejection through committed commands.
+- `npm run lint` - passed after variant UI changes.
+- `npm test` - passed, 79 tests.
+- `npm run docs:check` - passed: 40 offline Help articles and 15 core docs.
+- `git diff --check` - passed at check time.
+
+Focused browser coverage for creating a family with two sizes is still being debugged; it is not counted as passed here. Atomic new-stock-plus-opening-balance, location-first stock count, room/property workflow simplification, first-use onboarding, and workflow guides remain open.
