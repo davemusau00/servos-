@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { flushLocalWork } from './localWork';
 import type { ReceiptResponse, ReceiptSummary } from '../types/receipt';
 import type { ImportApplyPlan, ImportBatchDetail, ImportBatchSummary, StageImportInput } from '../types/imports';
 import type { BusinessCommand, CommandResult, IntakeProfile, ManagerApproval, Permission, PrinterJobResult, ProductionHealthAudit, ReconciliationReport, RuntimeSession, RuntimeSnapshot, RuntimeStatus, TerminalAcceptanceStatus } from '../types/runtime';
@@ -14,6 +15,10 @@ export interface GuidanceProgress {
 }
 
 export interface InventoryCountDraft {
+  sessionId: string;
+  revision: number;
+  baseline: Record<string, { name: string; baseUnit: string; scanUnitQuantity: number; expectedQuantity: number }>;
+  pendingCommand?: { id: string; payload: Record<string, unknown> };
   locationId: string;
   counts: Record<string, number>;
   scanCounts: Record<string, number>;
@@ -38,7 +43,7 @@ interface RuntimeContextValue {
   login: (staffId: string, pin: string) => Promise<void>;
   lock: () => Promise<void>;
   refresh: () => Promise<void>;
-  command: (operation: string, payload?: Record<string, unknown>, targetVersion?: number) => Promise<CommandResult>;
+  command: (operation: string, payload?: Record<string, unknown>, targetVersion?: number, commandId?: string) => Promise<CommandResult>;
   guidanceProgress: () => Promise<GuidanceProgress[]>;
   saveGuidanceProgress: (progress: GuidanceProgress) => Promise<GuidanceProgress>;
   inventoryCountDraft: (locationId: string) => Promise<InventoryCountDraft | null>;
@@ -142,12 +147,13 @@ export const RuntimeProvider = ({ children }: { children: React.ReactNode }) => 
     catch (e) { report(e); throw e; } finally { setBusy(false); }
   };
   const lock = useCallback(async () => {
+    await flushLocalWork();
     try { if (session) await invoke('runtime_lock', { token: session.token }); }
     finally { setSession(null); setSnapshot(null); await reloadStatus(); }
   }, [session, reloadStatus]);
-  const command = useCallback(async (operation: string, payload: Record<string, unknown> = {}, targetVersion?: number) => {
+  const command = useCallback(async (operation: string, payload: Record<string, unknown> = {}, targetVersion?: number, commandId?: string) => {
     if (!session) throw new Error('Unlock the terminal first');
-    const request: BusinessCommand = { id: crypto.randomUUID(), schemaVersion: 1, operation, payload, targetVersion };
+    const request: BusinessCommand = { id: commandId || crypto.randomUUID(), schemaVersion: 1, operation, payload, targetVersion };
     let result: CommandResult;
     try { result = await invoke<CommandResult>('runtime_command', { token: session.token, command: request }); }
     catch (e) { report(e); throw e; }
