@@ -81,3 +81,13 @@ test('release verifier forwards argument lists instead of colliding with automat
   assert.doesNotMatch(verifier,/\[string\[\]\]\$Args/);
   assert.doesNotMatch(verifier,/@Args/);
 });
+
+
+test('disposable PostgreSQL waits for stable query readiness before applying migrations',()=>{
+  const harness=read('scripts/test-supabase.mjs');
+  assert.match(harness,/psql', '-U', 'postgres', '-Atqc', 'select 1'/);
+  assert.match(harness,/consecutiveReady >= 2/);
+  assert.match(harness,/attempt < 60/);
+  assert.match(harness,/\['logs', container\]/);
+  assert.doesNotMatch(harness,/pg_isready/);
+});
