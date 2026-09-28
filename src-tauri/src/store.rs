@@ -2060,7 +2060,9 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
             product["id"]=json!(product_id);
             product["stockItemId"]=json!(stock_id);
             stock["id"]=json!(stock_id);
-            stock["currentStock"]=if starting_quantity>0.0 { json!({location_id:starting_quantity}) } else { json!({}) };
+            let mut current_stock=serde_json::Map::new();
+            if starting_quantity>0.0 { current_stock.insert(location_id.to_string(),json!(starting_quantity)); }
+            stock["currentStock"]=Value::Object(current_stock);
             put(&tx,"products",&product_id,product.clone(),&mut changes)?;
             put(&tx,"stockItems",&stock_id,stock.clone(),&mut changes)?;
             if starting_quantity>0.0 {
