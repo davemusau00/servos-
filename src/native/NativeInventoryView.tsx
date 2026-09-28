@@ -161,23 +161,61 @@ const Metric = ({ label, value, hint, icon, tone = 'normal' }: { label: string; 
 const SmallFact = ({ label, value }: { label: string; value: string }) =>
   <div className="rounded-xl bg-slate-950 p-3"><div className="text-[10px] uppercase tracking-wide text-slate-600">{label}</div><div className="mt-1 font-semibold">{value}</div></div>;
 
-const InventoryForm = ({ modal, form, setForm, stocks, locations, onResolveBarcode, onSubmit }: {
+const LocationStockCountDialog = ({ stocks, locations, initialLocationId, onClose, onCommit }: {
+  stocks: any[]; locations: any[]; initialLocationId: string; onClose: () => void;
+  onCommit: (payload: Record<string, unknown>) => Promise<void>;
+}) => {
+  const [stage, setStage] = useState<'LOCATION' | 'COUNT' | 'REVIEW'>(initialLocationId ? 'COUNT' : 'LOCATION');
+  const [locationId, setLocationId] = useState(initialLocationId);
+  const [quantities, setQuantities] = useState<Record<string, string>>({});
+  const [filter, setFilter] = useState('');
+  const [reason, setReason] = useState('');
+  const [error, setError] = useState('');
+  const location = locations.find(item => item.id === locationId);
+  const rows = stocks.map(item => {
+    const expected = Number(item.currentStock?.[locationId] || 0);
+    const counted = quantities[item.id] === undefined ? null : Number(quantities[item.id]);
+    return { item, expected, counted, variance: counted === null ? null : counted - expected };
+  });
+  const query = filter.trim().toLowerCase();
+  const visibleRows = rows.filter(row => !query || [row.item.name, row.item.code, row.item.barcode].some(value => String(value || '').toLowerCase().includes(query)));
+  const complete = rows.length > 0 && rows.every(row => row.counted !== null && Number.isFinite(row.counted) && row.counted >= 0 && row.counted <= 1_000_000_000 && /^\d+(\.\d{1,6})?$/.test(quantities[row.item.id] || ''));
+  const matches = rows.filter(row => row.variance === 0).length;
+  const short = rows.filter(row => row.variance !== null && row.variance < 0).length;
+  const over = rows.filter(row => row.variance !== null && row.variance > 0).length;
+  const chooseLocation = (id: string) => { setLocationId(id); setQuantities({}); setStage('COUNT'); setError(''); };
+  const commit = async () => {
+    setError('');
+    try {
+      await onCommit({ locationId, reason: reason.trim() || 'Location stock count', rows: rows.map(row => ({ stockItemId: row.item.id, expectedQuantity: row.expected, countedQuantity: row.counted })) });
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Count could not be committed. Review the location and try again.'); }
+  };
+  return <div className="fixed inset-0 z-[180] grid place-items-center bg-black/70 p-3 sm:p-5" role="dialog" aria-modal="true" aria-label="Count stock by location">
+    <div className="max-h-[94vh] w-full max-w-4xl overflow-auto rounded-2xl border border-slate-700 bg-slate-900 p-4 text-white sm:p-6">
+      <div className="mb-5 flex items-start justify-between gap-3"><div><div className="text-[11px] font-black uppercase tracking-widest text-amber-400">{stage === 'LOCATION' ? 'Count stock' : location?.name || 'Location count'}</div><h2 className="mt-1 text-xl font-bold">{stage === 'LOCATION' ? 'Where are you counting?' : stage === 'COUNT' ? 'Count every stock item' : 'Review this count'}</h2>{stage === 'COUNT' && <p className="mt-1 text-sm text-slate-400">{Object.keys(quantities).length} / {stocks.length} counted · quantities are a draft until you confirm</p>}</div><button className={buttonClass} onClick={onClose} aria-label="Close count">Close</button></div>
+      {error && <p role="alert" className="mb-3 rounded-xl border border-rose-500/40 bg-rose-500/10 p-3 text-sm text-rose-200">{error}</p>}
+      {stage === 'LOCATION' && <div className="grid gap-3 sm:grid-cols-2">{locations.map(item => <button key={item.id} onClick={() => chooseLocation(item.id)} className="rounded-xl border border-slate-700 bg-slate-950 p-5 text-left text-lg font-bold hover:border-amber-400">{item.name}<span className="mt-1 block text-sm font-normal text-slate-500">Start a full stock count here</span></button>)}{locations.length === 0 && <p className="text-sm text-slate-400">Create a Storage Place before counting stock.</p>}</div>}
+      {stage === 'COUNT' && <>
+        <div className="mb-3 grid gap-2 sm:grid-cols-[1fr_auto]"><label><span className="sr-only">Filter stock items</span><input className={fieldClass} value={filter} onChange={event => setFilter(event.target.value)} placeholder="Find item by name, code or barcode" /></label><button className={buttonClass} onClick={() => { setStage('LOCATION'); setQuantities({}); }}>Change Storage Place</button></div>
+        <div className="max-h-[52vh] space-y-2 overflow-auto pr-1">{visibleRows.map(({ item, expected, counted, variance }) => <div key={item.id} className="grid gap-3 rounded-xl border border-slate-800 bg-slate-950 p-3 sm:grid-cols-[minmax(0,1fr)_120px_150px] sm:items-center"><div><div className="font-semibold">{item.name}</div><div className="text-xs text-slate-500">Expected {expected.toLocaleString()} {item.baseUnit} · {item.code || 'No code'}</div></div><div className={`text-sm font-semibold ${variance === null ? 'text-slate-500' : variance === 0 ? 'text-emerald-300' : variance < 0 ? 'text-rose-300' : 'text-amber-300'}`}>{variance === null ? 'Not counted' : `Variance ${variance > 0 ? '+' : ''}${variance.toLocaleString()}`}</div><label className="text-xs text-slate-500">Counted ({item.baseUnit})<input aria-label={`Counted quantity for ${item.name}`} className={fieldClass + ' mt-1'} type="number" min="0" max="1000000000" step="0.000001" value={quantities[item.id] ?? ''} onChange={event => setQuantities(previous => ({ ...previous, [item.id]: event.target.value }))} /></label></div>)}{visibleRows.length === 0 && <p className="p-5 text-center text-sm text-slate-500">No stock items match that search.</p>}</div>
+        <label className="mt-3 block text-sm">Count note <textarea className={fieldClass + ' mt-1'} value={reason} maxLength={500} onChange={event => setReason(event.target.value)} placeholder="Optional reason for this count" /></label>
+        <div className="mt-4 flex justify-end"><button className={primaryButtonClass} disabled={!complete} onClick={() => setStage('REVIEW')}>Review Count</button></div>
+      </>}
+      {stage === 'REVIEW' && <><div className="mb-4 grid grid-cols-3 gap-2"><SmallFact label="Match" value={String(matches)} /><SmallFact label="Short" value={String(short)} /><SmallFact label="Over" value={String(over)} /></div><p className="mb-3 text-sm text-slate-400">{stocks.length} items at {location?.name}. Stock changes only after you confirm.</p><div className="max-h-[45vh] space-y-2 overflow-auto">{rows.map(({ item, expected, counted, variance }) => <div key={item.id} className="flex justify-between gap-3 rounded-lg bg-slate-950 p-3 text-sm"><span>{item.name}<span className="ml-2 text-xs text-slate-500">{expected.toLocaleString()} → {counted?.toLocaleString()} {item.baseUnit}</span></span><b className={variance === 0 ? 'text-emerald-300' : variance! < 0 ? 'text-rose-300' : 'text-amber-300'}>{variance! > 0 ? '+' : ''}{variance!.toLocaleString()}</b></div>)}</div><div className="mt-4 flex flex-wrap justify-between gap-2"><button className={buttonClass} onClick={() => setStage('COUNT')}>Back to count</button><button className={primaryButtonClass} onClick={() => void commit()}>Confirm Count</button></div></>}
+    </div>
+  </div>;
+};
+
+const InventoryForm = ({ modal, form, setForm, stocks, locations, onSubmit }: {
   modal: string; form: any; setForm: (next: any) => void; stocks: any[]; locations: any[];
-  onResolveBarcode: (code: string) => void; onSubmit: () => Promise<void>;
+  onSubmit: () => Promise<void>;
 }) => {
   const selected = stocks.find(item => item.id === form.stockItemId);
-  const expected = Number(selected?.currentStock?.[form.locationId] || 0);
-  const variance = Number(form.countedQty || 0) - expected;
   return <div className="space-y-3">
-    <label className="block text-sm">Stock item<select className={fieldClass + ' mt-1'} value={form.stockItemId} onChange={event => setForm({ ...form, stockItemId: event.target.value, countedQty: 0 })}>{stocks.map(item => <option key={item.id} value={item.id}>{item.name} · {item.code}</option>)}</select></label>
-    <label className="block text-sm">Location<select className={fieldClass + ' mt-1'} value={form.locationId} onChange={event => setForm({ ...form, locationId: event.target.value, countedQty: 0, toLocationId: locations.find(location => location.id !== event.target.value)?.id || '' })}>{locations.map(location => <option key={location.id} value={location.id}>{location.name}</option>)}</select></label>
+    <label className="block text-sm">Stock item<select className={fieldClass + ' mt-1'} value={form.stockItemId} onChange={event => setForm({ ...form, stockItemId: event.target.value })}>{stocks.map(item => <option key={item.id} value={item.id}>{item.name} · {item.code}</option>)}</select></label>
+    <label className="block text-sm">Location<select className={fieldClass + ' mt-1'} value={form.locationId} onChange={event => setForm({ ...form, locationId: event.target.value, toLocationId: locations.find(location => location.id !== event.target.value)?.id || '' })}>{locations.map(location => <option key={location.id} value={location.id}>{location.name}</option>)}</select></label>
     {modal === 'TRANSFER' && <label className="block text-sm">Destination<select className={fieldClass + ' mt-1'} value={form.toLocationId} onChange={event => setForm({ ...form, toLocationId: event.target.value })}>{locations.filter(location => location.id !== form.locationId).map(location => <option key={location.id} value={location.id}>{location.name}</option>)}</select></label>}
-    {modal === 'COUNT' ? <>
-      <div className="grid grid-cols-2 gap-2"><SmallFact label="Expected" value={`${expected.toLocaleString()} ${selected?.baseUnit || ''}`}/><SmallFact label="Draft variance" value={`${variance > 0 ? '+' : ''}${variance.toLocaleString()} ${selected?.baseUnit || ''}`}/></div>
-      <label className="block text-sm">Physical quantity counted in {selected?.baseUnit || 'base units'}<input className={fieldClass + ' mt-1'} type="number" min="0" step="0.001" value={form.countedQty} onChange={event => setForm({ ...form, countedQty: Number(event.target.value) })} /></label>
-      <div className="rounded-xl border border-slate-700 bg-slate-950/60 p-3"><label className="block text-sm">Scan stock barcode or SKU<input data-barcode-capture="true" className={fieldClass + ' mt-1 font-mono'} placeholder="Scan or type exact stock code" value={form.scanBarcode} onChange={event => setForm({ ...form, scanBarcode: event.target.value })} /></label><button className={buttonClass + ' mt-2'} disabled={!form.scanBarcode.trim()} onClick={() => onResolveBarcode(form.scanBarcode)}>Apply typed barcode</button><p className="mt-2 text-xs text-slate-500">One scan adds {Number(selected?.scanUnitQuantity || 1).toLocaleString()} {selected?.baseUnit || 'base units'}. Scanning only changes this draft.</p></div>
-      <label className="block text-sm">Count note / reason<textarea className={fieldClass + ' mt-1'} value={form.reason} onChange={event => setForm({ ...form, reason: event.target.value })} placeholder="e.g. Weekly Sunday stocktake" /></label>
-    </> : <><label className="block text-sm">Quantity in {selected?.baseUnit || 'base units'}<input className={fieldClass + ' mt-1'} type="number" min="0.001" step="0.001" value={form.quantity} onChange={event => setForm({ ...form, quantity: Number(event.target.value) })} /></label><label className="block text-sm">Reason / note<textarea className={fieldClass + ' mt-1'} value={form.reason} onChange={event => setForm({ ...form, reason: event.target.value })} /></label></>}
-    <button className={primaryButtonClass} disabled={!form.stockItemId || !form.locationId || (modal === 'COUNT' ? Number(form.countedQty) < 0 : Number(form.quantity) <= 0) || (modal === 'TRANSFER' && !form.toLocationId)} onClick={() => void onSubmit()}>{modal === 'COUNT' ? 'Commit physical count' : modal === 'TRANSFER' ? 'Commit transfer' : 'Commit waste'}</button>
+    <label className="block text-sm">Quantity in {selected?.baseUnit || 'base units'}<input className={fieldClass + ' mt-1'} type="number" min="0.001" step="0.001" value={form.quantity} onChange={event => setForm({ ...form, quantity: Number(event.target.value) })} /></label><label className="block text-sm">Reason / note<textarea className={fieldClass + ' mt-1'} value={form.reason} onChange={event => setForm({ ...form, reason: event.target.value })} /></label>
+    <button className={primaryButtonClass} disabled={!form.stockItemId || !form.locationId || Number(form.quantity) <= 0 || (modal === 'TRANSFER' && !form.toLocationId)} onClick={() => void onSubmit()}>{modal === 'TRANSFER' ? 'Commit transfer' : 'Commit waste'}</button>
   </div>;
 };

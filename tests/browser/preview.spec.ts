@@ -40,7 +40,7 @@ test('native shell mounts its fresh-install intake without runtime provider erro
   expect(errors).toEqual([]);
 });
 
-test('native checkout provides customer and business receipt copies', async ({ page }) => {
+test('native checkout provides receipts and location stock count stays draft until confirmation', async ({ page }) => {
   await page.addInitScript(() => {
     const windowState = window as Window & { __SERVOS_CALLS?: string[]; __SERVOS_COMMANDS?: any[] };
     windowState.__SERVOS_CALLS = [];
@@ -50,7 +50,7 @@ test('native checkout provides customer and business receipt copies', async ({ p
     const record = (collection: string, id: string, data: Record<string, unknown>) => ({ collection, id, version: 1, archived: false, data });
     const snapshot = {
       terminalId: 'terminal-test', installationStage: 'LIVE', pendingCount: 0, lastSync: null, lastBackup: null,
-      actor: { id: 'staff-1', name: 'Test Owner', role: 'Admin', permissions: ['pos.sell','kds.view','inventory.view','catalog.view','catalog.manage','mpesa.reconcile','payment.record','floorplan.view','till.close','reports.view','backup.create','help.view','sync.manual'] },
+      actor: { id: 'staff-1', name: 'Test Owner', role: 'Admin', permissions: ['pos.sell','kds.view','inventory.view','inventory.count','catalog.view','catalog.manage','mpesa.reconcile','payment.record','floorplan.view','till.close','reports.view','backup.create','help.view','sync.manual'] },
       records: [record('organization','business',{name:'Test Bar'}),record('outlets','outlet-1',{name:'Main Bar',propertyId:'property-1',active:true}),record('orders','order-1',order),record('paymentConfig','main',{methods:['CASH']}),record('stockLocations','main',{id:'main',name:'Main Store',code:'MAIN'}),record('stockItems','whisky-350-stock',{id:'whisky-350-stock',name:'Whisky 350 stock',code:'WHISKY-350-STOCK',baseUnit:'ml',currentStock:{}}),record('stockItems','whisky-750-stock',{id:'whisky-750-stock',name:'Whisky 750 stock',code:'WHISKY-750-STOCK',baseUnit:'ml',currentStock:{}})],
     };
     (window as Window & { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__ = {
@@ -169,6 +169,24 @@ test('native checkout provides customer and business receipt copies', async ({ p
   await expect(receipt.getByRole('status')).toContainText('SENT');
   expect(await page.evaluate(() => (window as Window & {__SERVOS_CALLS?:string[]}).__SERVOS_CALLS)).toContain('runtime_print_receipt');
   expect(await page.evaluate(() => (window as Window & {__SERVOS_CALLS?:string[]}).__SERVOS_CALLS)).toContain('runtime_printer_retry');
+
+  await page.evaluate(() => { window.location.hash = '/inventory'; });
+  await expect(page.getByRole('heading', {name:'Inventory'})).toBeVisible();
+  await page.getByRole('button', {name:'Count stock'}).click();
+  const count = page.getByRole('dialog', {name:'Count stock by location'});
+  await count.getByRole('button', {name:/Main Store/}).click();
+  await count.getByLabel('Counted quantity for Whisky 350 stock').fill('0');
+  await count.getByLabel('Counted quantity for Whisky 750 stock').fill('0');
+  const countCalls = () => page.evaluate(() => ((window as any).__SERVOS_COMMANDS || []).filter((command:any) => command.operation === 'inventory.countLocation'));
+  expect(await countCalls()).toHaveLength(0);
+  await count.getByRole('button', {name:'Review Count'}).click();
+  await expect(count.getByText('2 items at Main Store. Stock changes only after you confirm.')).toBeVisible();
+  expect(await countCalls()).toHaveLength(0);
+  await count.getByRole('button', {name:'Confirm Count'}).click();
+  await expect(count).toHaveCount(0);
+  const committedCounts = await countCalls();
+  expect(committedCounts).toHaveLength(1);
+  expect(committedCounts[0].payload.rows).toHaveLength(2);
 });
 
 test('floorplan drafts are editable and preview cannot claim a saved layout', async ({ page }) => {
