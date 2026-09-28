@@ -49,7 +49,7 @@ test('native checkout provides customer and business receipt copies', async ({ p
     const record = (collection: string, id: string, data: Record<string, unknown>) => ({ collection, id, version: 1, archived: false, data });
     const snapshot = {
       terminalId: 'terminal-test', installationStage: 'LIVE', pendingCount: 0, lastSync: null, lastBackup: null,
-      actor: { id: 'staff-1', name: 'Test Owner', role: 'Admin', permissions: ['pos.sell','kds.view','inventory.view','catalog.view','mpesa.reconcile','payment.record','floorplan.view','till.close','reports.view','backup.create','help.view','sync.manual'] },
+      actor: { id: 'staff-1', name: 'Test Owner', role: 'Admin', permissions: ['pos.sell','kds.view','inventory.view','catalog.view','catalog.manage','mpesa.reconcile','payment.record','floorplan.view','till.close','reports.view','backup.create','help.view','sync.manual'] },
       records: [record('organization','business',{name:'Test Bar'}),record('outlets','outlet-1',{name:'Main Bar',propertyId:'property-1',active:true}),record('orders','order-1',order),record('paymentConfig','main',{methods:['CASH']})],
     };
     (window as Window & { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__ = {
@@ -82,7 +82,9 @@ test('native checkout provides customer and business receipt copies', async ({ p
   await expect(quickAdd.getByRole('button', {name:/Item or menu product/})).toBeVisible();
   await expect(quickAdd.getByRole('button', {name:/Room/})).toHaveCount(0);
   await expect(quickAdd.getByRole('button', {name:/Property item/})).toHaveCount(0);
-  await quickAdd.getByRole('button', {name:'Close Quick Add'}).click();
+  await quickAdd.getByRole('button', {name:/Item or menu product/}).click();
+  await expect(page.getByRole('dialog', {name:'Add product or menu item'})).toBeVisible();
+  await expect(page).toHaveURL(/#\/catalog\?action=add-item$/);
   await page.getByRole('button', {name:'Sell', exact:true}).click();
   await page.getByRole('button', {name:'Pay'}).click();
   await page.getByLabel('Cash tendered').fill('100');

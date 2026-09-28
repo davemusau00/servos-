@@ -25,6 +25,10 @@ test('native shell uses permission-filtered task navigation with Home and Quick 
   assert.match(home,/What are you working on\?/);
   assert.match(home,/Quick Add/);
   assert.match(home,/permissions\.includes\(action\.permission\)/);
+  assert.match(home,/action: 'add-item', label: 'Item or menu product', permission: 'catalog.manage'/);
+  assert.match(home,/guideProgress=progress\.find\(row=>row\.guideId===guide\.id/);
+  assert.match(shell,/servos:guide-route/);
+  assert.match(shell,/action\?`\?action=/);
 });
 
 test('guidance progress uses its own native table and success events follow command commit', () => {
