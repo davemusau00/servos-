@@ -162,7 +162,7 @@ export const RuntimeProvider = ({ children }: { children: React.ReactNode }) => 
     catch (e) { setError(`Saved locally, but refresh failed. Reload before making another change. ${String(e)}`); }
     nextSync.current = 0;
     window.dispatchEvent(new Event('servos:local-commit'));
-    window.dispatchEvent(new CustomEvent('servos:command-committed', { detail: { operation, result } }));
+    window.dispatchEvent(new CustomEvent('servos:command-committed', { detail: { operation, result, payload: Object.fromEntries(['orderId', 'locationId', 'supplierId', 'purchaseOrderId'].filter(key => typeof payload[key] === 'string').map(key => [key, payload[key]])) } }));
     return result;
   }, [session, refresh, report, reloadStatus]);
   const guidanceProgress = async () => {

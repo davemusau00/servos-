@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowRight, BedDouble, Boxes, ClipboardCheck, PackagePlus, Plus, Search, Truck, X } from 'lucide-react';
 import type { Permission } from '../types/runtime';
+import { StaffWelcome } from '../guidance/StaffWelcome';
 import { TourAnchor, useGuidance } from '../guidance/GuidanceProvider';
 
 interface HomeAction { id: string; title: string; description: string; icon: React.ComponentType<{ className?: string }>; permission: Permission; }
@@ -22,7 +23,7 @@ export function NativeHomeView({ permissions, onNavigate }: { permissions: Permi
   const visibleActions = actions.filter(action => permissions.includes(action.permission));
   const visibleAdds = quickAdds.filter(action => permissions.includes(action.permission));
   return <div className="h-full overflow-auto bg-slate-950 p-4 text-white sm:p-7">
-    <div className="mx-auto max-w-5xl">
+    <div className="mx-auto max-w-5xl"><StaffWelcome/>
       <p className="text-sm font-semibold text-amber-300">HOME</p>
       <div className="mt-1 flex flex-wrap items-end justify-between gap-4"><div><h1 className="text-3xl font-bold">What are you working on?</h1><p className="mt-2 text-slate-400">Choose a task to open the right workspace.</p></div>
         <TourAnchor id="quick-add.open"><button className="inline-flex items-center gap-2 rounded-xl bg-amber-400 px-4 py-3 font-bold text-slate-950 hover:bg-amber-300" onClick={() => setQuickAddOpen(true)}><Plus className="h-5 w-5"/>Quick Add</button></TourAnchor>

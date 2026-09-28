@@ -1,4 +1,4 @@
-export type WorkflowContext = { key: 'orderId' | 'locationId' | 'supplierId'; id: string };
+export type WorkflowContext = { key: 'orderId' | 'locationId' | 'supplierId' | 'purchaseOrderId'; id: string };
 export function selectGuideResource(guideId: string, context: WorkflowContext) {
   window.dispatchEvent(new CustomEvent('servos:guide-context', { detail: { guideId, context } }));
 }

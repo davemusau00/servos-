@@ -1,5 +1,6 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, ArrowRightLeft, Boxes, PackageCheck, Search, Trash2 } from 'lucide-react';
+import { selectGuideResource } from '../guidance/workflow';
 import { useRuntime } from '../runtime/RuntimeProvider';
 import type { InventoryCountDraft } from '../runtime/RuntimeProvider';
 import { flushLocalWork, guardLocalWork } from '../runtime/localWork';
@@ -341,6 +342,7 @@ const LocationStockCountDialog = ({ stocks, products, locations, initialLocation
 }) => {
   const [stage, setStage] = useState<'LOCATION' | 'COUNT' | 'SCANNER' | 'REVIEW'>(initialLocationId ? 'COUNT' : 'LOCATION');
   const [locationId, setLocationId] = useState(initialLocationId);
+  useEffect(() => { if (initialLocationId) selectGuideResource('stock.count', { key: 'locationId', id: initialLocationId }); }, [initialLocationId]);
   const [quantities, setQuantities] = useState<Record<string, string>>({});
   const [filter, setFilter] = useState('');
   const [reason, setReason] = useState('');
@@ -357,7 +359,7 @@ const LocationStockCountDialog = ({ stocks, products, locations, initialLocation
   const matches = rows.filter(row => row.variance === 0).length;
   const short = rows.filter(row => row.variance !== null && row.variance < 0).length;
   const over = rows.filter(row => row.variance !== null && row.variance > 0).length;
-  const chooseLocation = (id: string) => { setLocationId(id); setQuantities({}); setStage('COUNT'); setError(''); };
+  const chooseLocation = (id: string) => { selectGuideResource('stock.count', { key: 'locationId', id }); setLocationId(id); setQuantities({}); setStage('COUNT'); setError(''); };
   const commit = async () => {
     setError('');
     try {

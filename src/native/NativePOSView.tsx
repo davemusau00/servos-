@@ -1,5 +1,6 @@
 ﻿import React, { useEffect, useMemo, useState } from 'react';
 import { CreditCard, Flame, Plus, Minus, Search, ShieldAlert, Split, Trash2 } from 'lucide-react';
+import { selectGuideResource } from '../guidance/workflow';
 import { useRuntime } from '../runtime/RuntimeProvider';
 import type { Permission } from '../types/runtime';
 import { recordsOf, money, fieldClass, buttonClass, primaryButtonClass } from './records';
@@ -15,6 +16,7 @@ export function NativePOSView(){
   const openOrders=orders.filter(o=>!['COMPLETED','VOIDED'].includes(o.state));
   const [outletId,setOutletId]=useState(outlets[0]?.id||''); const [activeId,setActiveId]=useState(openOrders[0]?.id||''); const active=openOrders.find(o=>o.id===activeId)||openOrders[0];
   const [query,setQuery]=useState(''); const [modal,setModal]=useState<{kind:string;data?:any}|null>(null); const [notice,setNotice]=useState(''); const [scannerTest,setScannerTest]=useState(false); const [lastTestScan,setLastTestScan]=useState('');
+  useEffect(()=>{ if(active && ['PAY','SPLIT'].includes(modal?.kind || '')) selectGuideResource('pos.first-sale',{key:'orderId',id:active.id}); },[modal?.kind,active?.id]);
   const [printerJobs,setPrinterJobs]=useState<any[]>([]);
   const [approval,setApproval]=useState<{permission:Permission;target?:string;run:(token:string)=>Promise<void>}|null>(null);
   const refreshPrinterJobs=async()=>{try{setPrinterJobs(await runtime.printerJobs())}catch{/* Session expiry is handled by the runtime shell. */}};
