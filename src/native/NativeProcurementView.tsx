@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Barcode, ClipboardCheck, Plus, Truck } from 'lucide-react';
 import { useRuntime } from '../runtime/RuntimeProvider';
 import type { Permission } from '../types/runtime';
 import { barcodeEquals, useBarcodeScanner } from '../hooks/useBarcodeScanner';
+import { SimpleReceiveDelivery } from './SimpleReceiveDelivery';
 import { ActionDialog } from './ActionDialog';
 import { ManagerApprovalDialog } from './ManagerApprovalDialog';
 import { ClassifiedPurchaseOrderDialog } from './ClassifiedPurchaseOrderDialog';
@@ -12,7 +13,7 @@ type ReceiptDraftLine = { delivered: number; rejected: number; rejectionReason: 
 const dateInput = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 const procurementLineKey = (line: any) => String(line.lineId || line.stockItemId || '');
 
-export function NativeProcurementView({ onOpenCatalog }: { onOpenCatalog: () => void }) {
+export function NativeProcurementView({ onOpenCatalog, initialAction = '' }: { onOpenCatalog: () => void; initialAction?: string }) {
   const runtime = useRuntime();
   const snapshot = runtime.snapshot!;
   const suppliers = recordsOf(snapshot, 'suppliers');
@@ -29,6 +30,8 @@ export function NativeProcurementView({ onOpenCatalog }: { onOpenCatalog: () => 
   const canEditCatalog = permissions.includes('catalog.manage');
   const canPay = permissions.includes('procurement.pay');
 
+  const [simpleReceive, setSimpleReceive] = useState(initialAction === 'receive-delivery');
+  useEffect(() => { if (initialAction === 'receive-delivery') setSimpleReceive(true); }, [initialAction]);
   const [section, setSection] = useState<'ORDERS' | 'RECEIPTS' | 'PAYABLES'>('ORDERS');
   const [notice, setNotice] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
@@ -298,7 +301,7 @@ export function NativeProcurementView({ onOpenCatalog }: { onOpenCatalog: () => 
 
   return <div className="h-full overflow-auto bg-slate-950 p-5 text-white">
     <header className="mb-5 flex flex-wrap items-start justify-between gap-3">
-      <div><h1 className="flex items-center gap-2 text-2xl font-bold"><Truck className="h-6 w-6 text-amber-400" />Procurement</h1><p className="mt-1 text-sm text-slate-400">Purchase orders, scanner-assisted GRNs, three-way invoice matching and accounts payable. Changes save locally first.</p></div>
+      <div>{canReceive && <button className={primaryButtonClass + ' mb-3'} onClick={() => setSimpleReceive(true)}>Receive Delivery</button>}<h1 className="flex items-center gap-2 text-2xl font-bold"><Truck className="h-6 w-6 text-amber-400" />Procurement</h1><p className="mt-1 text-sm text-slate-400">Purchase orders, scanner-assisted GRNs, three-way invoice matching and accounts payable. Changes save locally first.</p></div>
       {canManage && <div className="flex flex-wrap gap-2"><button className={buttonClass} onClick={() => { setNotice(''); setSupplierId(suppliers[0]?.id || ''); setPoLines([]); setPoScanCode(''); setCreateOpen(true); }}><Plus className="mr-1 inline h-4 w-4" />New stock PO</button><button className={primaryButtonClass} onClick={()=>setClassifiedOpen(true)}>Classified PO</button></div>}
     </header>
 
@@ -358,6 +361,7 @@ export function NativeProcurementView({ onOpenCatalog }: { onOpenCatalog: () => 
         <button className={primaryButtonClass} disabled={!paymentConfirmed || !paymentReference.trim() || !paymentReason.trim() || !Number.isFinite(Number(paymentAmount)) || Number(paymentAmount) <= 0 || Number(paymentAmount) > Number(payingPayable.amountDue ?? payingPayable.amount)} onClick={() => void recordSupplierPayment()}>Record confirmed payment</button>
       </div>
     </ActionDialog>}
+    {simpleReceive && <SimpleReceiveDelivery onClose={() => setSimpleReceive(false)} />}
     {classifiedOpen && <ClassifiedPurchaseOrderDialog onClose={()=>setClassifiedOpen(false)} onCreated={message=>setNotice(message)}/>}
     {createOpen && <ActionDialog title="Create purchase order" onClose={() => setCreateOpen(false)}>
       {notice && <p role="status" className="mb-3 rounded-lg bg-slate-950 p-3 text-sm text-slate-200">{notice}</p>}

@@ -188,7 +188,7 @@ fn live_required(tx: &Transaction, operation: &str) -> Result<()> {
         "till.open","till.cashMovement","till.close","order.create","order.addItem","order.updateItem",
         "order.removeItem","order.fire","order.kds","order.repeatRound","order.transfer","order.merge","order.void","order.discount",
         "order.compItem","payment.record","payment.split","payment.refund","payment.reverse","mpesa.reconcile","mpesa.discrepancy","mpesa.discrepancy.resolve",
-        "inventory.receive","inventory.adjust","inventory.countLocation","inventory.waste","inventory.transfer","purchaseOrder.create","purchaseOrder.receive","supplierPayable.matchInvoice","supplierPayable.pay","table.ready","closeDay.generate","roomReservation.create","roomReservation.update","roomReservation.cancel","roomReservation.noShow","stay.checkIn","stay.move","stay.extend","stay.checkOut","folio.open","folio.postAccommodation","folio.postService","folio.deposit","folio.pay","folio.applyDeposit","folio.refundDeposit","folio.reverse","pos.roomCharge","asset.commission","asset.assign","asset.return","asset.transfer","asset.inspect","asset.lose","asset.retire","asset.dispose","maintenance.report","maintenance.assign","maintenance.start","maintenance.complete","maintenance.cancel"];
+        "inventory.receive","inventory.adjust","inventory.countLocation","inventory.waste","inventory.transfer","procurement.receiveDelivery","purchaseOrder.create","purchaseOrder.receive","supplierPayable.matchInvoice","supplierPayable.pay","table.ready","closeDay.generate","roomReservation.create","roomReservation.update","roomReservation.cancel","roomReservation.noShow","stay.checkIn","stay.move","stay.extend","stay.checkOut","folio.open","folio.postAccommodation","folio.postService","folio.deposit","folio.pay","folio.applyDeposit","folio.refundDeposit","folio.reverse","pos.roomCharge","asset.commission","asset.assign","asset.return","asset.transfer","asset.inspect","asset.lose","asset.retire","asset.dispose","maintenance.report","maintenance.assign","maintenance.start","maintenance.complete","maintenance.cancel"];
     if TRADING.contains(&operation) && installation_stage(tx)? != "LIVE" {
         return Err("Complete business setup and approve Go Live before trading".into());
     }
@@ -472,15 +472,8 @@ pub fn save_inventory_count_draft(db: &Connection, token: &str, location_id: &st
     if !previous.is_null() && !previous["sessionId"].is_null() {
         if previous["sessionId"]!=draft["sessionId"] { return Err("Another count session exists at this Storage Place".into()); }
         let old_revision=previous["revision"].as_u64().unwrap_or(0);
-        if revision<=old_revision {
-            let mut old=previous.clone(); let mut incoming=draft.clone();
-            old.as_object_mut().unwrap().remove("updatedAt");
-            incoming.as_object_mut().ok_or("Invalid draft")?.remove("updatedAt");
-            incoming["locationId"]=json!(location_id);
-            if revision==old_revision && old==incoming { return Ok(previous); }
-            return Err("CONFLICT: count draft revision changed".into());
-        }
-        if !previous["pendingCommand"].is_null() { return Err("Retry the reviewed count before editing this session".into()); }
+        if revision<old_revision { return Err("CONFLICT: count draft revision changed".into()); }
+        if revision>old_revision && !previous["pendingCommand"].is_null() { return Err("Retry the reviewed count before editing this session".into()); }
     }
     if location_id.trim().is_empty() || location_id.len()>120 { return Err("Invalid Storage Place".into()); }
     get(db,"stockLocations",location_id)?;
@@ -525,6 +518,12 @@ pub fn save_inventory_count_draft(db: &Connection, token: &str, location_id: &st
         text(pending,"id")?;
         if pending["payload"]["draftSessionId"]!=session_id || pending["payload"]["draftRevision"]!=revision || pending["payload"]["locationId"]!=location_id { return Err("Reviewed count does not match its draft".into()); }
         clean["pendingCommand"]=pending.clone();
+    }
+    if previous["revision"].as_u64()==Some(revision) {
+        let mut old=previous.clone(); let mut incoming=clean.clone();
+        old.as_object_mut().unwrap().remove("updatedAt"); incoming.as_object_mut().unwrap().remove("updatedAt");
+        if old==incoming { return Ok(previous); }
+        return Err("CONFLICT: count draft revision changed".into());
     }
     let encoded=serde_json::to_string(&clean).map_err(error)?;
     tx.execute("INSERT INTO inventory_count_drafts(staff_id,location_id,payload,updated_at) VALUES(?,?,?,?) ON CONFLICT(staff_id,location_id) DO UPDATE SET payload=excluded.payload,updated_at=excluded.updated_at",params![user.staff_id,location_id,encoded,updated_at]).map_err(error)?;
@@ -2056,6 +2055,275 @@ pub fn execute(db: &mut Connection, token: &str, cmd: BusinessCommand) -> Result
     let user = actor(db, token, true)?;
     execute_as(db, &user, cmd)
 }
+// Shared procurement primitives run inside the caller's single business transaction.
+fn procurement_create(tx: &Transaction, user: &Session, p: &Value, changes: &mut Vec<Value>) -> Result<String> {
+            if !permissions(&user.role).contains(&"procurement.manage") { return Err("Purchase order management permission required".into()); }
+            let supplier_id=text(p,"supplierId")?.to_string();
+            let (_,supplier)=get(tx,"suppliers",&supplier_id)?;
+            let requested=p["items"].as_array().ok_or("Add at least one purchase-order line")?;
+            if requested.is_empty() || requested.len()>100 { return Err("Purchase orders require between 1 and 100 lines".into()); }
+            let mut seen_stock=Vec::<String>::new();
+            let mut seen_line_ids=Vec::<String>::new();
+            let mut items=Vec::<Value>::new();
+            let mut subtotal_minor=0i64;
+            for line in requested {
+                let treatment=line.get("treatment").and_then(Value::as_str).unwrap_or("STOCK").trim().to_ascii_uppercase();
+                if !["STOCK","EXPENSE","ASSET"].contains(&treatment.as_str()) { return Err("VALIDATION_FAILED: purchase-line treatment".into()); }
+                let line_id=line.get("lineId").and_then(Value::as_str).map(str::trim).filter(|v|!v.is_empty()).map(str::to_string).unwrap_or_else(id);
+                if line_id.len()>128||seen_line_ids.iter().any(|v|v==&line_id){return Err("DUPLICATE_REFERENCE: purchase line ID".into());}
+                seen_line_ids.push(line_id.clone());
+                let quantity_ordered=quantity(line,"quantityOrdered")?;
+                if quantity_ordered<=0.0 { return Err("Ordered quantities must be greater than zero".into()); }
+                let unit_price=quantity(line,"unitPrice")?;
+                let line_total=((quantity_ordered*unit_price*100.0).round())/100.0;
+                if !line_total.is_finite() || line_total>1_000_000_000.0 { return Err("Purchase order line total is too large".into()); }
+                subtotal_minor=subtotal_minor.checked_add((line_total*100.0).round() as i64).ok_or("Purchase order total is too large")?;
+
+                match treatment.as_str() {
+                    "STOCK"=>{
+                        let stock_id=text(line,"stockItemId")?.to_string();
+                        if seen_stock.iter().any(|v|v==&stock_id) { return Err("Each stock item can appear only once on a purchase order".into()); }
+                        seen_stock.push(stock_id.clone());
+                        let (_,stock)=get(tx,"stockItems",&stock_id)?;
+                        let scan_unit=stock["scanUnitQuantity"].as_f64().filter(|value|value.is_finite()&&*value>0.0).unwrap_or(1.0);
+                        items.push(json!({
+                            "lineId":line_id,"treatment":"STOCK","displayName":stock["name"],
+                            "stockItemId":stock_id,"stockItemName":stock["name"],"quantityOrdered":quantity_ordered,
+                            "quantityDelivered":0,"quantityReceived":0,"quantityRejected":0,"unitPrice":unit_price,
+                            "unitSymbol":stock["baseUnit"],"scanUnitQuantity":scan_unit,"lineTotal":line_total
+                        }));
+                    }
+                    "EXPENSE"=>{
+                        let description=text(line,"description")?.trim();
+                        if description.is_empty()||description.len()>240{return Err("VALIDATION_FAILED: expense description".into());}
+                        let category=line.get("expenseCategory").and_then(Value::as_str).unwrap_or("GENERAL").trim().to_ascii_uppercase();
+                        let (account_id,account_code,account_name)=match category.as_str(){
+                            "GENERAL"=>("OPERATING_EXPENSE","6000","Operating expense"),
+                            "REPAIRS"=>("MAINTENANCE_EXPENSE","6100","Maintenance expense"),
+                            "MARKETING"=>("MARKETING_EXPENSE","6200","Marketing expense"),
+                            "UTILITIES"=>("UTILITIES_EXPENSE","6300","Utilities expense"),
+                            _=>return Err("VALIDATION_FAILED: expense category".into())
+                        };
+                        items.push(json!({
+                            "lineId":line_id,"treatment":"EXPENSE","displayName":description,
+                            "description":description,"expenseCategory":category,"expenseAccountId":account_id,
+                            "expenseAccountCode":account_code,"expenseAccountName":account_name,
+                            "quantityOrdered":quantity_ordered,"quantityDelivered":0,"quantityReceived":0,"quantityRejected":0,
+                            "unitPrice":unit_price,"unitSymbol":"unit","scanUnitQuantity":1,"lineTotal":line_total
+                        }));
+                    }
+                    "ASSET"=>{
+                        if (quantity_ordered.round()-quantity_ordered).abs()>0.000001||quantity_ordered>100.0{return Err("VALIDATION_FAILED: asset quantity must be a whole number between 1 and 100".into());}
+                        let category_id=text(line,"assetCategoryId")?.to_string();
+                        let category_record=room_any(tx,"assetCategories",&category_id)?.ok_or("Asset category not found")?;
+                        if category_record.2{return Err("INVALID_STATE: asset category is archived".into());}
+                        let category=category_record.1;
+                        let asset_name=text(line,"assetName")?.trim();
+                        if asset_name.is_empty()||asset_name.len()>240{return Err("VALIDATION_FAILED: asset name".into());}
+                        items.push(json!({
+                            "lineId":line_id,"treatment":"ASSET","displayName":asset_name,
+                            "assetName":asset_name,"assetCategoryId":category_id,"assetCategoryName":category["name"],"assetCategoryCode":category["code"],
+                            "quantityOrdered":quantity_ordered,"quantityDelivered":0,"quantityReceived":0,"quantityRejected":0,
+                            "unitPrice":unit_price,"unitSymbol":"asset","scanUnitQuantity":1,"lineTotal":line_total
+                        }));
+                    }
+                    _=>unreachable!()
+                }
+            }
+            if subtotal_minor>100_000_000_000 { return Err("Purchase order total is too large".into()); }
+            let order_id=id();
+            let po_number=format!("PO-{}",order_id[..8].to_ascii_uppercase());
+            let total=subtotal_minor as f64/100.0;
+            put(tx,"purchaseOrders",&order_id,json!({
+                "id":order_id,"poNumber":po_number,"supplierId":supplier_id,"supplierName":supplier["name"],
+                "propertyId":"property","createdAt":now(),"createdBy":user.staff_id,"createdByName":user.name,
+                "approvedBy":user.name,"approvedById":user.staff_id,"approvedAt":now(),"status":"APPROVED",
+                "items":items,"subtotal":total,"taxTotal":0,"grandTotal":total
+            }),changes)?;
+    Ok(order_id)
+}
+fn procurement_receive(tx: &Transaction, user: &Session, cmd: &BusinessCommand, changes: &mut Vec<Value>) -> Result<()> {
+    let p=&cmd.payload;
+            let order_id=text(p,"purchaseOrderId")?.to_string();
+            authorize(tx,user,"procurement.receive",p,Some(&order_id))?;
+            let (order_version,mut order)=get(tx,"purchaseOrders",&order_id)?;
+            if cmd.target_version!=Some(order_version) { return Err("CONFLICT: Purchase order changed; reload before receiving".into()); }
+            if !["APPROVED","PARTIALLY_RECEIVED"].contains(&order["status"].as_str().unwrap_or("")) {
+                return Err("Only approved purchase orders with remaining quantities can receive a delivery".into());
+            }
+            let location_id=p.get("locationId").and_then(Value::as_str).map(str::trim).filter(|v|!v.is_empty()).map(str::to_string);
+            let requested=p["lines"].as_array().ok_or("Delivery lines are required")?;
+            if requested.is_empty() { return Err("Enter at least one delivered quantity".into()); }
+            if requested.len()>100 { return Err("A goods receipt cannot contain more than 100 lines".into()); }
+            let mut order_items=order["items"].as_array().cloned().ok_or("Purchase order lines are invalid")?;
+            let mut seen=Vec::<String>::new();
+            let mut receipt_lines=Vec::<Value>::new();
+            let mut accepted_value_minor=0i64;
+            let mut stock_value_minor=0i64;
+            let mut asset_value_minor=0i64;
+            let mut expense_totals:Vec<(String,String,String,i64)>=vec![];
+            let mut over_received=false;
+            let mut has_delivered=false;
+            let mut needs_stock_location=false;
+            for line in requested {
+                let request_line_id=line.get("lineId").and_then(Value::as_str).map(str::trim).filter(|v|!v.is_empty());
+                let request_stock=line.get("stockItemId").and_then(Value::as_str).map(str::trim).filter(|v|!v.is_empty());
+                let index=order_items.iter().position(|item|{
+                    request_line_id.is_some_and(|id|item["lineId"].as_str()==Some(id))
+                        || (request_line_id.is_none()&&request_stock.is_some_and(|id|item["stockItemId"].as_str()==Some(id)))
+                }).ok_or("A delivered line is not on this purchase order")?;
+                let line_id=order_items[index].get("lineId").and_then(Value::as_str).unwrap_or_else(||order_items[index]["stockItemId"].as_str().unwrap_or("")).to_string();
+                if line_id.is_empty()||seen.iter().any(|id|id==&line_id){return Err("A purchase line can be received only once per GRN".into());}
+                seen.push(line_id.clone());
+                let delivered=quantity(line,"quantityDelivered")?;
+                let accepted=quantity(line,"quantityAccepted")?;
+                let rejected=quantity(line,"quantityRejected")?;
+                if delivered<=0.0 { continue; }
+                has_delivered=true;
+                if accepted<0.0||rejected<0.0||(accepted+rejected-delivered).abs()>0.000001 { return Err("Delivered quantity must equal accepted plus rejected quantity".into()); }
+                let rejection_reason=line.get("rejectionReason").and_then(Value::as_str).unwrap_or("").trim();
+                if rejected>0.0 && rejection_reason.is_empty() { return Err("Enter a reason for every rejected delivery quantity".into()); }
+                let ordered=quantity(&order_items[index],"quantityOrdered")?;
+                let previously_accepted=order_items[index]["quantityReceived"].as_f64().unwrap_or(0.0);
+                let previously_delivered=order_items[index]["quantityDelivered"].as_f64().unwrap_or(0.0);
+                let previously_rejected=order_items[index]["quantityRejected"].as_f64().unwrap_or(0.0);
+                if previously_accepted+accepted>ordered+0.000001 { over_received=true; }
+                let treatment=order_items[index].get("treatment").and_then(Value::as_str).unwrap_or("STOCK").to_ascii_uppercase();
+                if treatment=="ASSET" && ((accepted.round()-accepted).abs()>0.000001||(delivered.round()-delivered).abs()>0.000001||(rejected.round()-rejected).abs()>0.000001){
+                    return Err("VALIDATION_FAILED: asset receipt quantities must be whole units".into());
+                }
+                if treatment=="STOCK"{needs_stock_location=true;}
+                let unit_price=quantity(&order_items[index],"unitPrice")?;
+                let raw_line_value=accepted*unit_price;
+                if !raw_line_value.is_finite() || raw_line_value>1_000_000_000.0 { return Err("Accepted receipt value is too large".into()); }
+                let line_value=(raw_line_value*100.0).round() as i64;
+                accepted_value_minor=accepted_value_minor.checked_add(line_value).ok_or("Accepted receipt total is too large")?;
+                match treatment.as_str(){
+                    "STOCK"=>stock_value_minor=stock_value_minor.checked_add(line_value).ok_or("Stock receipt total is too large")?,
+                    "ASSET"=>asset_value_minor=asset_value_minor.checked_add(line_value).ok_or("Asset receipt total is too large")?,
+                    "EXPENSE"=>{
+                        let aid=order_items[index]["expenseAccountId"].as_str().unwrap_or("OPERATING_EXPENSE").to_string();
+                        let code=order_items[index]["expenseAccountCode"].as_str().unwrap_or("6000").to_string();
+                        let name=order_items[index]["expenseAccountName"].as_str().unwrap_or("Operating expense").to_string();
+                        if let Some(existing)=expense_totals.iter_mut().find(|v|v.0==aid){existing.3=existing.3.checked_add(line_value).ok_or("Expense receipt total is too large")?;}
+                        else{expense_totals.push((aid,code,name,line_value));}
+                    }
+                    _=>return Err("VALIDATION_FAILED: stored purchase treatment".into())
+                }
+                order_items[index]["quantityDelivered"]=json!(previously_delivered+delivered);
+                order_items[index]["quantityReceived"]=json!(previously_accepted+accepted);
+                order_items[index]["quantityRejected"]=json!(previously_rejected+rejected);
+                receipt_lines.push(json!({
+                    "lineId":line_id,"treatment":treatment,"displayName":order_items[index]["displayName"],
+                    "stockItemId":order_items[index].get("stockItemId").cloned().unwrap_or(Value::Null),
+                    "stockItemName":order_items[index].get("stockItemName").cloned().unwrap_or(Value::Null),
+                    "assetCategoryId":order_items[index].get("assetCategoryId").cloned().unwrap_or(Value::Null),
+                    "assetCategoryName":order_items[index].get("assetCategoryName").cloned().unwrap_or(Value::Null),
+                    "assetName":order_items[index].get("assetName").cloned().unwrap_or(Value::Null),
+                    "expenseAccountId":order_items[index].get("expenseAccountId").cloned().unwrap_or(Value::Null),
+                    "expenseAccountCode":order_items[index].get("expenseAccountCode").cloned().unwrap_or(Value::Null),
+                    "expenseAccountName":order_items[index].get("expenseAccountName").cloned().unwrap_or(Value::Null),
+                    "quantityDelivered":delivered,"quantityAccepted":accepted,"quantityRejected":rejected,
+                    "unitSymbol":order_items[index]["unitSymbol"],"unitCost":unit_price,
+                    "acceptedValue":line_value as f64/100.0,"rejectionReason":rejection_reason
+                }));
+            }
+            if !has_delivered || receipt_lines.is_empty() { return Err("Enter a positive delivered quantity for at least one purchase order line".into()); }
+            if needs_stock_location{
+                let id=location_id.as_deref().ok_or("Choose a stock location for stock lines on this delivery")?;
+                get(tx,"stockLocations",id)?;
+            }
+            if over_received { require_separate_approval(tx,user,"procurement.over_receive",p,&order_id)?; }
+            let receipt_id=id();
+            let grn_number=format!("GRN-{}",receipt_id[..8].to_ascii_uppercase());
+            let supplier_id=text(&order,"supplierId")?.to_string();
+            let invoice_reference=p.get("supplierInvoiceNumber").and_then(Value::as_str).unwrap_or("").trim().to_string();
+            let delivery_note=p.get("deliveryNote").and_then(Value::as_str).unwrap_or("").trim().to_string();
+            let receipt_time=now();
+            put(tx,"goodsReceipts",&receipt_id,json!({
+                "id":receipt_id,"grnNumber":grn_number,"purchaseOrderId":order_id,"poNumber":order["poNumber"],
+                "supplierId":supplier_id,"supplierName":order["supplierName"],"locationId":location_id,
+                "supplierInvoiceNumber":invoice_reference,"deliveryNote":delivery_note,"notes":p.get("notes"),
+                "lines":receipt_lines,"receivedAt":receipt_time,"receivedBy":user.staff_id,"receivedByName":user.name,
+                "acceptedValue":accepted_value_minor as f64/100.0,
+                "treatmentTotals":{"stockMinor":stock_value_minor,"assetMinor":asset_value_minor,"expenseMinor":expense_totals.iter().map(|v|v.3).sum::<i64>()},
+                "status":"POSTED"
+            }),changes)?;
+
+            for line in &receipt_lines {
+                let accepted=line["quantityAccepted"].as_f64().unwrap_or(0.0);
+                if accepted<=0.0 { continue; }
+                let treatment=line["treatment"].as_str().unwrap_or("STOCK");
+                if treatment=="STOCK"{
+                    let stock_id=text(line,"stockItemId")?.to_string();
+                    let unit_cost=line["unitCost"].as_f64().unwrap_or(0.0);
+                    let location=location_id.as_deref().ok_or("Stock receipt location missing")?;
+                    let (_,mut stock)=get(tx,"stockItems",&stock_id)?;
+                    let stock_total=stock["currentStock"].as_object().map(|locations|locations.values().map(|value|value.as_f64().unwrap_or(0.0)).sum::<f64>()).unwrap_or(0.0);
+                    let old_cost=stock["averageUnitCost"].as_f64().unwrap_or(0.0);
+                    let next_cost=if stock_total+accepted>0.0 { ((stock_total*old_cost+accepted*unit_cost)/(stock_total+accepted)*1_000_000.0).round()/1_000_000.0 } else { unit_cost };
+                    stock["averageUnitCost"]=json!(next_cost);
+                    put(tx,"stockItems",&stock_id,stock,changes)?;
+                    let inventory_receipt_id=id();
+                    put(tx,"inventoryReceipts",&inventory_receipt_id,json!({
+                        "id":inventory_receipt_id,"goodsReceiptId":receipt_id,"purchaseOrderId":order_id,
+                        "purchaseLineId":line["lineId"],"stockItemId":stock_id,"locationId":location,"quantity":accepted,"unitCost":unit_cost,
+                        "supplierId":supplier_id,"reference":grn_number,"supplierInvoiceNumber":invoice_reference,
+                        "receivedAt":receipt_time,"receivedBy":user.staff_id
+                    }),changes)?;
+                    stock_delta_with_cost(tx,user,&stock_id,location,accepted,"PURCHASE_RECEIPT",&receipt_id,&grn_number,Some(unit_cost),changes)?;
+                }else if treatment=="ASSET"{
+                    let units=accepted.round() as i64;
+                    let unit_cost_minor=(line["unitCost"].as_f64().unwrap_or(0.0)*100.0).round() as i64;
+                    for ordinal in 1..=units{
+                        let source_key=format!("{receipt_id}:{}:{ordinal}",line["lineId"].as_str().unwrap_or("asset"));
+                        let acquisition_id=id();
+                        put(tx,"assetAcquisitions",&acquisition_id,json!({
+                            "id":acquisition_id,"sourceUnitKey":source_key,"status":"PENDING_COMMISSION",
+                            "goodsReceiptId":receipt_id,"grnNumber":grn_number,"purchaseOrderId":order_id,"poNumber":order["poNumber"],
+                            "purchaseLineId":line["lineId"],"unitOrdinal":ordinal,
+                            "assetName":line["assetName"],"assetCategoryId":line["assetCategoryId"],"assetCategoryName":line["assetCategoryName"],
+                            "supplierId":supplier_id,"supplierName":order["supplierName"],"unitCostMinor":unit_cost_minor,
+                            "receivedAt":receipt_time,"receivedBy":user.staff_id,"receivedByName":user.name
+                        }),changes)?;
+                    }
+                }
+            }
+
+            if accepted_value_minor>0 {
+                let payable_id=id();
+                put(tx,"supplierPayables",&payable_id,json!({
+                    "id":payable_id,"payableNumber":format!("AP-{}",payable_id[..8].to_ascii_uppercase()),
+                    "supplierId":supplier_id,"supplierName":order["supplierName"],"purchaseOrderId":order_id,
+                    "goodsReceiptId":receipt_id,"grnNumber":grn_number,"supplierInvoiceNumber":invoice_reference,
+                    "amount":accepted_value_minor as f64/100.0,"paidAmount":0,"amountDue":accepted_value_minor as f64/100.0,"status":"RECEIVED_UNINVOICED",
+                    "basis":"Accepted STOCK / EXPENSE / ASSET procurement lines at approved purchase-order cost","createdAt":receipt_time
+                }),changes)?;
+                let journal_id=id();let amount=accepted_value_minor as f64/100.0;let mut lines=Vec::<Value>::new();
+                if stock_value_minor>0{lines.push(json!({"id":id(),"accountId":"INVENTORY","accountCode":"1400","accountName":"Inventory","debit":stock_value_minor as f64/100.0,"credit":0,"debitMinor":stock_value_minor,"creditMinor":0}));}
+                if asset_value_minor>0{lines.push(json!({"id":id(),"accountId":"ASSET_CLEARING","accountCode":"1505","accountName":"Asset clearing","debit":asset_value_minor as f64/100.0,"credit":0,"debitMinor":asset_value_minor,"creditMinor":0}));}
+                for (account_id,account_code,account_name,value_minor) in &expense_totals{
+                    if *value_minor>0{lines.push(json!({"id":id(),"accountId":account_id,"accountCode":account_code,"accountName":account_name,"debit":*value_minor as f64/100.0,"credit":0,"debitMinor":value_minor,"creditMinor":0}));}
+                }
+                lines.push(json!({"id":id(),"accountId":"ACCOUNTS_PAYABLE","accountCode":"2000","accountName":"Accounts payable","debit":0,"credit":amount,"debitMinor":0,"creditMinor":accepted_value_minor}));
+                put(tx,"journalEntries",&journal_id,json!({
+                    "id":journal_id,"entryNumber":format!("JE-{}",journal_id[..8].to_ascii_uppercase()),
+                    "propertyId":"property","occurredAt":receipt_time,"postedAt":receipt_time,
+                    "sourceType":"SUPPLIER_RECEIPT","sourceId":receipt_id,"memo":format!("Accepted procurement receipt from {} ({grn_number})",order["supplierName"]),
+                    "lines":lines,"totalDebit":amount,"totalCredit":amount,"balanced":true
+                }),changes)?;
+            }
+
+            let fully_received=order_items.iter().all(|item|item["quantityReceived"].as_f64().unwrap_or(0.0)+0.000001>=item["quantityOrdered"].as_f64().unwrap_or(0.0));
+            let any_delivered=order_items.iter().any(|item|item["quantityDelivered"].as_f64().unwrap_or(0.0)>0.0);
+            order["items"]=json!(order_items);
+            order["status"]=json!(if fully_received{"RECEIVED"}else if any_delivered{"PARTIALLY_RECEIVED"}else{"APPROVED"});
+            order["lastGoodsReceiptId"]=json!(receipt_id);
+            order["lastGoodsReceiptAt"]=json!(receipt_time);
+            put(tx,"purchaseOrders",&order_id,order,changes)?;
+    Ok(())
+}
+
 pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> Result<Value> {
     if cmd.schema_version != 1 || Uuid::parse_str(&cmd.id).is_err() {
         return Err("Unsupported command version or invalid ID".into());
@@ -2465,269 +2733,29 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
             put(&tx,"businessSetup","business",progress,&mut changes)?;
             set_meta(&tx,"installation_stage","LIVE")?;
         }
-        "purchaseOrder.create" => {
-            if !permissions(&user.role).contains(&"procurement.manage") { return Err("Purchase order management permission required".into()); }
-            let supplier_id=text(p,"supplierId")?.to_string();
-            let (_,supplier)=get(&tx,"suppliers",&supplier_id)?;
-            let requested=p["items"].as_array().ok_or("Add at least one purchase-order line")?;
-            if requested.is_empty() || requested.len()>100 { return Err("Purchase orders require between 1 and 100 lines".into()); }
-            let mut seen_stock=Vec::<String>::new();
-            let mut seen_line_ids=Vec::<String>::new();
-            let mut items=Vec::<Value>::new();
-            let mut subtotal_minor=0i64;
-            for line in requested {
-                let treatment=line.get("treatment").and_then(Value::as_str).unwrap_or("STOCK").trim().to_ascii_uppercase();
-                if !["STOCK","EXPENSE","ASSET"].contains(&treatment.as_str()) { return Err("VALIDATION_FAILED: purchase-line treatment".into()); }
-                let line_id=line.get("lineId").and_then(Value::as_str).map(str::trim).filter(|v|!v.is_empty()).map(str::to_string).unwrap_or_else(id);
-                if line_id.len()>128||seen_line_ids.iter().any(|v|v==&line_id){return Err("DUPLICATE_REFERENCE: purchase line ID".into());}
-                seen_line_ids.push(line_id.clone());
-                let quantity_ordered=quantity(line,"quantityOrdered")?;
-                if quantity_ordered<=0.0 { return Err("Ordered quantities must be greater than zero".into()); }
-                let unit_price=quantity(line,"unitPrice")?;
-                let line_total=((quantity_ordered*unit_price*100.0).round())/100.0;
-                if !line_total.is_finite() || line_total>1_000_000_000.0 { return Err("Purchase order line total is too large".into()); }
-                subtotal_minor=subtotal_minor.checked_add((line_total*100.0).round() as i64).ok_or("Purchase order total is too large")?;
-
-                match treatment.as_str() {
-                    "STOCK"=>{
-                        let stock_id=text(line,"stockItemId")?.to_string();
-                        if seen_stock.iter().any(|v|v==&stock_id) { return Err("Each stock item can appear only once on a purchase order".into()); }
-                        seen_stock.push(stock_id.clone());
-                        let (_,stock)=get(&tx,"stockItems",&stock_id)?;
-                        let scan_unit=stock["scanUnitQuantity"].as_f64().filter(|value|value.is_finite()&&*value>0.0).unwrap_or(1.0);
-                        items.push(json!({
-                            "lineId":line_id,"treatment":"STOCK","displayName":stock["name"],
-                            "stockItemId":stock_id,"stockItemName":stock["name"],"quantityOrdered":quantity_ordered,
-                            "quantityDelivered":0,"quantityReceived":0,"quantityRejected":0,"unitPrice":unit_price,
-                            "unitSymbol":stock["baseUnit"],"scanUnitQuantity":scan_unit,"lineTotal":line_total
-                        }));
-                    }
-                    "EXPENSE"=>{
-                        let description=text(line,"description")?.trim();
-                        if description.is_empty()||description.len()>240{return Err("VALIDATION_FAILED: expense description".into());}
-                        let category=line.get("expenseCategory").and_then(Value::as_str).unwrap_or("GENERAL").trim().to_ascii_uppercase();
-                        let (account_id,account_code,account_name)=match category.as_str(){
-                            "GENERAL"=>("OPERATING_EXPENSE","6000","Operating expense"),
-                            "REPAIRS"=>("MAINTENANCE_EXPENSE","6100","Maintenance expense"),
-                            "MARKETING"=>("MARKETING_EXPENSE","6200","Marketing expense"),
-                            "UTILITIES"=>("UTILITIES_EXPENSE","6300","Utilities expense"),
-                            _=>return Err("VALIDATION_FAILED: expense category".into())
-                        };
-                        items.push(json!({
-                            "lineId":line_id,"treatment":"EXPENSE","displayName":description,
-                            "description":description,"expenseCategory":category,"expenseAccountId":account_id,
-                            "expenseAccountCode":account_code,"expenseAccountName":account_name,
-                            "quantityOrdered":quantity_ordered,"quantityDelivered":0,"quantityReceived":0,"quantityRejected":0,
-                            "unitPrice":unit_price,"unitSymbol":"unit","scanUnitQuantity":1,"lineTotal":line_total
-                        }));
-                    }
-                    "ASSET"=>{
-                        if (quantity_ordered.round()-quantity_ordered).abs()>0.000001||quantity_ordered>100.0{return Err("VALIDATION_FAILED: asset quantity must be a whole number between 1 and 100".into());}
-                        let category_id=text(line,"assetCategoryId")?.to_string();
-                        let category_record=room_any(&tx,"assetCategories",&category_id)?.ok_or("Asset category not found")?;
-                        if category_record.2{return Err("INVALID_STATE: asset category is archived".into());}
-                        let category=category_record.1;
-                        let asset_name=text(line,"assetName")?.trim();
-                        if asset_name.is_empty()||asset_name.len()>240{return Err("VALIDATION_FAILED: asset name".into());}
-                        items.push(json!({
-                            "lineId":line_id,"treatment":"ASSET","displayName":asset_name,
-                            "assetName":asset_name,"assetCategoryId":category_id,"assetCategoryName":category["name"],"assetCategoryCode":category["code"],
-                            "quantityOrdered":quantity_ordered,"quantityDelivered":0,"quantityReceived":0,"quantityRejected":0,
-                            "unitPrice":unit_price,"unitSymbol":"asset","scanUnitQuantity":1,"lineTotal":line_total
-                        }));
-                    }
-                    _=>unreachable!()
-                }
+        "purchaseOrder.create" => { procurement_create(&tx,user,p,&mut changes)?; }
+        "purchaseOrder.receive" => { procurement_receive(&tx,user,&cmd,&mut changes)?; }
+        "procurement.receiveDelivery" => {
+            if !permissions(&user.role).contains(&"procurement.manage") || !permissions(&user.role).contains(&"procurement.receive") {
+                return Err("Purchasing and receiving permissions are both required for a delivery without a purchase order".into());
             }
-            if subtotal_minor>100_000_000_000 { return Err("Purchase order total is too large".into()); }
-            let order_id=id();
-            let po_number=format!("PO-{}",order_id[..8].to_ascii_uppercase());
-            let total=subtotal_minor as f64/100.0;
-            put(&tx,"purchaseOrders",&order_id,json!({
-                "id":order_id,"poNumber":po_number,"supplierId":supplier_id,"supplierName":supplier["name"],
-                "propertyId":"property","createdAt":now(),"createdBy":user.staff_id,"createdByName":user.name,
-                "approvedBy":user.name,"approvedById":user.staff_id,"approvedAt":now(),"status":"APPROVED",
-                "items":items,"subtotal":total,"taxTotal":0,"grandTotal":total
-            }),&mut changes)?;
-        }
-        "purchaseOrder.receive" => {
-            let order_id=text(p,"purchaseOrderId")?.to_string();
-            authorize(&tx,user,"procurement.receive",p,Some(&order_id))?;
-            let (order_version,mut order)=get(&tx,"purchaseOrders",&order_id)?;
-            if cmd.target_version!=Some(order_version) { return Err("CONFLICT: Purchase order changed; reload before receiving".into()); }
-            if !["APPROVED","PARTIALLY_RECEIVED"].contains(&order["status"].as_str().unwrap_or("")) {
-                return Err("Only approved purchase orders with remaining quantities can receive a delivery".into());
-            }
-            let location_id=p.get("locationId").and_then(Value::as_str).map(str::trim).filter(|v|!v.is_empty()).map(str::to_string);
-            let requested=p["lines"].as_array().ok_or("Delivery lines are required")?;
-            if requested.is_empty() { return Err("Enter at least one delivered quantity".into()); }
-            if requested.len()>100 { return Err("A goods receipt cannot contain more than 100 lines".into()); }
-            let mut order_items=order["items"].as_array().cloned().ok_or("Purchase order lines are invalid")?;
-            let mut seen=Vec::<String>::new();
-            let mut receipt_lines=Vec::<Value>::new();
-            let mut accepted_value_minor=0i64;
-            let mut stock_value_minor=0i64;
-            let mut asset_value_minor=0i64;
-            let mut expense_totals:Vec<(String,String,String,i64)>=vec![];
-            let mut over_received=false;
-            let mut has_delivered=false;
-            let mut needs_stock_location=false;
-            for line in requested {
-                let request_line_id=line.get("lineId").and_then(Value::as_str).map(str::trim).filter(|v|!v.is_empty());
-                let request_stock=line.get("stockItemId").and_then(Value::as_str).map(str::trim).filter(|v|!v.is_empty());
-                let index=order_items.iter().position(|item|{
-                    request_line_id.is_some_and(|id|item["lineId"].as_str()==Some(id))
-                        || (request_line_id.is_none()&&request_stock.is_some_and(|id|item["stockItemId"].as_str()==Some(id)))
-                }).ok_or("A delivered line is not on this purchase order")?;
-                let line_id=order_items[index].get("lineId").and_then(Value::as_str).unwrap_or_else(||order_items[index]["stockItemId"].as_str().unwrap_or("")).to_string();
-                if line_id.is_empty()||seen.iter().any(|id|id==&line_id){return Err("A purchase line can be received only once per GRN".into());}
-                seen.push(line_id.clone());
+            let reference=text(p,"supplierInvoiceNumber")?.trim();
+            if reference.len()>120 { return Err("Delivery reference cannot exceed 120 characters".into()); }
+            let lines=p["lines"].as_array().filter(|lines|!lines.is_empty() && lines.len()<=100).ok_or("Delivery requires between 1 and 100 items")?;
+            let mut items=Vec::new(); let mut received=Vec::new();
+            for line in lines {
+                let stock_id=text(line,"stockItemId")?;
                 let delivered=quantity(line,"quantityDelivered")?;
-                let accepted=quantity(line,"quantityAccepted")?;
                 let rejected=quantity(line,"quantityRejected")?;
-                if delivered<=0.0 { continue; }
-                has_delivered=true;
-                if accepted<0.0||rejected<0.0||(accepted+rejected-delivered).abs()>0.000001 { return Err("Delivered quantity must equal accepted plus rejected quantity".into()); }
-                let rejection_reason=line.get("rejectionReason").and_then(Value::as_str).unwrap_or("").trim();
-                if rejected>0.0 && rejection_reason.is_empty() { return Err("Enter a reason for every rejected delivery quantity".into()); }
-                let ordered=quantity(&order_items[index],"quantityOrdered")?;
-                let previously_accepted=order_items[index]["quantityReceived"].as_f64().unwrap_or(0.0);
-                let previously_delivered=order_items[index]["quantityDelivered"].as_f64().unwrap_or(0.0);
-                let previously_rejected=order_items[index]["quantityRejected"].as_f64().unwrap_or(0.0);
-                if previously_accepted+accepted>ordered+0.000001 { over_received=true; }
-                let treatment=order_items[index].get("treatment").and_then(Value::as_str).unwrap_or("STOCK").to_ascii_uppercase();
-                if treatment=="ASSET" && ((accepted.round()-accepted).abs()>0.000001||(delivered.round()-delivered).abs()>0.000001||(rejected.round()-rejected).abs()>0.000001){
-                    return Err("VALIDATION_FAILED: asset receipt quantities must be whole units".into());
-                }
-                if treatment=="STOCK"{needs_stock_location=true;}
-                let unit_price=quantity(&order_items[index],"unitPrice")?;
-                let raw_line_value=accepted*unit_price;
-                if !raw_line_value.is_finite() || raw_line_value>1_000_000_000.0 { return Err("Accepted receipt value is too large".into()); }
-                let line_value=(raw_line_value*100.0).round() as i64;
-                accepted_value_minor=accepted_value_minor.checked_add(line_value).ok_or("Accepted receipt total is too large")?;
-                match treatment.as_str(){
-                    "STOCK"=>stock_value_minor=stock_value_minor.checked_add(line_value).ok_or("Stock receipt total is too large")?,
-                    "ASSET"=>asset_value_minor=asset_value_minor.checked_add(line_value).ok_or("Asset receipt total is too large")?,
-                    "EXPENSE"=>{
-                        let aid=order_items[index]["expenseAccountId"].as_str().unwrap_or("OPERATING_EXPENSE").to_string();
-                        let code=order_items[index]["expenseAccountCode"].as_str().unwrap_or("6000").to_string();
-                        let name=order_items[index]["expenseAccountName"].as_str().unwrap_or("Operating expense").to_string();
-                        if let Some(existing)=expense_totals.iter_mut().find(|v|v.0==aid){existing.3=existing.3.checked_add(line_value).ok_or("Expense receipt total is too large")?;}
-                        else{expense_totals.push((aid,code,name,line_value));}
-                    }
-                    _=>return Err("VALIDATION_FAILED: stored purchase treatment".into())
-                }
-                order_items[index]["quantityDelivered"]=json!(previously_delivered+delivered);
-                order_items[index]["quantityReceived"]=json!(previously_accepted+accepted);
-                order_items[index]["quantityRejected"]=json!(previously_rejected+rejected);
-                receipt_lines.push(json!({
-                    "lineId":line_id,"treatment":treatment,"displayName":order_items[index]["displayName"],
-                    "stockItemId":order_items[index].get("stockItemId").cloned().unwrap_or(Value::Null),
-                    "stockItemName":order_items[index].get("stockItemName").cloned().unwrap_or(Value::Null),
-                    "assetCategoryId":order_items[index].get("assetCategoryId").cloned().unwrap_or(Value::Null),
-                    "assetCategoryName":order_items[index].get("assetCategoryName").cloned().unwrap_or(Value::Null),
-                    "assetName":order_items[index].get("assetName").cloned().unwrap_or(Value::Null),
-                    "expenseAccountId":order_items[index].get("expenseAccountId").cloned().unwrap_or(Value::Null),
-                    "expenseAccountCode":order_items[index].get("expenseAccountCode").cloned().unwrap_or(Value::Null),
-                    "expenseAccountName":order_items[index].get("expenseAccountName").cloned().unwrap_or(Value::Null),
-                    "quantityDelivered":delivered,"quantityAccepted":accepted,"quantityRejected":rejected,
-                    "unitSymbol":order_items[index]["unitSymbol"],"unitCost":unit_price,
-                    "acceptedValue":line_value as f64/100.0,"rejectionReason":rejection_reason
-                }));
+                if delivered<=0.0 || rejected>delivered { return Err("Delivered quantity must be positive and cover rejected quantity".into()); }
+                let line_id=id();
+                items.push(json!({"lineId":line_id,"stockItemId":stock_id,"quantityOrdered":delivered,"unitPrice":quantity(line,"unitPrice")?}));
+                received.push(json!({"lineId":line_id,"stockItemId":stock_id,"quantityDelivered":delivered,"quantityAccepted":((delivered-rejected)*1_000_000.0).round()/1_000_000.0,"quantityRejected":rejected,"rejectionReason":line.get("rejectionReason")}));
             }
-            if !has_delivered || receipt_lines.is_empty() { return Err("Enter a positive delivered quantity for at least one purchase order line".into()); }
-            if needs_stock_location{
-                let id=location_id.as_deref().ok_or("Choose a stock location for stock lines on this delivery")?;
-                get(&tx,"stockLocations",id)?;
-            }
-            if over_received { require_separate_approval(&tx,user,"procurement.over_receive",p,&order_id)?; }
-            let receipt_id=id();
-            let grn_number=format!("GRN-{}",receipt_id[..8].to_ascii_uppercase());
-            let supplier_id=text(&order,"supplierId")?.to_string();
-            let invoice_reference=p.get("supplierInvoiceNumber").and_then(Value::as_str).unwrap_or("").trim().to_string();
-            let delivery_note=p.get("deliveryNote").and_then(Value::as_str).unwrap_or("").trim().to_string();
-            let receipt_time=now();
-            put(&tx,"goodsReceipts",&receipt_id,json!({
-                "id":receipt_id,"grnNumber":grn_number,"purchaseOrderId":order_id,"poNumber":order["poNumber"],
-                "supplierId":supplier_id,"supplierName":order["supplierName"],"locationId":location_id,
-                "supplierInvoiceNumber":invoice_reference,"deliveryNote":delivery_note,"notes":p.get("notes"),
-                "lines":receipt_lines,"receivedAt":receipt_time,"receivedBy":user.staff_id,"receivedByName":user.name,
-                "acceptedValue":accepted_value_minor as f64/100.0,
-                "treatmentTotals":{"stockMinor":stock_value_minor,"assetMinor":asset_value_minor,"expenseMinor":expense_totals.iter().map(|v|v.3).sum::<i64>()},
-                "status":"POSTED"
-            }),&mut changes)?;
-
-            for line in &receipt_lines {
-                let accepted=line["quantityAccepted"].as_f64().unwrap_or(0.0);
-                if accepted<=0.0 { continue; }
-                let treatment=line["treatment"].as_str().unwrap_or("STOCK");
-                if treatment=="STOCK"{
-                    let stock_id=text(line,"stockItemId")?.to_string();
-                    let unit_cost=line["unitCost"].as_f64().unwrap_or(0.0);
-                    let location=location_id.as_deref().ok_or("Stock receipt location missing")?;
-                    let (_,mut stock)=get(&tx,"stockItems",&stock_id)?;
-                    let stock_total=stock["currentStock"].as_object().map(|locations|locations.values().map(|value|value.as_f64().unwrap_or(0.0)).sum::<f64>()).unwrap_or(0.0);
-                    let old_cost=stock["averageUnitCost"].as_f64().unwrap_or(0.0);
-                    let next_cost=if stock_total+accepted>0.0 { ((stock_total*old_cost+accepted*unit_cost)/(stock_total+accepted)*1_000_000.0).round()/1_000_000.0 } else { unit_cost };
-                    stock["averageUnitCost"]=json!(next_cost);
-                    put(&tx,"stockItems",&stock_id,stock,&mut changes)?;
-                    let inventory_receipt_id=id();
-                    put(&tx,"inventoryReceipts",&inventory_receipt_id,json!({
-                        "id":inventory_receipt_id,"goodsReceiptId":receipt_id,"purchaseOrderId":order_id,
-                        "purchaseLineId":line["lineId"],"stockItemId":stock_id,"locationId":location,"quantity":accepted,"unitCost":unit_cost,
-                        "supplierId":supplier_id,"reference":grn_number,"supplierInvoiceNumber":invoice_reference,
-                        "receivedAt":receipt_time,"receivedBy":user.staff_id
-                    }),&mut changes)?;
-                    stock_delta_with_cost(&tx,user,&stock_id,location,accepted,"PURCHASE_RECEIPT",&receipt_id,&grn_number,Some(unit_cost),&mut changes)?;
-                }else if treatment=="ASSET"{
-                    let units=accepted.round() as i64;
-                    let unit_cost_minor=(line["unitCost"].as_f64().unwrap_or(0.0)*100.0).round() as i64;
-                    for ordinal in 1..=units{
-                        let source_key=format!("{receipt_id}:{}:{ordinal}",line["lineId"].as_str().unwrap_or("asset"));
-                        let acquisition_id=id();
-                        put(&tx,"assetAcquisitions",&acquisition_id,json!({
-                            "id":acquisition_id,"sourceUnitKey":source_key,"status":"PENDING_COMMISSION",
-                            "goodsReceiptId":receipt_id,"grnNumber":grn_number,"purchaseOrderId":order_id,"poNumber":order["poNumber"],
-                            "purchaseLineId":line["lineId"],"unitOrdinal":ordinal,
-                            "assetName":line["assetName"],"assetCategoryId":line["assetCategoryId"],"assetCategoryName":line["assetCategoryName"],
-                            "supplierId":supplier_id,"supplierName":order["supplierName"],"unitCostMinor":unit_cost_minor,
-                            "receivedAt":receipt_time,"receivedBy":user.staff_id,"receivedByName":user.name
-                        }),&mut changes)?;
-                    }
-                }
-            }
-
-            if accepted_value_minor>0 {
-                let payable_id=id();
-                put(&tx,"supplierPayables",&payable_id,json!({
-                    "id":payable_id,"payableNumber":format!("AP-{}",payable_id[..8].to_ascii_uppercase()),
-                    "supplierId":supplier_id,"supplierName":order["supplierName"],"purchaseOrderId":order_id,
-                    "goodsReceiptId":receipt_id,"grnNumber":grn_number,"supplierInvoiceNumber":invoice_reference,
-                    "amount":accepted_value_minor as f64/100.0,"paidAmount":0,"amountDue":accepted_value_minor as f64/100.0,"status":"RECEIVED_UNINVOICED",
-                    "basis":"Accepted STOCK / EXPENSE / ASSET procurement lines at approved purchase-order cost","createdAt":receipt_time
-                }),&mut changes)?;
-                let journal_id=id();let amount=accepted_value_minor as f64/100.0;let mut lines=Vec::<Value>::new();
-                if stock_value_minor>0{lines.push(json!({"id":id(),"accountId":"INVENTORY","accountCode":"1400","accountName":"Inventory","debit":stock_value_minor as f64/100.0,"credit":0,"debitMinor":stock_value_minor,"creditMinor":0}));}
-                if asset_value_minor>0{lines.push(json!({"id":id(),"accountId":"ASSET_CLEARING","accountCode":"1505","accountName":"Asset clearing","debit":asset_value_minor as f64/100.0,"credit":0,"debitMinor":asset_value_minor,"creditMinor":0}));}
-                for (account_id,account_code,account_name,value_minor) in &expense_totals{
-                    if *value_minor>0{lines.push(json!({"id":id(),"accountId":account_id,"accountCode":account_code,"accountName":account_name,"debit":*value_minor as f64/100.0,"credit":0,"debitMinor":value_minor,"creditMinor":0}));}
-                }
-                lines.push(json!({"id":id(),"accountId":"ACCOUNTS_PAYABLE","accountCode":"2000","accountName":"Accounts payable","debit":0,"credit":amount,"debitMinor":0,"creditMinor":accepted_value_minor}));
-                put(&tx,"journalEntries",&journal_id,json!({
-                    "id":journal_id,"entryNumber":format!("JE-{}",journal_id[..8].to_ascii_uppercase()),
-                    "propertyId":"property","occurredAt":receipt_time,"postedAt":receipt_time,
-                    "sourceType":"SUPPLIER_RECEIPT","sourceId":receipt_id,"memo":format!("Accepted procurement receipt from {} ({grn_number})",order["supplierName"]),
-                    "lines":lines,"totalDebit":amount,"totalCredit":amount,"balanced":true
-                }),&mut changes)?;
-            }
-
-            let fully_received=order_items.iter().all(|item|item["quantityReceived"].as_f64().unwrap_or(0.0)+0.000001>=item["quantityOrdered"].as_f64().unwrap_or(0.0));
-            let any_delivered=order_items.iter().any(|item|item["quantityDelivered"].as_f64().unwrap_or(0.0)>0.0);
-            order["items"]=json!(order_items);
-            order["status"]=json!(if fully_received{"RECEIVED"}else if any_delivered{"PARTIALLY_RECEIVED"}else{"APPROVED"});
-            order["lastGoodsReceiptId"]=json!(receipt_id);
-            order["lastGoodsReceiptAt"]=json!(receipt_time);
-            put(&tx,"purchaseOrders",&order_id,order,&mut changes)?;
+            let order_id=procurement_create(&tx,user,&json!({"supplierId":text(p,"supplierId")?,"items":items}),&mut changes)?;
+            let order_version=get(&tx,"purchaseOrders",&order_id)?.0;
+            let receipt=BusinessCommand { id:cmd.id.clone(),schema_version:cmd.schema_version,operation:"purchaseOrder.receive".into(),target_version:Some(order_version),payload:json!({"purchaseOrderId":order_id,"locationId":text(p,"locationId")?,"supplierInvoiceNumber":reference,"deliveryNote":p.get("deliveryNote"),"lines":received}) };
+            procurement_receive(&tx,user,&receipt,&mut changes)?;
         }
         "supplierPayable.matchInvoice" => {
             if !permissions(&user.role).contains(&"procurement.manage") { return Err("Supplier invoice matching permission required".into()); }
@@ -2882,7 +2910,7 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
                 let (_,stock)=get(&tx,"stockItems",&stock_id)?;
                 if let Some(saved)=&draft {
                     let baseline=&saved["baseline"][&stock_id];
-                    if baseline["expectedQuantity"]!=row["expectedQuantity"] || saved["counts"][&stock_id]!=row["countedQuantity"] { return Err("Count quantities differ from the reviewed draft".into()); }
+                    if baseline["expectedQuantity"].as_f64()!=row["expectedQuantity"].as_f64() || saved["counts"][&stock_id].as_f64()!=row["countedQuantity"].as_f64() { return Err("Count quantities differ from the reviewed draft".into()); }
                     if baseline["name"]!=stock["name"] || baseline["baseUnit"]!=stock["baseUnit"] || baseline["scanUnitQuantity"].as_f64()!=Some(stock["scanUnitQuantity"].as_f64().filter(|q|*q>0.0).unwrap_or(1.0)) {
                         return Err("CONFLICT: stock catalog changed; recount the affected items".into());
                     }

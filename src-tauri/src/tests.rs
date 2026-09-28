@@ -65,12 +65,13 @@ fn guidance_progress_is_staff_scoped_durable_and_outside_business_outbox() {
 fn inventory_scanner_draft_is_persistent_staff_scoped_and_outside_business_outbox() {
     let (dir,mut db,admin)=setup();
     run(&mut db,&admin,"record.save",json!({"collection":"stockItems","id":"draft-stock","data":{"name":"Draft Stock","code":"DRAFT-STOCK","baseUnit":"bottle","scanUnitQuantity":6,"averageUnitCost":0,"currentStock":{"main":20}}}));
-    let draft=json!({"counts":{"draft-stock":12.0},"scanCounts":{"draft-stock":2},"unknownScans":[{"barcode":"UNKNOWN-42","count":3}]});
+    run(&mut db,&admin,"inventory.adjust",json!({"stockItemId":"draft-stock","locationId":"main","countedQty":20,"reason":"Establish test ledger balance"}));
+    let draft=json!({"sessionId":"test-draft","revision":1,"baseline":{"draft-stock":{"name":"Draft Stock","baseUnit":"bottle","scanUnitQuantity":6,"expectedQuantity":20}},"counts":{"draft-stock":12.0},"scanCounts":{"draft-stock":2},"unknownScans":[{"barcode":"UNKNOWN-42","count":3}]});
     let outbox_before:i64=db.query_row("SELECT COUNT(*) FROM outbox",[],|row|row.get(0)).unwrap();
     let saved=save_inventory_count_draft(&db,&admin.token,"main",draft.clone()).unwrap();
     assert_eq!(saved["counts"]["draft-stock"],12.0);
-    assert_eq!(get(&db,"stockItems","draft-stock").unwrap().1["currentStock"],json!({}));
-    assert!(list(&db,"stockMovements").unwrap().is_empty());
+    assert_eq!(get(&db,"stockItems","draft-stock").unwrap().1["currentStock"]["main"],20.0);
+    assert_eq!(list(&db,"stockMovements").unwrap().len(),1);
     assert_eq!(inventory_count_draft(&db,&admin.token,"main").unwrap()["unknownScans"][0]["count"],3);
     assert!(save_inventory_count_draft(&db,&admin.token,"main",json!({"counts":{"missing":1},"scanCounts":{},"unknownScans":[]})).is_err());
     assert!(save_inventory_count_draft(&db,&admin.token,"main",json!({"counts":{"draft-stock":0.0000001},"scanCounts":{},"unknownScans":[]})).is_err());
@@ -79,7 +80,7 @@ fn inventory_scanner_draft_is_persistent_staff_scoped_and_outside_business_outbo
     let server_id:String=db.query_row("SELECT id FROM staff WHERE name='Draft Server'",[],|row|row.get(0)).unwrap();
     let server=login(&db,&server_id,"492736").unwrap();
     assert!(inventory_count_draft(&db,&server.token,"main").unwrap().is_null());
-    save_inventory_count_draft(&db,&server.token,"main",json!({"counts":{},"scanCounts":{},"unknownScans":[]})).unwrap();
+    save_inventory_count_draft(&db,&server.token,"main",json!({"sessionId":"server-draft","revision":1,"baseline":{},"counts":{},"scanCounts":{},"unknownScans":[]})).unwrap();
     assert_eq!(inventory_count_draft(&db,&admin.token,"main").unwrap()["counts"]["draft-stock"],12.0);
     assert_eq!(inventory_count_draft(&db,&server.token,"main").unwrap()["counts"],json!({}));
 
@@ -94,16 +95,73 @@ fn inventory_scanner_draft_is_persistent_staff_scoped_and_outside_business_outbo
 }
 
 #[test]
-fn schema_ten_upgrades_to_eleven_for_scanner_drafts() {
+fn schema_ten_upgrades_to_twelve_for_scanner_drafts() {
     let dir=tempfile::tempdir().unwrap();
     let path=dir.path().join("upgrade.sqlite");
-    let mut db=open(&path).unwrap();
-    db.execute_batch("DROP TABLE inventory_count_drafts; PRAGMA user_version=10;").unwrap();
+    let db=open(&path).unwrap();
+    db.execute_batch("DROP TABLE inventory_count_closed_sessions; DROP TABLE inventory_count_drafts; PRAGMA user_version=10;").unwrap();
     drop(db);
     let upgraded=open(&path).unwrap();
     let version:i64=upgraded.query_row("PRAGMA user_version",[],|row|row.get(0)).unwrap();
-    assert_eq!(version,11);
+    assert_eq!(version,12);
     assert!(upgraded.query_row("SELECT name FROM sqlite_master WHERE type='table' AND name='inventory_count_drafts'",[],|row|row.get::<_,String>(0)).is_ok());
+}
+
+#[test]
+fn scanner_review_is_atomic_replayable_and_cannot_be_resurrected() {
+    let (_dir,mut db,admin)=setup();
+    run(&mut db,&admin,"record.save",json!({"collection":"stockItems","id":"scan","data":{"name":"Scan","code":"SCAN","baseUnit":"bottle","scanUnitQuantity":1,"averageUnitCost":0}}));
+    run(&mut db,&admin,"inventory.adjust",json!({"stockItemId":"scan","locationId":"main","countedQty":20,"reason":"Fixture ledger"}));
+    let mut draft=json!({"sessionId":"session-one","revision":1,"locationId":"main","baseline":{"scan":{"name":"Scan","baseUnit":"bottle","scanUnitQuantity":1,"expectedQuantity":20}},"counts":{"scan":18},"scanCounts":{"scan":18},"unknownScans":[]});
+    save_inventory_count_draft(&db,&admin.token,"main",draft.clone()).unwrap();
+    save_inventory_count_draft(&db,&admin.token,"main",draft.clone()).unwrap();
+    let mut conflicting=draft.clone(); conflicting["counts"]["scan"]=json!(17);
+    assert!(save_inventory_count_draft(&db,&admin.token,"main",conflicting).is_err());
+    let command=cmd("inventory.countLocation",json!({"locationId":"main","draftSessionId":"session-one","draftRevision":2,"rows":[{"stockItemId":"scan","expectedQuantity":20,"countedQuantity":18}]}));
+    draft["revision"]=json!(2); draft["pendingCommand"]=json!({"id":command.id,"payload":command.payload});
+    save_inventory_count_draft(&db,&admin.token,"main",draft.clone()).unwrap();
+    let mut edited=draft.clone(); edited["revision"]=json!(3);
+    assert!(save_inventory_count_draft(&db,&admin.token,"main",edited).is_err());
+    let first=execute(&mut db,&admin.token,command.clone()).unwrap();
+    assert!(inventory_count_draft(&db,&admin.token,"main").unwrap().is_null());
+    assert!(save_inventory_count_draft(&db,&admin.token,"main",draft).is_err());
+    assert_eq!(execute(&mut db,&admin.token,command).unwrap(),first);
+    assert_eq!(list(&db,"stockCounts").unwrap().len(),1);
+    assert_eq!(get(&db,"stockItems","scan").unwrap().1["currentStock"]["main"],18.0);
+}
+
+#[test]
+fn scanner_failed_commit_retains_review_and_catalog_changes_require_recount() {
+    let (_dir,mut db,admin)=setup();
+    run(&mut db,&admin,"record.save",json!({"collection":"stockItems","id":"scan","data":{"name":"Scan","code":"SCAN","baseUnit":"bottle","scanUnitQuantity":1,"averageUnitCost":0}}));
+    let command=cmd("inventory.countLocation",json!({"locationId":"main","draftSessionId":"session-two","draftRevision":1,"rows":[{"stockItemId":"scan","expectedQuantity":0,"countedQuantity":2}]}));
+    let draft=json!({"sessionId":"session-two","revision":1,"baseline":{"scan":{"name":"Old name","baseUnit":"bottle","scanUnitQuantity":1,"expectedQuantity":0}},"counts":{"scan":2},"scanCounts":{"scan":2},"unknownScans":[],"pendingCommand":{"id":command.id,"payload":command.payload}});
+    save_inventory_count_draft(&db,&admin.token,"main",draft).unwrap();
+    assert!(execute(&mut db,&admin.token,command).unwrap_err().contains("catalog changed"));
+    assert!(!inventory_count_draft(&db,&admin.token,"main").unwrap().is_null());
+    assert!(list(&db,"stockCounts").unwrap().is_empty());
+    assert!(list(&db,"stockMovements").unwrap().is_empty());
+}
+
+#[test]
+fn ad_hoc_delivery_is_atomic_authorized_and_idempotent() {
+    let (_dir,mut db,admin)=setup();
+    run(&mut db,&admin,"record.save",json!({"collection":"suppliers","id":"supplier","data":{"name":"Supplier","code":"SUPPLIER"}}));
+    run(&mut db,&admin,"record.save",json!({"collection":"stockItems","id":"delivery-stock","data":{"name":"Delivery Stock","code":"DELIVERY","baseUnit":"bottle","scanUnitQuantity":1,"averageUnitCost":0}}));
+    let payload=json!({"supplierId":"supplier","supplierInvoiceNumber":"INV-1","locationId":"main","lines":[{"stockItemId":"delivery-stock","quantityDelivered":12,"quantityRejected":2,"rejectionReason":"Broken","unitPrice":60}]});
+    let mut invalid=payload.clone(); invalid["locationId"]=json!("missing");
+    assert!(execute(&mut db,&admin.token,cmd("procurement.receiveDelivery",invalid)).is_err());
+    for collection in ["purchaseOrders","goodsReceipts","supplierPayables","journalEntries","stockMovements"] { assert!(list(&db,collection).unwrap().is_empty(),"{collection}"); }
+    run(&mut db,&admin,"staff.create",json!({"name":"Receiver","role":"Server","pin":"492736"}));
+    let staff_id:String=db.query_row("SELECT id FROM staff WHERE name='Receiver'",[],|r|r.get(0)).unwrap();
+    let receiver=login(&db,&staff_id,"492736").unwrap();
+    assert!(execute(&mut db,&receiver.token,cmd("procurement.receiveDelivery",payload.clone())).unwrap_err().contains("Purchasing and receiving"));
+    let command=cmd("procurement.receiveDelivery",payload);
+    let first=execute(&mut db,&admin.token,command.clone()).unwrap();
+    assert_eq!(execute(&mut db,&admin.token,command).unwrap(),first);
+    assert_eq!(get(&db,"stockItems","delivery-stock").unwrap().1["currentStock"]["main"],10.0);
+    for collection in ["purchaseOrders","goodsReceipts","supplierPayables","journalEntries","stockMovements"] { assert_eq!(list(&db,collection).unwrap().len(),1,"{collection}"); }
+    assert_eq!(list(&db,"supplierPayables").unwrap()[0]["data"]["amount"],600.0);
 }
 fn order(db: &mut rusqlite::Connection, s: &Session) -> String {
     let product = Uuid::new_v4().to_string();
@@ -956,7 +1014,7 @@ fn classified_asset_quantity_requires_whole_units_and_commissioning_is_live_only
 fn terminal_acceptance_evidence_is_local_immutable_and_schema_v11() {
     let (_dir,db,s)=setup();
     let schema:i64=db.query_row("PRAGMA user_version",[],|r|r.get(0)).unwrap();
-    assert_eq!(schema,11);
+    assert_eq!(schema,12);
     let before:(i64,i64,i64)=db.query_row(
         "SELECT (SELECT COUNT(*) FROM records),(SELECT COUNT(*) FROM outbox),(SELECT COUNT(*) FROM commands)",
         [],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?))
