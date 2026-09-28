@@ -69,7 +69,7 @@ fn inventory_scanner_draft_is_persistent_staff_scoped_and_outside_business_outbo
     let outbox_before:i64=db.query_row("SELECT COUNT(*) FROM outbox",[],|row|row.get(0)).unwrap();
     let saved=save_inventory_count_draft(&db,&admin.token,"main",draft.clone()).unwrap();
     assert_eq!(saved["counts"]["draft-stock"],12.0);
-    assert_eq!(get(&db,"stockItems","draft-stock").unwrap().1["currentStock"]["main"],20.0);
+    assert_eq!(get(&db,"stockItems","draft-stock").unwrap().1["currentStock"],json!({}));
     assert!(list(&db,"stockMovements").unwrap().is_empty());
     assert_eq!(inventory_count_draft(&db,&admin.token,"main").unwrap()["unknownScans"][0]["count"],3);
     assert!(save_inventory_count_draft(&db,&admin.token,"main",json!({"counts":{"missing":1},"scanCounts":{},"unknownScans":[]})).is_err());
