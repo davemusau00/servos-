@@ -2157,6 +2157,29 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
                     for outlet in outlets {
                         get(&tx, "outlets", outlet.as_str().ok_or("Invalid outlet")?)?;
                     }
+                    if data.get("productFamilyId").and_then(Value::as_str).is_some_and(|id| !id.trim().is_empty()) {
+                        let family_id=text(&data,"productFamilyId")?;
+                        text(&data,"productFamilyName")?;
+                        text(&data,"packageType")?;
+                        let variant_label=text(&data,"variantLabel")?;
+                        text(&data,"containerUnit")?;
+                        if quantity(&data,"containerQuantity")?<=0.0 || quantity(&data,"portionVolume")?<=0.0 {
+                            return Err("Physical container and stock quantities must be greater than zero".into());
+                        }
+                        let duplicate_variant:bool=tx.query_row(
+                            "SELECT EXISTS(SELECT 1 FROM records WHERE collection='products' AND id<>? AND archived=0 AND json_extract(data,'$.productFamilyId')=? AND lower(json_extract(data,'$.variantLabel'))=lower(?))",
+                            params![record_id,family_id,variant_label],|r|r.get(0)
+                        ).map_err(error)?;
+                        if duplicate_variant { return Err("This product family already has that physical size".into()); }
+                        if let Some(stock_id)=data.get("stockItemId").and_then(Value::as_str).map(str::trim).filter(|id|!id.is_empty()) {
+                            get(&tx,"stockItems",stock_id)?;
+                            let shared_stock:bool=tx.query_row(
+                                "SELECT EXISTS(SELECT 1 FROM records WHERE collection='products' AND id<>? AND archived=0 AND json_extract(data,'$.productFamilyId')=? AND json_extract(data,'$.stockItemId')=?)",
+                                params![record_id,family_id,stock_id],|r|r.get(0)
+                            ).map_err(error)?;
+                            if shared_stock { return Err("Each physical size in a product family needs its own stock item".into()); }
+                        }
+                    }
                 }
                 if collection == "stockItems" {
                     quantity(&data, "averageUnitCost")?;
