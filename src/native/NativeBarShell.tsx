@@ -20,6 +20,7 @@ import { NativeFrontDeskView } from './NativeFrontDeskView';
 import { NativeHousekeepingView } from './NativeHousekeepingView';
 import { NativeFoliosView } from './NativeFoliosView';
 import { NativeAssetsView } from './NativeAssetsView';
+import { NativeCustomerCreditView } from './NativeCustomerCreditView';
 
 interface ShellRoute { id: string; label: string; permission: Permission; icon: React.ComponentType<{ className?: string }>; help: string; group: 'Operations' | 'Management' | 'System'; }
 const routes: ShellRoute[] = [
@@ -34,6 +35,7 @@ const routes: ShellRoute[] = [
   { id:'assets',label:'Property',permission:'assets.view',icon:PackageSearch,help:'asset-register-procurement',group:'Management' },
   { id:'rooms',label:'Room setup',permission:'rooms.view',icon:BedDouble,help:'rooms-engine',group:'Management' },
   { id:'tender',label:'M-Pesa reconciliation',permission:'mpesa.reconcile',icon:WalletCards,help:'mpesa',group:'Management' },
+  { id:'credit',label:'Customer Accounts',permission:'credit.view',icon:CreditCard,help:'customer-credit',group:'Management' },
   { id:'refunds',label:'Refunds',permission:'payment.record',icon:CreditCard,help:'refunds',group:'Management' },
   { id:'close',label:'Close Day',permission:'till.close',icon:SlidersHorizontal,help:'close-day',group:'Management' },
   { id:'reports',label:'Reports',permission:'reports.view',icon:BookOpen,help:'reports',group:'Management' },
@@ -58,7 +60,7 @@ function NativeBarShellContent(){
   useEffect(()=>{const handle=(event:Event)=>{const target=(event as CustomEvent<{screen:string;action?:string}>).detail;if(target?.screen)go(target.screen,target.action)};window.addEventListener('servos:guide-route',handle);return()=>window.removeEventListener('servos:guide-route',handle)},[allowed]);
   const current=allowed.find(item=>item.id===tab);
   const openHelp=()=>{if(!allowed.some(item=>item.id==='help'))return;setHelpQuery(current?.help||'');go('help');};
-  const content=tab==='home'?<NativeHomeView permissions={snapshot.actor.permissions} onNavigate={go}/>:tab==='pos'?<NativePOSView/>:tab==='kds'?<NativeKDSView/>:tab==='inventory'?<NativeInventoryView/>:tab==='assets'?<NativeAssetsView initialAction={tabAction}/>:tab==='procurement'?<NativeProcurementView initialAction={tabAction} onOpenCatalog={()=>go('catalog')}/>:tab==='catalog'?<NativeCatalogView initialAction={tabAction}/>:tab==='master'?<NativeMasterDataView/>:tab==='imports'?<NativeImportCenterView/>:tab==='frontdesk'?<NativeFrontDeskView/>:tab==='folios'?<NativeFoliosView/>:tab==='housekeeping'?<NativeHousekeepingView/>:tab==='rooms'?<NativeRoomsView initialAction={tabAction}/>:tab==='tender'?<NativeReconciliationView/>:tab==='refunds'?<NativeRefundsView/>:tab==='floorplan'?<NativeFloorplanView/>:tab==='close'?<NativeCloseDayView/>:tab==='reports'?<NativeReportsView/>:tab==='admin'?<NativeAdminView/>:<HelpCenterView key={helpQuery} initialQuery={helpQuery}/>;
+  const content=tab==='home'?<NativeHomeView permissions={snapshot.actor.permissions} onNavigate={go}/>:tab==='pos'?<NativePOSView/>:tab==='kds'?<NativeKDSView/>:tab==='inventory'?<NativeInventoryView/>:tab==='assets'?<NativeAssetsView initialAction={tabAction}/>:tab==='procurement'?<NativeProcurementView initialAction={tabAction} onOpenCatalog={()=>go('catalog')}/>:tab==='catalog'?<NativeCatalogView initialAction={tabAction}/>:tab==='master'?<NativeMasterDataView/>:tab==='imports'?<NativeImportCenterView/>:tab==='frontdesk'?<NativeFrontDeskView/>:tab==='folios'?<NativeFoliosView/>:tab==='housekeeping'?<NativeHousekeepingView/>:tab==='rooms'?<NativeRoomsView initialAction={tabAction}/>:tab==='tender'?<NativeReconciliationView/>:tab==='credit'?<NativeCustomerCreditView/>:tab==='refunds'?<NativeRefundsView/>:tab==='floorplan'?<NativeFloorplanView/>:tab==='close'?<NativeCloseDayView/>:tab==='reports'?<NativeReportsView/>:tab==='admin'?<NativeAdminView/>:<HelpCenterView key={helpQuery} initialQuery={helpQuery}/>;
   const groups=['Operations','Management','System'] as const;
   return <div className="flex h-screen overflow-hidden bg-slate-950 text-slate-100">
     <aside className="hidden w-64 shrink-0 flex-col border-r border-slate-800 bg-slate-900 md:flex"><div className="border-b border-slate-800 p-4"><div className="text-xs font-black tracking-[.25em] text-amber-400">SERVOS</div><div className="mt-1 font-bold">Workspaces</div></div><nav className="flex-1 space-y-4 overflow-auto p-2" aria-label="Workspaces">

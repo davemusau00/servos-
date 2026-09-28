@@ -21,6 +21,7 @@ ServOS currently runs one installed authoritative terminal. The accepted expansi
 - [Operational workflows](MODULE_WORKFLOWS.md)
 - [Data dictionary](DATA_DICTIONARY.md)
 - [Deployment runbook](DEPLOYMENT_RUNBOOK.md)
+- [Customer tabs and credit](CUSTOMER_CREDIT.md)
 - [Existing-terminal 0.2.0 upgrade](EXISTING_TERMINAL_UPGRADE.md)
 - [0.2.0 release acceptance](RELEASE_0.2_ACCEPTANCE.md)
 - [Completion ledger](COMPLETION_LEDGER.md)

@@ -52,3 +52,14 @@ Baseline and executed checks are recorded in [test evidence](TEST_EVIDENCE.md). 
 | Staff Welcome + workflow guides | per-staff guidance persistence | permission-aware welcome + committed-operation guides | source guide checks + RC browser welcome flow | local verification required |
 | Friendly CSV / Excel-paste import | controlled import pipeline | mapping + preview + stage | parser/source coverage + RC browser paste/stage flow | local verification required; XLSX out of scope |
 | Existing-terminal 0.2.0 upgrade | additive schema 12 migration | no Intake reset | upgrade + acceptance runbooks | rehearsal and physical acceptance pending |
+
+## Customer tabs and credit accounts
+
+| Slice | Native authority | UI | Acceptance |
+|---|---|---|---|
+| Named customer tabs | order customer snapshot + assign command | POS tab/customer link | native/source gate required |
+| Credit policy | customerCreditAccounts | Customer Accounts | native/source gate required |
+| Credit sale | immutable customerCreditEntries + A/R journal | Charge to account | native/source/browser gate required |
+| Credit settlement | CASH/M-Pesa/CARD + A/R journal | Receive Payment | native/source gate required |
+| Reconciliation | immutable reconciliation + explicit discrepancies | Customer Accounts | native/source gate required |
+| Close day | credit sales/collections/outstanding | Reports | native/source gate required |

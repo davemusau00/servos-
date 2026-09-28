@@ -16,6 +16,7 @@ export type Permission =
   | 'payment.record' | 'payment.split' | 'payment.reverse'
   | 'till.open' | 'till.close' | 'till.cash_movement' | 'till.override_variance'
   | 'mpesa.record' | 'mpesa.reconcile'
+  | 'credit.view' | 'credit.manage' | 'credit.charge' | 'credit.settle' | 'credit.reconcile' | 'credit.write_off' | 'credit.override_limit'
   | 'catalog.view' | 'catalog.manage' | 'pricing.manage'
   | 'inventory.view' | 'inventory.receive' | 'inventory.transfer' | 'inventory.waste' | 'inventory.count' | 'inventory.adjust'
   | 'procurement.view' | 'procurement.manage' | 'procurement.receive' | 'procurement.over_receive' | 'procurement.pay'

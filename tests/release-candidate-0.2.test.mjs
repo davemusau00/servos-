@@ -8,7 +8,7 @@ test('0.2.0 release identity and existing-terminal upgrade contract are pinned',
   const pkg=JSON.parse(read('package.json'));
   const tauri=JSON.parse(read('src-tauri/tauri.conf.json'));
   const cargo=read('src-tauri/Cargo.toml');
-  const migration=read('src-tauri/migrations/012_count_sessions.sql');
+  const migration=read('src-tauri/migrations/013_customer_credit.sql');
   const builder=read('scripts/build-terminal-installer.ps1');
   const upgrade=read('docs/EXISTING_TERMINAL_UPGRADE.md');
   const acceptance=read('docs/RELEASE_0.2_ACCEPTANCE.md');
@@ -17,10 +17,10 @@ test('0.2.0 release identity and existing-terminal upgrade contract are pinned',
   assert.equal(tauri.version,'0.2.0');
   assert.equal(tauri.identifier,'ke.servos.business');
   assert.match(cargo,/version\s*=\s*"0\.2\.0"/);
-  assert.match(migration,/PRAGMA user_version=12/);
+  assert.match(migration,/PRAGMA user_version=13/);
   assert.match(builder,/docs\\EXISTING_TERMINAL_UPGRADE\.md/);
   assert.match(builder,/docs\\RELEASE_0\.2_ACCEPTANCE\.md/);
-  assert.match(builder,/SQLiteSchema\s*=\s*12/);
+  assert.match(builder,/SQLiteSchema\s*=\s*13/);
   assert.match(builder,/ExistingEnrollmentPreserved\s*=\s*\$true/);
   assert.match(upgrade,/Do not repeat Intake or enrollment/);
   assert.match(upgrade,/old binary must never be pointed at the already-upgraded schema-12 database/i);

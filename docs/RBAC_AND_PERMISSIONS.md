@@ -58,3 +58,9 @@ Every protected native command requires a positive role/capability test and a de
 The [workflow contracts](EXPANSION_WORKFLOWS.md) identify planned domain capabilities and offline restrictions. They do not yet extend the current Rust registry. Cloud memberships, device/operator grants and field-filtered queries must be implemented before enabling browser operational writes.
 
 Implemented native additions: `business.identity` requires `business.configure` and both organization/property baseline versions. Settings editors are available only to this capability. Receipt loading/history/printing requires `pos.sell`, validates receipt/order linkage and does not accept caller-supplied receipt contents. Staged v2 SQL has independent membership/device checks and no authenticated direct access to private tables; this is not yet a complete operational permission model.
+
+## Customer credit capabilities
+
+Native capabilities: `credit.view`, `credit.manage`, `credit.charge`, `credit.settle`, `credit.reconcile`, `credit.write_off`, `credit.override_limit`.
+
+Admin has all. Manager retains operational credit authority. Server receives view/ordinary-charge/ordinary-settlement capabilities; account policy, reconciliation, write-off and limit override remain Manager/Admin work. Backend authorization is authoritative.

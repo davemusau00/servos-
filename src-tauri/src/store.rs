@@ -9,6 +9,8 @@ use uuid::Uuid;
 
 #[path = "receipts.rs"]
 pub mod receipts;
+#[path = "customer_credit.rs"]
+pub mod customer_credit;
 
 pub type Result<T> = std::result::Result<T, String>;
 fn error(e: impl std::fmt::Display) -> String {
@@ -89,7 +91,7 @@ pub fn open(path: &std::path::Path) -> Result<Connection> {
     let version: i64 = db
         .query_row("PRAGMA user_version", [], |r| r.get(0))
         .map_err(error)?;
-    if version > 12 {
+    if version > 13 {
         return Err("Database requires a newer ServOS version".into());
     }
     if version < 1 {
@@ -129,6 +131,10 @@ pub fn open(path: &std::path::Path) -> Result<Connection> {
     if version < 12 {
         db.execute_batch(include_str!("../migrations/012_count_sessions.sql")).map_err(error)?;
     }
+    let version: i64 = db.query_row("PRAGMA user_version", [], |r| r.get(0)).map_err(error)?;
+    if version < 13 {
+        db.execute_batch(include_str!("../migrations/013_customer_credit.sql")).map_err(error)?;
+    }
     Ok(db)
 }
 pub fn meta(db: &Connection, key: &str) -> Result<Option<String>> {
@@ -155,6 +161,7 @@ pub const ALL_PERMISSIONS: &[&str] = &[
     "payment.record","payment.split","payment.reverse",
     "till.open","till.close","till.cash_movement","till.override_variance",
     "mpesa.record","mpesa.reconcile",
+    "credit.view","credit.manage","credit.charge","credit.settle","credit.reconcile","credit.write_off","credit.override_limit",
     "catalog.view","catalog.manage","pricing.manage",
     "inventory.view","inventory.receive","inventory.transfer","inventory.waste","inventory.count","inventory.adjust",
     "procurement.view","procurement.manage","procurement.receive","procurement.over_receive","procurement.pay",
@@ -170,7 +177,7 @@ pub fn permissions(role: &str) -> Vec<&'static str> {
         ].contains(p)).collect(),
         _ => vec![
             "business.view","staff.view","pos.sell","pos.open_tab","pos.manage_table","order.fire",
-            "payment.record","payment.split","till.open","till.close","mpesa.record",
+            "payment.record","payment.split","till.open","till.close","mpesa.record","credit.view","credit.charge","credit.settle",
             "catalog.view","inventory.view","procurement.view","procurement.receive","floorplan.view","folio.room_charge","kds.view","kds.update","help.view"
         ],
     }
@@ -187,7 +194,7 @@ fn live_required(tx: &Transaction, operation: &str) -> Result<()> {
     const TRADING: &[&str] = &[
         "till.open","till.cashMovement","till.close","order.create","order.addItem","order.updateItem",
         "order.removeItem","order.fire","order.kds","order.repeatRound","order.transfer","order.merge","order.void","order.discount",
-        "order.compItem","payment.record","payment.split","payment.refund","payment.reverse","mpesa.reconcile","mpesa.discrepancy","mpesa.discrepancy.resolve",
+        "order.compItem","payment.record","payment.split","payment.refund","payment.reverse","mpesa.reconcile","mpesa.discrepancy","mpesa.discrepancy.resolve","order.assignCustomer","customerCredit.configure","customerCredit.charge","customerCredit.settle","customerCredit.reconcile","customerCredit.discrepancy","customerCredit.discrepancy.resolve","customerCredit.writeOff","customerCredit.reverse",
         "inventory.receive","inventory.adjust","inventory.countLocation","inventory.waste","inventory.transfer","procurement.receiveDelivery","purchaseOrder.create","purchaseOrder.receive","supplierPayable.matchInvoice","supplierPayable.pay","table.ready","closeDay.generate","roomReservation.create","roomReservation.update","roomReservation.cancel","roomReservation.noShow","stay.checkIn","stay.move","stay.extend","stay.checkOut","folio.open","folio.postAccommodation","folio.postService","folio.deposit","folio.pay","folio.applyDeposit","folio.refundDeposit","folio.reverse","pos.roomCharge","asset.commission","asset.assign","asset.return","asset.transfer","asset.inspect","asset.lose","asset.retire","asset.dispose","maintenance.report","maintenance.assign","maintenance.start","maintenance.complete","maintenance.cancel"];
     if TRADING.contains(&operation) && installation_stage(tx)? != "LIVE" {
         return Err("Complete business setup and approve Go Live before trading".into());
@@ -2412,6 +2419,12 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
         tx.commit().map_err(error)?;
         return Ok(result);
     }
+    if customer_credit::execute(&tx,user,&cmd,&mut changes)? {
+        if cmd.operation=="customerCredit.charge" { receipts::capture(&tx,user,text(p,"orderId")?,&cmd.id,&mut changes)?; }
+        let result=finish(&tx,&cmd,&user.staff_id,changes)?;
+        tx.commit().map_err(error)?;
+        return Ok(result);
+    }
     if asset_execute(&tx,user,&cmd,&mut changes)? {
         let result=finish(&tx,&cmd,&user.staff_id,changes)?;
         tx.commit().map_err(error)?;
@@ -2569,6 +2582,9 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
                 if collection=="customers" {
                     let open_order=list(&tx,"orders")?.iter().any(|r|r["data"]["customerId"].as_str()==Some(record_id) && !["COMPLETED","VOIDED"].contains(&r["data"]["state"].as_str().unwrap_or("")));
                     if open_order { return Err("Resolve the customer's open tab before archiving".into()); }
+                    let credit_balance=customer_credit::balance_minor(&tx,record_id)?;
+                    let credit_active=get(&tx,"customerCreditAccounts",record_id).ok().is_some_and(|(_,a)|a["status"]!="CLOSED");
+                    if credit_balance!=0 || credit_active { return Err("Settle and close the customer credit account before archiving".into()); }
                 }
                 if collection == "tables" && data["currentOrderId"].as_str().is_some() {
                     return Err(
@@ -3516,6 +3532,12 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
             let payments:Vec<Value>=list(&tx,"payments")?.into_iter().map(|r|r["data"].clone()).filter(|v|v["tillSessionId"]==till_id).collect();
             let mut cash=0i64;let mut mpesa=0i64;let mut card=0i64;let mut order_ids=std::collections::HashSet::new();
             for pay in &payments{let amount=money(pay,"amount")?;match pay["tenderType"].as_str().unwrap_or(""){"CASH"=>cash+=amount,"MPESA"=>mpesa+=amount,"CARD"=>card+=amount,_=>{}} if let Some(x)=pay["orderId"].as_str(){order_ids.insert(x.to_string());}}
+            let credit_entries:Vec<Value>=list(&tx,"customerCreditEntries")?.into_iter().map(|r|r["data"].clone()).filter(|e|e["occurredAt"].as_str().is_some_and(|t|t>=opened.as_str()&&t<=closed.as_str())).collect();
+            let credit_sales=credit_entries.iter().filter(|e|e["kind"]=="CHARGE").map(|e|e["amountMinor"].as_i64().unwrap_or(0)).sum::<i64>();
+            let credit_collections=credit_entries.iter().filter(|e|e["kind"]=="SETTLEMENT").map(|e|e["amountMinor"].as_i64().unwrap_or(0)).sum::<i64>();
+            let credit_writeoffs=credit_entries.iter().filter(|e|e["kind"]=="WRITE_OFF").map(|e|e["amountMinor"].as_i64().unwrap_or(0)).sum::<i64>();
+            for entry in credit_entries.iter().filter(|e|e["kind"]=="CHARGE"){if let Some(order_id)=entry["orderId"].as_str(){order_ids.insert(order_id.to_string());}}
+            let ar_outstanding=list(&tx,"customerCreditEntries")?.into_iter().map(|r|r["data"]["balanceDeltaMinor"].as_i64().unwrap_or(0)).sum::<i64>();
             let orders:Vec<Value>=list(&tx,"orders")?.into_iter().map(|r|r["data"].clone()).filter(|o|order_ids.contains(o["id"].as_str().unwrap_or(""))).collect();
             let pos_gross=orders.iter().map(|o|money(o,"grandTotal")).collect::<Result<Vec<_>>>()?.iter().sum::<i64>(); let tax=orders.iter().map(|o|money(o,"taxTotal")).collect::<Result<Vec<_>>>()?.iter().sum::<i64>(); let levy=orders.iter().map(|o|money(o,"cateringLevyTotal")).collect::<Result<Vec<_>>>()?.iter().sum::<i64>(); let discounts=orders.iter().map(|o|money(o,"discountTotal")).collect::<Result<Vec<_>>>()?.iter().sum::<i64>();
             let hotel_entries:Vec<Value>=list(&tx,"folioEntries")?.into_iter().map(|r|r["data"].clone()).filter(|e|["CHARGE","REVERSAL"].contains(&e["kind"].as_str().unwrap_or(""))&&e["sourceType"].as_str()!=Some("POS")&&e["postedAt"].as_str().is_some_and(|t|t>=opened.as_str()&&t<=closed.as_str())).collect();
@@ -3529,7 +3551,7 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
             for order in &orders{let name=order["serverName"].as_str().unwrap_or("Unknown").to_string();*staff_sales.entry(name).or_insert(0)+=money(order,"grandTotal")?;for item in order["items"].as_array().cloned().unwrap_or_default(){*product_counts.entry(item["productName"].as_str().unwrap_or("Unknown").to_string()).or_insert(0.0)+=item["quantity"].as_f64().unwrap_or(0.0);}}
             let mut top_products:Vec<Value>=product_counts.into_iter().map(|(name,quantity)|json!({"name":name,"quantity":quantity})).collect();top_products.sort_by(|a,b|b["quantity"].as_f64().partial_cmp(&a["quantity"].as_f64()).unwrap_or(std::cmp::Ordering::Equal));top_products.truncate(10);
             let staff:Vec<Value>=staff_sales.into_iter().map(|(name,amount)|json!({"name":name,"sales":amount as f64/100.0})).collect(); let pending:i64=tx.query_row("SELECT count(*) FROM outbox WHERE acknowledged_at IS NULL",[],|r|r.get(0)).map_err(error)?;
-            let report_id=id();put(&tx,"closeDayReports",&report_id,json!({"id":report_id,"tillSessionId":till_id,"openedAt":opened,"closedAt":closed,"generatedAt":now(),"generatedBy":user.staff_id,"sales":{"gross":gross as f64/100.0,"net":(gross-tax-levy-hotel_tax-refund_total) as f64/100.0,"vat":tax as f64/100.0,"levy":levy as f64/100.0,"hotelTax":hotel_tax as f64/100.0,"hotelGross":hotel_gross as f64/100.0,"refunds":refund_total as f64/100.0},"tenders":{"cash":cash as f64/100.0,"mpesa":mpesa as f64/100.0,"card":card as f64/100.0},"cash":{"openingFloat":till["openingFloat"],"paidIn":till["cashPaidIn"],"paidOut":till["cashPaidOut"],"expected":till["expectedCashInDrawer"],"actual":till["countedCashAtClose"],"variance":till["cashVariance"]},"adjustments":{"discounts":discounts as f64/100.0,"comps":comp_value as f64/100.0,"refunds":refund_total as f64/100.0},"inventory":{"cogs":cogs as f64/100.0,"waste":waste as f64/100.0},"margin":{"grossProfit":(gross-refund_total-cogs) as f64/100.0},"mpesa":{"pendingReconciliation":pending_mpesa},"topProducts":top_products,"staffSales":staff,"system":{"pendingSync":pending,"lastSync":meta(&tx,"last_sync")?,"lastBackup":meta(&tx,"last_backup")?}}),&mut changes)?;
+            let report_id=id();put(&tx,"closeDayReports",&report_id,json!({"id":report_id,"tillSessionId":till_id,"openedAt":opened,"closedAt":closed,"generatedAt":now(),"generatedBy":user.staff_id,"sales":{"gross":gross as f64/100.0,"net":(gross-tax-levy-hotel_tax-refund_total) as f64/100.0,"vat":tax as f64/100.0,"levy":levy as f64/100.0,"hotelTax":hotel_tax as f64/100.0,"hotelGross":hotel_gross as f64/100.0,"refunds":refund_total as f64/100.0},"tenders":{"cash":cash as f64/100.0,"mpesa":mpesa as f64/100.0,"card":card as f64/100.0,"credit":credit_sales as f64/100.0},"receivables":{"creditSales":credit_sales as f64/100.0,"collections":credit_collections as f64/100.0,"writeOffs":credit_writeoffs as f64/100.0,"outstanding":ar_outstanding as f64/100.0},"cash":{"openingFloat":till["openingFloat"],"paidIn":till["cashPaidIn"],"paidOut":till["cashPaidOut"],"expected":till["expectedCashInDrawer"],"actual":till["countedCashAtClose"],"variance":till["cashVariance"]},"adjustments":{"discounts":discounts as f64/100.0,"comps":comp_value as f64/100.0,"refunds":refund_total as f64/100.0},"inventory":{"cogs":cogs as f64/100.0,"waste":waste as f64/100.0},"margin":{"grossProfit":(gross-refund_total-cogs) as f64/100.0},"mpesa":{"pendingReconciliation":pending_mpesa},"topProducts":top_products,"staffSales":staff,"system":{"pendingSync":pending,"lastSync":meta(&tx,"last_sync")?,"lastBackup":meta(&tx,"last_backup")?}}),&mut changes)?;
         }
         _ => {
             return Err(format!(

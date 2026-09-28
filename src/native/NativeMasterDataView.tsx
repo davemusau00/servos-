@@ -81,7 +81,7 @@ export function NativeMasterDataView(){
     <div className="space-y-2">
       {records.map(record=><article key={record.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900 p-4">
         <div><div className="font-bold">{record.name||record.code||record.id}</div><div className="text-xs text-slate-500">{[record.code,record.phone,record.email,record.description].filter(Boolean).join(' · ')}</div></div>
-        <div className="flex gap-2"><button className={buttonClass} onClick={()=>setEditing(record)}>Edit</button>{def.archivable&&<button className={buttonClass} onClick={()=>setArchiving(record)}>Archive</button>}</div>
+        <div className="flex gap-2"><button className={buttonClass} onClick={()=>setEditing(record)}>Edit</button>{def.collection==='customers'&&s.actor.permissions.includes('credit.view')&&<button className={buttonClass} onClick={()=>{window.location.hash='/credit'}}>Credit Account</button>}{def.archivable&&<button className={buttonClass} onClick={()=>setArchiving(record)}>Archive</button>}</div>
       </article>)}
       {records.length===0&&<div className="rounded-xl border border-dashed border-slate-700 p-8 text-center"><p className="text-sm text-slate-300">{def.collection==='stockLocations'?'No storage places yet. Add where staff keep stock so service areas and inventory movements can use it.':`No ${def.label.toLowerCase()} found.`}</p>{def.collection==='stockLocations'&&<button className={primaryButtonClass+' mt-3'} onClick={()=>setEditing({...def.defaults})}>Add first storage place</button>}</div>}
     </div>

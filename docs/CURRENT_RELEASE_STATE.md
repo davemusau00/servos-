@@ -106,3 +106,9 @@ Expansion migration 016 adds Auth-bound staff records, canonical permission prof
 The disposable expansion SQL acceptance passed migrations 001-016 and the staff/device suite: canonical role rights, escalation denial, approval action/target/initiator/expiry/replay boundaries, inventory/revocation and server rejection for the revoked device. Lint, Node tests and UI inventory also passed before the broader final gate. The feature is staged and default-off; this is not hosted Supabase/Auth or production acceptance.
 
 Remaining work includes the complete 10B Auth invitation/recovery/session flows, richer custom permission editing, report/audit UI, shared multi-operator device ownership, and 11E room-charge/M-Pesa/close-day gaps. Continue the 12A desktop adapter and migration/rollback rehearsal. Signed offline grants, cutover and physical acceptance remain open.
+
+## Final 0.2.0 customer-credit closure
+
+The installed terminal now includes authoritative customer tabs and Accounts Receivable under SQLite schema 13. A POS tab may be linked to a reusable customer, settled partly by normal tender and then charged to an active customer credit account. Credit charges complete the order without pretending receivables are cash. Later Cash/M-Pesa/Card settlements reduce A/R, with M-Pesa reusing the existing statement reconciliation workflow. Customer credit ledger entries and reconciliation snapshots are immutable.
+
+The staged PostgreSQL/web-v2 authority remains disabled for this terminal release.

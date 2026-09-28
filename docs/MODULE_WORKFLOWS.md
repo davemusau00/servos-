@@ -27,3 +27,7 @@ Resolve open tabs → reconcile tenders → physical drawer count → manager va
 ## Offline/recovery
 
 Locally enrolled staff work against SQLite without server availability. Accepted commands atomically persist records/audit/outbox. Reconnection uploads in sequence idempotently. Replication is not backup.
+
+## Customer tabs and credit
+
+Named tabs may link a reusable customer. Normal tender remains actual money received. Charge to Account transfers the exact remaining order balance to Customer Accounts Receivable, completes the order and preserves sale/tax recognition. Later Cash/M-Pesa/Card settlements reduce receivables without recognizing revenue again. Cash collections affect expected drawer but are reported separately from cash sales. M-Pesa collections reuse provider-statement reconciliation. Day close requires open POS tabs to be resolved, but completed credit sales do not remain open merely because the customer still owes A/R.

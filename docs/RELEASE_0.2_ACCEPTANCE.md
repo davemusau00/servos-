@@ -8,7 +8,7 @@ This worksheet is the final acceptance record for the installed **ServOS 0.2.0**
 Git commit:
 Version:                 0.2.0
 Application identifier:  ke.servos.business
-SQLite schema:           12
+SQLite schema:           13
 Release folder:
 Installer:
 Installer SHA-256:
@@ -28,7 +28,7 @@ Date:
 - [ ] Identifier is `ke.servos.business`.
 - [ ] Installer SHA-256 matches.
 - [ ] `ExistingEnrollmentPreserved` is true.
-- [ ] Manifest reports SQLite schema 12.
+- [ ] Manifest reports SQLite schema 13.
 - [ ] No database, PIN, service-role key or `.env.local` is packaged.
 
 ## Gate B — existing-terminal migration
@@ -39,7 +39,7 @@ Date:
 - [ ] Intake not repeated.
 - [ ] Terminal ID and device enrollment preserved.
 - [ ] Installation stage remains LIVE.
-- [ ] Database opens at schema 12.
+- [ ] Database opens at schema 13.
 - [ ] SQLite quick_check healthy.
 - [ ] Business record counts reconcile.
 - [ ] Pending outbox preserved.
@@ -110,3 +110,19 @@ Notes:
 ```
 
 `PhysicalAcceptance` remains pending until this worksheet is actually completed on the target terminal.
+
+## Gate E — customer tabs and credit
+
+- [ ] Named tab preserves customer identity.
+- [ ] Existing open tab can be linked before settlement.
+- [ ] Active credit account charges the exact remaining sale balance.
+- [ ] Credit sale closes the POS order without increasing cash/M-Pesa/card received.
+- [ ] Credit limit/hold safeguards work.
+- [ ] Cash account settlement increases expected drawer but remains separate from cash sales.
+- [ ] M-Pesa account settlement appears in normal M-Pesa reconciliation.
+- [ ] Partial settlement and FIFO allocation preserve exact customer balance.
+- [ ] Customer statement reconciliation records a matching immutable snapshot.
+- [ ] A mismatch creates a discrepancy without mutating the balance.
+- [ ] Customer with active credit/debt cannot be archived.
+- [ ] Close-day report includes credit sales, collections and A/R outstanding.
+- [ ] Credit sale receipt shows Customer Account separately from Paid tender.

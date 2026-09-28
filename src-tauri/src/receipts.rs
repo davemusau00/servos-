@@ -13,6 +13,9 @@ pub fn capture(tx: &Transaction, user: &Session, order_id: &str, command_id: &st
         "cashTenderedMinor":p["cashTenderedMinor"],"changeMinor":p["changeMinor"],"occurredAt":p["occurredAt"],
         "currentPayment":p["id"].as_str().is_some_and(|id|payment_ids.iter().any(|key|key==id))
     })).collect();
+    let credit_entries: Vec<Value> = list(tx,"customerCreditEntries")?.into_iter().map(|r|r["data"].clone()).filter(|e|e["orderId"]==order_id&&e["kind"]=="CHARGE").collect();
+    let credited_minor:i64=credit_entries.iter().map(|e|e["amountMinor"].as_i64().unwrap_or(0)).sum();
+    let latest_credit=credit_entries.last().cloned().unwrap_or(json!({}));
     let items: Vec<Value> = order["items"].as_array().ok_or("Invalid receipt items")?.iter().filter(|i|i["state"]!="VOIDED").map(|i|json!({
         "id":i["id"],"description":i["productName"],"quantity":i["quantity"],
         "unitPriceMinor":(i["unitPrice"].as_f64().unwrap_or(0.0)*100.0).round() as i64,
@@ -33,7 +36,8 @@ pub fn capture(tx: &Transaction, user: &Session, order_id: &str, command_id: &st
         "currency":property["currency"].as_str().unwrap_or("KES"),"timezone":property["timezone"].as_str().unwrap_or("Africa/Nairobi"),
         "items":items,"subtotalMinor":total+money(&order,"discountTotal")?,"discountMinor":money(&order,"discountTotal")?,
         "netMinor":money(&order,"subtotal")?,"taxMinor":money(&order,"taxTotal")?,"levyMinor":money(&order,"cateringLevyTotal")?,
-        "totalMinor":total,"paidMinor":money(&order,"amountPaid")?,"balanceMinor":total-money(&order,"amountPaid")?,"payments":payments,
+        "totalMinor":total,"paidMinor":money(&order,"amountPaid")?,"creditedMinor":credited_minor,"balanceMinor":total-money(&order,"amountPaid")?-credited_minor,"payments":payments,
+        "customerCredit":if credited_minor>0{json!({"customerId":order["customerId"],"customerName":order["customerName"],"amountMinor":credited_minor,"dueAt":latest_credit["dueAt"],"accountBalanceMinor":customer_credit::balance_minor(tx,order["customerId"].as_str().unwrap_or(""))?})}else{Value::Null},
         "message":property["receiptFooter"].as_str().unwrap_or("Thank you for your business.")
     });
     put(tx,"receiptDocuments",&receipt_id,doc,changes)
@@ -83,6 +87,7 @@ pub fn lines(doc:&Value,business_copy:bool,columns:usize,reprint:bool)->Vec<Stri
         if ["discountMinor","taxMinor","levyMinor"].contains(&key)&&doc[key].as_i64().unwrap_or(0)==0{continue;}
         lines.push(pair(label,&format!("{} {}{}",doc["currency"].as_str().unwrap_or("KES"),if key=="discountMinor"{"-"}else{""},amount(&doc[key])),width));
     }
+    if doc["creditedMinor"].as_i64().unwrap_or(0)>0{lines.push(pair("CUSTOMER ACCOUNT",&amount(&doc["creditedMinor"]),width));if let Some(name)=doc["customerCredit"]["customerName"].as_str(){lines.push(format!("Account: {}",clean(name)));}if let Some(due)=doc["customerCredit"]["dueAt"].as_str(){lines.push(format!("Due: {}",clean(due)));}lines.push(pair("Account balance",&amount(&doc["customerCredit"]["accountBalanceMinor"]),width));}
     for payment in doc["payments"].as_array().into_iter().flatten(){
         lines.push(pair(payment["tenderType"].as_str().unwrap_or("Payment"),&amount(&payment["amountMinor"]),width));
         if let Some(reference)=payment["reference"].as_str().filter(|v|!v.is_empty()){lines.push(format!("Ref: {}",clean(reference)));}

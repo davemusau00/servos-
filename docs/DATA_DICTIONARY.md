@@ -73,3 +73,11 @@ Cloud `journalEntries`, `folioEntries`, `assetEvents`, `stayEvents`, `stayExtens
 
 `stayExtensions` records its own rate, units, old/new departure interval, exact amount and linked payment. Accepting an extension posts the charge and payment in the same command transaction; original accommodation units remain unchanged to prevent catch-up duplication. `folio.reverse` currently reverses unpaid charges with source linkage; payment refunds/payouts and credit/POS receivable transfers remain separate unimplemented commands. Journals currently use fixed control-account codes; full configured chart/mapping integration is pending. Cloud receipt-document generation is also pending.
 - `terminal_acceptance_evidence`: local-only immutable installed-terminal acceptance evidence. It is deliberately outside business `records` / `outbox` replication and contains no scanned barcode value or cloud/device secrets.
+
+## Customer credit / Accounts Receivable
+
+- `customerCreditAccounts`: mutable customer credit policy, limit, terms and ACTIVE/HOLD/CLOSED status. Balance is not directly editable.
+- `customerCreditEntries`: immutable CHARGE, SETTLEMENT, WRITE_OFF and reversal ledger entries. `balanceDeltaMinor` is the balance truth; settlements carry deterministic FIFO charge allocations.
+- `customerCreditReconciliations`: immutable reviewed statement snapshots.
+- `customerCreditDiscrepancies`: explicit OPEN/RESOLVED statement mismatches; resolution does not silently alter the financial ledger.
+- POS orders retain actual `amountPaid` and separately record `amountCredited`.

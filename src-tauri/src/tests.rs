@@ -95,7 +95,7 @@ fn inventory_scanner_draft_is_persistent_staff_scoped_and_outside_business_outbo
 }
 
 #[test]
-fn schema_ten_upgrades_to_twelve_for_scanner_drafts() {
+fn schema_ten_upgrades_to_thirteen_for_scanner_drafts_and_credit() {
     let dir=tempfile::tempdir().unwrap();
     let path=dir.path().join("upgrade.sqlite");
     let db=open(&path).unwrap();
@@ -1631,4 +1631,49 @@ fn backup_sync_step_requires_backup_evidence() {
         &session.token,
         cmd("setup.completeStep", json!({"step":"BACKUP_SYNC"})),
     ).unwrap();
+}
+
+
+#[test]
+fn customer_credit_charge_settlement_and_reconciliation_are_atomic() {
+    let (_dir,mut db,admin)=setup();
+    run(&mut db,&admin,"record.save",json!({"collection":"customers","id":"credit-customer","data":{"name":"Kamau","phone":"0712345678","email":"","notes":""}}));
+    run(&mut db,&admin,"customerCredit.configure",json!({"customerId":"credit-customer","limit":1000,"termsDays":30,"status":"ACTIVE","notes":"Approved house account"}));
+    run(&mut db,&admin,"till.open",json!({"floatAmount":0}));
+    let order_id=run(&mut db,&admin,"order.create",json!({"outletId":"main","customerId":"credit-customer","name":"Kamau tab"}))["recordIds"][0].as_str().unwrap().to_string();
+    run(&mut db,&admin,"order.addItem",json!({"orderId":order_id,"productId":"setup-product"}));
+    run(&mut db,&admin,"order.fire",json!({"orderId":order_id}));
+    run(&mut db,&admin,"customerCredit.charge",json!({"orderId":order_id}));
+    let order=get(&db,"orders",&order_id).unwrap().1;
+    assert_eq!(order["state"],"COMPLETED");
+    assert_eq!(order["amountPaid"],0);
+    assert_eq!(order["amountCredited"],1.0);
+    assert_eq!(list(&db,"customerCreditEntries").unwrap().len(),1);
+    assert_eq!(list(&db,"receiptDocuments").unwrap().len(),1);
+    run(&mut db,&admin,"customerCredit.settle",json!({"customerId":"credit-customer","amount":0.4,"method":"CASH","notes":"Part payment"}));
+    let till=list(&db,"tillSessions").unwrap().into_iter().find(|r|r["data"]["status"]=="OPEN").unwrap()["data"].clone();
+    assert_eq!(till["creditCollectionsCash"],0.4);
+    assert_eq!(till["expectedCashInDrawer"],0.4);
+    run(&mut db,&admin,"customerCredit.settle",json!({"customerId":"credit-customer","amount":0.6,"method":"MPESA","notes":"Balance","mpesa":{"code":"CREDIT1","account":"123456","receivedAmount":0.6,"receivedAt":"2026-09-28T20:00:00+03:00","confirmed":true}}));
+    let balance:i64=list(&db,"customerCreditEntries").unwrap().iter().filter(|r|r["data"]["customerId"]=="credit-customer").map(|r|r["data"]["balanceDeltaMinor"].as_i64().unwrap_or(0)).sum();
+    assert_eq!(balance,0);
+    assert_eq!(list(&db,"mpesaReceipts").unwrap()[0]["data"]["purpose"],"CUSTOMER_CREDIT_SETTLEMENT");
+    run(&mut db,&admin,"customerCredit.reconcile",json!({"customerId":"credit-customer","statementBalance":0,"reference":"SEP-2026","notes":"Matches customer statement"}));
+    assert_eq!(list(&db,"customerCreditReconciliations").unwrap().len(),1);
+}
+
+#[test]
+fn customer_credit_failure_and_archive_rules_preserve_financial_truth() {
+    let (_dir,mut db,admin)=setup();
+    run(&mut db,&admin,"record.save",json!({"collection":"customers","id":"credit-limit","data":{"name":"Limit Customer","phone":"","email":"","notes":""}}));
+    run(&mut db,&admin,"customerCredit.configure",json!({"customerId":"credit-limit","limit":0,"termsDays":7,"status":"ACTIVE","notes":""}));
+    let oid=run(&mut db,&admin,"order.create",json!({"outletId":"main","customerId":"credit-limit","name":"Limit"}))["recordIds"][0].as_str().unwrap().to_string();
+    run(&mut db,&admin,"order.addItem",json!({"orderId":oid,"productId":"setup-product"}));run(&mut db,&admin,"order.fire",json!({"orderId":oid}));
+    // Admin carries override authority, so put account on HOLD to prove no ledger side effects on rejection.
+    run(&mut db,&admin,"customerCredit.configure",json!({"customerId":"credit-limit","limit":0,"termsDays":7,"status":"HOLD","notes":"Review"}));
+    assert!(execute(&mut db,&admin.token,cmd("customerCredit.charge",json!({"orderId":oid}))).is_err());
+    assert!(list(&db,"customerCreditEntries").unwrap().is_empty());
+    let rec=get(&db,"customers","credit-limit").unwrap();
+    let mut archive=cmd("record.archive",json!({"collection":"customers","id":"credit-limit"}));archive.target_version=Some(rec.0);
+    assert!(execute(&mut db,&admin.token,archive).is_err());
 }

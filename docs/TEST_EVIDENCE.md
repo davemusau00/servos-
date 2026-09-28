@@ -239,3 +239,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\verify-release-0.2.ps1 -Repo 
 After commit, rerun without `-AllowDirty`.
 
 Do not mark this section passed until command output has been reviewed. Physical acceptance remains pending until `RELEASE_0.2_ACCEPTANCE.md` is completed on the packaged terminal.
+
+### Final customer-credit release gate — PENDING EXECUTION
+
+Run the complete 0.2.0 verifier after applying the final customer-credit patch. The expected installed schema is 13. Required new evidence includes native customer credit charge/settlement/reconciliation tests, source contract tests, the full browser suite, Windows native/Tauri suites and staged PostgreSQL regression tests. Packaging and physical acceptance remain separate.

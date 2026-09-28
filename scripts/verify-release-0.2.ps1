@@ -29,13 +29,13 @@ $package = Get-Content -LiteralPath '.\package.json' -Raw | ConvertFrom-Json
 $tauri = Get-Content -LiteralPath '.\src-tauri\tauri.conf.json' -Raw | ConvertFrom-Json
 $cargo = Get-Content -LiteralPath '.\src-tauri\Cargo.toml' -Raw
 $cargoVersion = [regex]::Match($cargo, '(?m)^version\s*=\s*"([^"]+)"').Groups[1].Value
-$migration12 = Get-Content -LiteralPath '.\src-tauri\migrations\012_count_sessions.sql' -Raw
+$migration13 = Get-Content -LiteralPath '.\src-tauri\migrations\013_customer_credit.sql' -Raw
 
 if ($package.version -ne '0.2.0') { throw "package.json must be 0.2.0, found $($package.version)" }
 if ($tauri.version -ne '0.2.0') { throw "tauri.conf.json must be 0.2.0, found $($tauri.version)" }
 if ($cargoVersion -ne '0.2.0') { throw "Cargo.toml must be 0.2.0, found $cargoVersion" }
 if ($tauri.identifier -ne 'ke.servos.business') { throw "Application identifier changed: $($tauri.identifier)" }
-if ($migration12 -notmatch 'PRAGMA\s+user_version\s*=\s*12') { throw 'Schema-12 migration does not set PRAGMA user_version=12.' }
+if ($migration13 -notmatch 'PRAGMA\s+user_version\s*=\s*13') { throw 'Schema-13 migration does not set PRAGMA user_version=13.' }
 
 foreach ($required in @(
     '.\docs\EXISTING_TERMINAL_UPGRADE.md',
@@ -57,7 +57,7 @@ if ($dirty.Count -gt 0) {
 
 Write-Host "Version:    0.2.0"
 Write-Host "Identifier: ke.servos.business"
-Write-Host "Schema:     12"
+Write-Host "Schema:     13"
 
 Section 'Whitespace integrity'
 Run 'git.exe' @('diff','--check')

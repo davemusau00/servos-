@@ -28,3 +28,5 @@ Receipts: persisted documents, cash/change, full 80mm preview, attribution and h
 | Remote management/sync | existing source implemented | live policy/replay/conflict/recovery acceptance |
 | Backup | local consistent SQLite copy source implemented | encryption/rotation/upload/restore verification |
 | Restaurant/procurement/production/CRM/events/hotel/HR/guest order | browser prototypes or future scope | begins only after bar deployment gate |
+
+| Customer tabs / credit A/R | source implemented in final 0.2.0 RC patch | execute native/source/browser release gates and physical operator acceptance |
