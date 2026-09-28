@@ -51,14 +51,15 @@ create function servos_v2.canonical_permissions()
 returns text[] language sql immutable set search_path='' as $$
  select array[
  'business.view','business.configure','business.tax.configure',
+ 'customers.manage','suppliers.manage','assetCategories.manage','roomTypes.manage',
  'staff.view','staff.create','staff.update','staff.deactivate','staff.reset_pin','staff.change_role',
  'pos.sell','pos.open_tab','pos.manage_table','order.fire','order.transfer','order.merge','order.void','order.discount','order.comp','order.refund',
- 'payment.record','payment.split','payment.reverse','till.open','till.close','till.cash_movement','till.override_variance','mpesa.record','mpesa.reconcile',
+ 'payment.record','payment.split','payment.reverse','till.view','till.open','till.close','till.cashMovement','till.override_variance','mpesa.record','mpesa.reconcile',
  'catalog.view','catalog.manage','pricing.manage','inventory.view','inventory.receive','inventory.transfer','inventory.waste','inventory.count','inventory.adjust',
  'procurement.view','procurement.manage','procurement.receive','procurement.over_receive','procurement.pay',
  'floorplan.view','floorplan.manage','rooms.view','rooms.manage','rooms.operate','rooms.guests.view','folio.view','folio.manage','folio.reverse','folio.room_charge',
  'assets.view','assets.manage','assets.operate','maintenance.view','maintenance.manage','kds.view','kds.update',
- 'accounting.view','reports.view','audit.view','data.import.view','data.import.stage','data.import.execute','backup.create','backup.restore','sync.manual','system.configure','help.view',
+ 'accounting.view','accounting.manage','reports.view','audit.view','data.import.view','data.import.stage','data.import.execute','backup.create','backup.restore','sync.manual','system.configure','help.view',
  'devices.register','devices.manage','records.view','payments.view','payments.manage'
  ]
 $$;

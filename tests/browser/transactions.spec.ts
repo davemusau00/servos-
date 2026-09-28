@@ -25,6 +25,9 @@ test.describe('transactional browser with PostgreSQL',()=>{
   sql(`
    insert into servos_private.managers(user_id,role) values('00000000-0000-4000-8000-000000000001','owner'),('00000000-0000-4000-8000-000000000002','manager') on conflict(user_id) do update set role=excluded.role;
    insert into servos_v2.members values('00000000-0000-4000-8000-000000000001',true,array['*']),('00000000-0000-4000-8000-000000000002',true,array['*']) on conflict(user_id) do update set active=true,permissions=array['*'];
+   insert into servos_v2.staff_profiles(auth_user_id,staff_id,name,role,created_by,updated_by) values
+    ('00000000-0000-4000-8000-000000000001','browser-owner','Browser Owner','Admin','00000000-0000-4000-8000-000000000001','00000000-0000-4000-8000-000000000001'),
+    ('00000000-0000-4000-8000-000000000002','browser-manager','Browser Manager','Manager','00000000-0000-4000-8000-000000000001','00000000-0000-4000-8000-000000000001') on conflict(auth_user_id) do update set active=true;
    select servos_v2.put_record('organization','business','{"name":"Browser Test Business"}');
    select servos_v2.put_record('property','property','{"address":"Test Street","phone":"0700000000","currency":"KES","timezone":"Africa/Nairobi","receiptFooter":"Thank you"}');
    select servos_v2.put_record('posPolicy','policy','{"vatBasisPoints":0,"cateringLevyBasisPoints":0,"taxInclusive":true,"currency":"KES"}');
@@ -50,11 +53,12 @@ test.describe('transactional browser with PostgreSQL',()=>{
     servos_v2_snapshot:`public.servos_v2_snapshot(p->>'after_collection',p->>'after_id',(p->>'expected_cursor')::bigint,p->>'expected_policy',(p->>'page_size')::integer)`,
     servos_v2_execute:`public.servos_v2_execute(p->'command')`,
     servos_v2_pull:`public.servos_v2_pull((p->>'after_sequence')::bigint,(p->>'page_size')::integer)`,
+    servos_v2_list_devices:'public.servos_v2_list_devices()',
    };
    const name=path.split('/').pop()||'';if(!calls[name])return route.fulfill({status:404,json:{message:'Unsupported test route'}});
    try{
     const output=sql(`begin;select set_config('request.jwt.claim.sub','${actor}',true);set local role authenticated;select ${calls[name]} from (select ${body} p) input;commit;`);
-    const result=JSON.parse(output.split(/\r?\n/).find(line=>line==='true'||line==='false'||line.startsWith('{'))!);
+    const result=JSON.parse(output.split(/\r?\n/).find(line=>line==='true'||line==='false'||line.startsWith('{')||line.startsWith('['))!);
     if(name==='servos_v2_execute'&&loseResponse){loseResponse=false;return route.abort('connectionreset')}
     return route.fulfill({json:result});
    }catch(error){return route.fulfill({status:String(error).includes('PERMISSION_DENIED')?403:400,json:{message:String(error)}})}
@@ -63,12 +67,13 @@ test.describe('transactional browser with PostgreSQL',()=>{
  const signIn=async(page:Page,email:string)=>{
   await bridge(page);await page.goto('/');await page.getByRole('button',{name:'Remote management',exact:true}).click();
   await page.getByLabel('Email',{exact:true}).fill(email);await page.getByLabel('Password',{exact:true}).fill('test-only');await page.getByRole('button',{name:'Sign in',exact:true}).click();
+  await expect(page.getByText('Authorized business records',{exact:true})).toBeVisible();
   await expect(page.getByRole('button',{name:'POS',exact:true})).toBeVisible();
  };
  test('two operators see committed room and asset records; response-loss retry preserves one command',async({page,browser},info)=>{
   test.setTimeout(120000);const context2=await browser.newContext({viewport:info.project.use.viewport});const other=await context2.newPage();
   await signIn(page,'first@example.test');await signIn(other,'second@example.test');
-  await page.getByRole('button',{name:'Settings',exact:true}).click();await page.getByRole('button',{name:'Add room type',exact:true}).click();
+  await page.getByRole('button',{name:'Settings',exact:true}).click();await expect(page.getByRole('heading',{name:'Business master records',exact:true})).toBeVisible();await page.getByRole('button',{name:'Add room type',exact:true}).click();
   let dialog=page.getByRole('dialog');await dialog.getByLabel('Room type',{exact:true}).fill('Double');await dialog.getByLabel('Maximum guests').fill('2');await dialog.getByRole('button',{name:'Confirm',exact:true}).click();
   await expect(page.getByRole('alert')).toContainText('retained for retry');await page.getByRole('button',{name:'Synchronize',exact:true}).click();
   await expect(page.getByText('Double',{exact:true})).toBeVisible();
@@ -83,6 +88,7 @@ test.describe('transactional browser with PostgreSQL',()=>{
   expect(sql("select data->>'purchaseCostMinor' from servos_v2.records where collection='assets';").trim()).toBe('2500000');
   await page.screenshot({path:info.outputPath('transactional-assets.png'),fullPage:true});
   await page.reload();await page.getByRole('button',{name:'Remote management',exact:true}).click();await page.getByLabel('Email',{exact:true}).fill('first@example.test');await page.getByLabel('Password',{exact:true}).fill('test-only');await page.getByRole('button',{name:'Sign in',exact:true}).click();await expect(page.getByRole('heading',{name:'Room 101',exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Staff',exact:true}).click();await expect(page.getByRole('heading',{name:'Staff, approvals and devices'})).toBeVisible();await expect(page.getByText('Browser Owner',{exact:true})).toBeVisible();await expect(page.getByText('Browser Manager',{exact:true})).toBeVisible();await expect(page.getByRole('heading',{name:'Trusted devices'})).toBeVisible();await expect(page.getByText('Browser workstation',{exact:true})).toHaveCount(2);
   await context2.close();
  });
  test('web POS opens a till, settles cash online and retains the immutable receipt',async({page})=>{

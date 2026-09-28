@@ -21,6 +21,16 @@ do $$declare r jsonb;begin
  if not 'payment.record'=any(servos_v2.role_permissions('Cashier')) then raise exception 'Cashier profile missing canonical POS rights';end if;
  if 'devices.manage'=any(servos_v2.role_permissions('Manager')) then raise exception 'Manager profile escalated device administration';end if;
  if servos_v2.role_permissions('Admin') @> array['payments.view','records.view','devices.manage'] is false then raise exception 'Admin profile missing staged permissions';end if;
+ if servos_v2.role_permissions('Admin') @> array[
+   'customers.manage','suppliers.manage','assetCategories.manage','roomTypes.manage',
+   'till.view','till.cashMovement','accounting.manage'
+ ] is false then raise exception 'Admin profile dropped established domain permissions';end if;
+ if 'till.cash_movement'=any(servos_v2.canonical_permissions()) then raise exception 'Deprecated till.cash_movement permission spelling remains canonical';end if;
+ perform servos_v2.require_permission('roomTypes.manage');
+ perform servos_v2.require_permission('customers.manage');
+ perform servos_v2.require_permission('assetCategories.manage');
+ perform servos_v2.require_permission('suppliers.manage');
+ perform servos_v2.require_permission('till.cashMovement');
  r:=pg_temp.staff_command('staff.create',jsonb_build_object('authUserId','00000000-0000-4000-8000-000000000002','staffId','server-2','name','Second operator','role','Server','outletIds',jsonb_build_array('main'),'serviceAreas',jsonb_build_array('floor')));
  if r->>'status'<>'SYNCHRONIZED' then raise exception 'Staff creation failed: %',r;end if;
  if not exists(select 1 from servos_v2.staff_profiles where auth_user_id='00000000-0000-4000-8000-000000000002' and role='Server' and outlet_ids=array['main']) then raise exception 'Staff binding/assignment missing';end if;
