@@ -83,8 +83,10 @@ test('native checkout provides customer and business receipt copies', async ({ p
   await expect(quickAdd.getByRole('button', {name:/Room/})).toHaveCount(0);
   await expect(quickAdd.getByRole('button', {name:/Property item/})).toHaveCount(0);
   await quickAdd.getByRole('button', {name:/Item or menu product/}).click();
-  await expect(page.getByRole('dialog', {name:'Add product or menu item'})).toBeVisible();
+  const addProduct=page.getByRole('dialog', {name:'Add product or menu item'});
+  await expect(addProduct).toBeVisible();
   await expect(page).toHaveURL(/#\/catalog\?action=add-item$/);
+  await addProduct.getByRole('button').first().click();
   await page.getByRole('button', {name:'Sell', exact:true}).click();
   await page.getByRole('button', {name:'Pay'}).click();
   await page.getByLabel('Cash tendered').fill('100');
