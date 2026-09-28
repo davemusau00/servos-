@@ -89,7 +89,7 @@ pub fn open(path: &std::path::Path) -> Result<Connection> {
     let version: i64 = db
         .query_row("PRAGMA user_version", [], |r| r.get(0))
         .map_err(error)?;
-    if version > 10 {
+    if version > 11 {
         return Err("Database requires a newer ServOS version".into());
     }
     if version < 1 {
@@ -122,6 +122,9 @@ pub fn open(path: &std::path::Path) -> Result<Connection> {
     }
     if version < 10 {
         db.execute_batch(include_str!("../migrations/010_guidance.sql")).map_err(error)?;
+    }
+    if version < 11 {
+        db.execute_batch(include_str!("../migrations/011_inventory_count_drafts.sql")).map_err(error)?;
     }
     Ok(db)
 }
@@ -440,6 +443,62 @@ pub fn save_guidance_progress(db: &Connection, token: &str, progress: Value) -> 
     let updated_at = Utc::now().to_rfc3339();
     db.execute("INSERT INTO guidance_progress(staff_id,guide_id,guide_version,state,current_step_id,completed_step_ids,updated_at) VALUES(?,?,?,?,?,?,?) ON CONFLICT(staff_id,guide_id) DO UPDATE SET guide_version=excluded.guide_version,state=excluded.state,current_step_id=excluded.current_step_id,completed_step_ids=excluded.completed_step_ids,updated_at=excluded.updated_at", params![user.staff_id,guide_id,guide_version,state,current_step,completed_json,updated_at]).map_err(error)?;
     Ok(json!({"guideId":guide_id,"guideVersion":guide_version,"state":state,"currentStepId":current_step,"completedStepIds":completed,"updatedAt":updated_at}))
+}
+
+pub fn inventory_count_draft(db: &Connection, token: &str, location_id: &str) -> Result<Value> {
+    let user=actor(db,token,true)?;
+    if location_id.trim().is_empty() || location_id.len()>120 { return Err("Invalid Storage Place".into()); }
+    get(db,"stockLocations",location_id)?;
+    let saved:Option<(String,String)>=db.query_row("SELECT payload,updated_at FROM inventory_count_drafts WHERE staff_id=? AND location_id=?",params![user.staff_id,location_id],|row|Ok((row.get(0)?,row.get(1)?))).optional().map_err(error)?;
+    if let Some((payload,updated_at))=saved {
+        let mut draft:Value=serde_json::from_str(&payload).map_err(error)?;
+        draft["updatedAt"]=json!(updated_at);
+        Ok(draft)
+    } else { Ok(Value::Null) }
+}
+
+pub fn save_inventory_count_draft(db: &Connection, token: &str, location_id: &str, draft: Value) -> Result<Value> {
+    let user=actor(db,token,true)?;
+    if location_id.trim().is_empty() || location_id.len()>120 { return Err("Invalid Storage Place".into()); }
+    get(db,"stockLocations",location_id)?;
+    let counts=draft.get("counts").and_then(Value::as_object).ok_or("Count draft quantities are required")?;
+    let scan_counts=draft.get("scanCounts").and_then(Value::as_object).ok_or("Count draft scan totals are required")?;
+    if counts.len()>5000 || scan_counts.len()>5000 { return Err("Count draft contains too many stock items".into()); }
+    let active:std::collections::HashSet<String>=list(db,"stockItems")?.iter().filter_map(|record|record["id"].as_str().map(str::to_string)).collect();
+    let mut clean_counts=serde_json::Map::new();
+    let mut clean_scans=serde_json::Map::new();
+    for (stock_id,value) in counts {
+        if !active.contains(stock_id) { return Err("Count draft refers to a stock item that is no longer active".into()); }
+        let amount=value.as_f64().ok_or("Count draft quantities must be numeric")?;
+        if !amount.is_finite() || amount<0.0 || amount>1_000_000_000.0 || (amount*1_000_000.0-(amount*1_000_000.0).round()).abs()>0.00001 { return Err("Count draft quantities must be non-negative with at most six decimals".into()); }
+        clean_counts.insert(stock_id.clone(),json!(amount));
+    }
+    for (stock_id,value) in scan_counts {
+        if !active.contains(stock_id) { return Err("Count draft refers to a stock item that is no longer active".into()); }
+        let scans=value.as_u64().filter(|count|*count<=1_000_000).ok_or("Count draft scan totals are invalid")?;
+        if scans>0 { clean_scans.insert(stock_id.clone(),json!(scans)); }
+    }
+    if scan_counts.keys().any(|stock_id|!counts.contains_key(stock_id)) { return Err("Count draft scan totals do not match counted items".into()); }
+    let unknown=draft.get("unknownScans").and_then(Value::as_array).ok_or("Unknown barcode list is required")?;
+    if unknown.len()>500 { return Err("Count draft has too many unrecognized barcodes".into()); }
+    let mut clean_unknown=Vec::with_capacity(unknown.len());
+    for entry in unknown {
+        let barcode=text(entry,"barcode")?.trim();
+        let count=entry["count"].as_u64().filter(|count|*count>0&&*count<=1_000_000).ok_or("Unknown barcode scan total is invalid")?;
+        if barcode.len()>128 { return Err("Unknown barcode cannot exceed 128 characters".into()); }
+        clean_unknown.push(json!({"barcode":barcode,"count":count}));
+    }
+    let updated_at=now();
+    let clean=json!({"locationId":location_id,"counts":clean_counts,"scanCounts":clean_scans,"unknownScans":clean_unknown,"updatedAt":updated_at});
+    let encoded=serde_json::to_string(&clean).map_err(error)?;
+    db.execute("INSERT INTO inventory_count_drafts(staff_id,location_id,payload,updated_at) VALUES(?,?,?,?) ON CONFLICT(staff_id,location_id) DO UPDATE SET payload=excluded.payload,updated_at=excluded.updated_at",params![user.staff_id,location_id,encoded,updated_at]).map_err(error)?;
+    Ok(clean)
+}
+
+pub fn clear_inventory_count_draft(db: &Connection, token: &str, location_id: &str) -> Result<()> {
+    let user=actor(db,token,true)?;
+    db.execute("DELETE FROM inventory_count_drafts WHERE staff_id=? AND location_id=?",params![user.staff_id,location_id]).map_err(error)?;
+    Ok(())
 }
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]

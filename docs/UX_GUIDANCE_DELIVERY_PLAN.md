@@ -52,7 +52,7 @@ Order firing continues through the established domain commands. The focused Rust
 
 - The installed Tauri shell now presents grouped, permission-filtered task navigation; the offline Help Center searches generated Markdown articles and can launch the shell tour.
 - `RuntimeProvider.command()` returns after the native command commits and refreshes local state. It is the observation point for successful operation events; business command payloads and authorization remain unchanged.
-- Native SQLite schema is version 10. Staff identities and expiring sessions are local. The first guidance slice stores per-staff progress separately from business records and keeps it outside the business outbox.
+- Native SQLite schema is version 11. Staff identities and expiring sessions are local. Guidance progress and scanner count drafts are staff-scoped local tables, separate from business records and outside the business outbox.
 - Implemented foundation: task-group navigation, permission-aware Home/Quick Add destinations, the core shell tour, Help Center tour launch/progress, a native progress table, and commit-only guidance events. The current follow-up adds first-run catalog and inventory empty states plus human-readable common native errors. Detailed task workflows and their guides remain pending.
 - The current release ledger remains authoritative for what is implemented and verified. This plan does not claim completion of the web expansion, production rollout, or target-device acceptance.
 
@@ -62,7 +62,7 @@ The following eight phases are the current implementation sequence from the user
 
 1. **Atomic Add Item + Stock + Starting Quantity (implemented):** `catalog.createWithOpeningStock` creates the sellable product, new stock master, relationship, barcode, and opening movement in one native transaction. It requires both catalog and inventory permissions. Local Rust tests verify rollback, idempotency, one audit/outbox entry, and opening valuation; desktop/mobile browser mocks verify the Quick Add payload. Physical-terminal acceptance remains open.
 2. **Location-first Stock Count (implemented; locally verified):** choose a Storage Place, count every active stock item, review match/short/over totals, then submit one native transaction. Draft quantities do not mutate stock. Native commit checks permissions, complete item coverage, and unchanged expected balances; stale or failed writes roll back the count and all adjustments. Scanner-session drafts remain Phase 3.
-3. **Continuous Scanner Count Session:** retain a local draft count session, map scans to stock items and scan quantities, then review and submit once. Draft scans do not mutate stock or claim a count commit.
+3. **Continuous Scanner Count Session (implemented; locally verified):** scan stock barcodes/SKUs into a persistent per-staff, per-Storage-Place SQLite draft. Apply `scanUnitQuantity`, preserve unknown codes for explicit assignment or dismissal, resume after restart, then review and submit once through Phase 2's native count command. Draft writes stay outside business records/outbox and never mutate stock. Physical scanner and packaged-terminal acceptance remain open.
 4. **Simple Receive Delivery:** collect supplier/reference and scanned line quantities/costs in a simple screen while preserving native GRN, inventory, weighted-cost, payable/journal, approval, and audit behavior.
 5. **Simple Rooms + Property:** simplify room and property/asset entry with progressive disclosure and inherited defaults; retain native IDs, prerequisite checks, custody and operational protections.
 6. **First-login Staff Onboarding:** non-blocking, per-staff welcome and permission-derived next steps with progress kept separate from business records.
@@ -76,6 +76,7 @@ The following eight phases are the current implementation sequence from the user
 - UI anchors use `data-guide-anchor` through a small anchor component; IDs are namespaced by shell or domain. Missing targets produce a readable fallback and never block the operation.
 - A committed operation event is emitted only after `runtime.command()` succeeds and includes the operation name and command result. Failure paths emit no success event.
 - Native progress reads and writes require a live staff session and derive the staff ID from that session. Progress is resumable per staff member, local-first, excluded from business records/outbox, and survives restart.
+- Scanner count drafts use a dedicated native SQLite table keyed by authenticated staff and Storage Place. Draft APIs validate stock IDs and quantities, are unavailable without a live staff session, and do not create business commands, audit rows, or outbox effects. Only confirmed review uses `inventory.countLocation`.
 - Guidance can explain and observe operations but cannot grant permissions, execute business commands, or imply provider/payment/sync success.
 
 ## Acceptance evidence
@@ -83,6 +84,7 @@ The following eight phases are the current implementation sequence from the user
 - **Foundation:** navigation remains permission-filtered on desktop and narrow layouts; Home and Quick Add only expose eligible destinations; current modules remain reachable; the Help Center and articles continue to work offline.
 - **Guidance:** definitions reject duplicate IDs and unknown targets; keyboard users can launch, advance, back, and close a guide; target loss is recoverable; staff progress is isolated and survives restart.
 - **Outcome events:** a successful local commit can advance a matching step; command rejection and uncommitted drafts cannot. A refresh error after a committed write must not invite a duplicate transaction or erase the success event.
+- **Scanner stock count:** exact SKU/barcode matches increment by the stock item's scan quantity; repeated and unknown codes remain visible in the staff-scoped local draft; a draft survives app restart and is isolated from other staff; stock movements remain absent through scanning/review and occur only through one confirmed, permission-checked count command.
 - **Quick Add:** each choice requires the target's real creation permission and opens its form directly. Missing prerequisites show a safe next step.
 - **Guide growth:** each Home card reflects its own guide progress; route steps navigate only to permission-allowed workspaces; anchors remain recoverable through resize, mobile layouts, and keyboard close.
 - **Quick Add:** each choice requires the target's real creation permission and opens its form directly. Missing target prerequisites show a safe next step.

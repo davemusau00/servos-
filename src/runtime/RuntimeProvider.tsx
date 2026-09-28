@@ -13,6 +13,14 @@ export interface GuidanceProgress {
   updatedAt?: string;
 }
 
+export interface InventoryCountDraft {
+  locationId: string;
+  counts: Record<string, number>;
+  scanCounts: Record<string, number>;
+  unknownScans: { barcode: string; count: number }[];
+  updatedAt?: string;
+}
+
 export const isNative = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
 
 interface RuntimeContextValue {
@@ -33,6 +41,9 @@ interface RuntimeContextValue {
   command: (operation: string, payload?: Record<string, unknown>, targetVersion?: number) => Promise<CommandResult>;
   guidanceProgress: () => Promise<GuidanceProgress[]>;
   saveGuidanceProgress: (progress: GuidanceProgress) => Promise<GuidanceProgress>;
+  inventoryCountDraft: (locationId: string) => Promise<InventoryCountDraft | null>;
+  saveInventoryCountDraft: (locationId: string, draft: InventoryCountDraft) => Promise<InventoryCountDraft>;
+  clearInventoryCountDraft: (locationId: string) => Promise<void>;
   approve: (approverId: string, pin: string, permission: Permission, target?: string) => Promise<ManagerApproval>;
   sync: () => Promise<void>;
   backup: () => Promise<string>;
@@ -156,6 +167,18 @@ export const RuntimeProvider = ({ children }: { children: React.ReactNode }) => 
     if (!session) throw new Error('Unlock the terminal first');
     return invoke<GuidanceProgress>('runtime_guidance_save_progress', { token: session.token, progress });
   };
+  const inventoryCountDraft = async (locationId: string) => {
+    if (!session) throw new Error('Unlock the terminal first');
+    return invoke<InventoryCountDraft | null>('runtime_inventory_count_draft', { token: session.token, locationId });
+  };
+  const saveInventoryCountDraft = async (locationId: string, draft: InventoryCountDraft) => {
+    if (!session) throw new Error('Unlock the terminal first');
+    return invoke<InventoryCountDraft>('runtime_save_inventory_count_draft', { token: session.token, locationId, draft });
+  };
+  const clearInventoryCountDraft = async (locationId: string) => {
+    if (!session) throw new Error('Unlock the terminal first');
+    await invoke('runtime_clear_inventory_count_draft', { token: session.token, locationId });
+  };
   const approve = async (approverId: string, pin: string, permission: Permission, target?: string) => {
     if (!session) throw new Error('Unlock the terminal first');
     try { return await invoke<ManagerApproval>('runtime_manager_approve', { token: session.token, approverId, pin, permission, target: target || null }); }
@@ -265,5 +288,5 @@ export const RuntimeProvider = ({ children }: { children: React.ReactNode }) => 
     return () => { clearInterval(timer); window.removeEventListener('pointerdown', active); window.removeEventListener('keydown', active); window.removeEventListener('online', resume); window.removeEventListener('servos:local-commit', resume); document.removeEventListener('visibilitychange', resume); };
   }, [session, sync, lock]);
 
-  return <RuntimeContext.Provider value={{ status, session, snapshot, error, syncing, busy, reloadStatus, saveIntake, completeIntake, reopenIntake, enroll, login, lock, refresh, command, guidanceProgress, saveGuidanceProgress, approve, sync, backup, healthAudit, acceptanceStatus, acceptanceAction, importBatches, importBatch, stageImport, cancelImport, planImport, importPlan, applyImport, reconcile, receipt, receiptHistory, printReceipt, testPrinter, retryPrinterJob, printerJobs, clearError: () => setError('') }}>{children}</RuntimeContext.Provider>;
+  return <RuntimeContext.Provider value={{ status, session, snapshot, error, syncing, busy, reloadStatus, saveIntake, completeIntake, reopenIntake, enroll, login, lock, refresh, command, guidanceProgress, saveGuidanceProgress, inventoryCountDraft, saveInventoryCountDraft, clearInventoryCountDraft, approve, sync, backup, healthAudit, acceptanceStatus, acceptanceAction, importBatches, importBatch, stageImport, cancelImport, planImport, importPlan, applyImport, reconcile, receipt, receiptHistory, printReceipt, testPrinter, retryPrinterJob, printerJobs, clearError: () => setError('') }}>{children}</RuntimeContext.Provider>;
 };

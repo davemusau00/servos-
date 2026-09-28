@@ -131,6 +131,21 @@ fn runtime_guidance_save_progress(state: State<Runtime>, token: String, progress
     store::save_guidance_progress(&db, &token, progress)
 }
 #[tauri::command]
+fn runtime_inventory_count_draft(state: State<Runtime>, token: String, location_id: String) -> store::Result<Value> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    store::inventory_count_draft(&db, &token, &location_id)
+}
+#[tauri::command]
+fn runtime_save_inventory_count_draft(state: State<Runtime>, token: String, location_id: String, draft: Value) -> store::Result<Value> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    store::save_inventory_count_draft(&db, &token, &location_id, draft)
+}
+#[tauri::command]
+fn runtime_clear_inventory_count_draft(state: State<Runtime>, token: String, location_id: String) -> store::Result<()> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    store::clear_inventory_count_draft(&db, &token, &location_id)
+}
+#[tauri::command]
 fn runtime_command(
     state: State<Runtime>,
     token: String,
@@ -989,6 +1004,9 @@ pub fn run() {
             runtime_snapshot,
             runtime_guidance_progress,
             runtime_guidance_save_progress,
+            runtime_inventory_count_draft,
+            runtime_save_inventory_count_draft,
+            runtime_clear_inventory_count_draft,
             runtime_command,
             runtime_manager_approve,
             runtime_enroll,

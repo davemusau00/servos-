@@ -60,6 +60,36 @@ fn guidance_progress_is_staff_scoped_durable_and_outside_business_outbox() {
     let admin_again=login(&reopened,&admin.staff_id,"827193").unwrap();
     assert_eq!(guidance_progress(&reopened,&admin_again.token).unwrap()[0]["guideId"],"servos.core");
 }
+
+#[test]
+fn inventory_scanner_draft_is_persistent_staff_scoped_and_outside_business_outbox() {
+    let (dir,mut db,admin)=setup();
+    run(&mut db,&admin,"record.save",json!({"collection":"stockItems","id":"draft-stock","data":{"name":"Draft Stock","code":"DRAFT-STOCK","baseUnit":"bottle","scanUnitQuantity":6,"averageUnitCost":0,"currentStock":{"main":20}}}));
+    let draft=json!({"counts":{"draft-stock":12.0},"scanCounts":{"draft-stock":2},"unknownScans":[{"barcode":"UNKNOWN-42","count":3}]});
+    let outbox_before:i64=db.query_row("SELECT COUNT(*) FROM outbox",[],|row|row.get(0)).unwrap();
+    let saved=save_inventory_count_draft(&db,&admin.token,"main",draft.clone()).unwrap();
+    assert_eq!(saved["counts"]["draft-stock"],12.0);
+    assert_eq!(inventory_count_draft(&db,&admin.token,"main").unwrap()["unknownScans"][0]["count"],3);
+    assert!(save_inventory_count_draft(&db,&admin.token,"main",json!({"counts":{"missing":1},"scanCounts":{},"unknownScans":[]})).is_err());
+    assert!(save_inventory_count_draft(&db,&admin.token,"main",json!({"counts":{"draft-stock":0.0000001},"scanCounts":{},"unknownScans":[]})).is_err());
+
+    run(&mut db,&admin,"staff.create",json!({"name":"Draft Server","role":"Server","pin":"492736"}));
+    let server_id:String=db.query_row("SELECT id FROM staff WHERE name='Draft Server'",[],|row|row.get(0)).unwrap();
+    let server=login(&db,&server_id,"492736").unwrap();
+    assert!(inventory_count_draft(&db,&server.token,"main").unwrap().is_null());
+    save_inventory_count_draft(&db,&server.token,"main",json!({"counts":{},"scanCounts":{},"unknownScans":[]})).unwrap();
+    assert_eq!(inventory_count_draft(&db,&admin.token,"main").unwrap()["counts"]["draft-stock"],12.0);
+    assert_eq!(inventory_count_draft(&db,&server.token,"main").unwrap()["counts"],json!({}));
+
+    drop(server); drop(admin); drop(db);
+    let reopened=open(&dir.path().join("test.sqlite")).unwrap();
+    let admin_id:String=reopened.query_row("SELECT id FROM staff WHERE name='Owner'",[],|row|row.get(0)).unwrap();
+    let admin_again=login(&reopened,&admin_id,"827193").unwrap();
+    assert_eq!(inventory_count_draft(&reopened,&admin_again.token,"main").unwrap()["counts"]["draft-stock"],12.0);
+    clear_inventory_count_draft(&reopened,&admin_again.token,"main").unwrap();
+    assert!(inventory_count_draft(&reopened,&admin_again.token,"main").unwrap().is_null());
+    assert_eq!(reopened.query_row::<i64,_,_>("SELECT COUNT(*) FROM outbox",[],|row|row.get(0)).unwrap(),outbox_before+1);
+}
 fn order(db: &mut rusqlite::Connection, s: &Session) -> String {
     let product = Uuid::new_v4().to_string();
     run(
@@ -908,10 +938,10 @@ fn classified_asset_quantity_requires_whole_units_and_commissioning_is_live_only
 
 // SERVOS_PATCH_10_TERMINAL_ACCEPTANCE
 #[test]
-fn terminal_acceptance_evidence_is_local_immutable_and_schema_v10() {
+fn terminal_acceptance_evidence_is_local_immutable_and_schema_v11() {
     let (_dir,db,s)=setup();
     let schema:i64=db.query_row("PRAGMA user_version",[],|r|r.get(0)).unwrap();
-    assert_eq!(schema,10);
+    assert_eq!(schema,11);
     let before:(i64,i64,i64)=db.query_row(
         "SELECT (SELECT COUNT(*) FROM records),(SELECT COUNT(*) FROM outbox),(SELECT COUNT(*) FROM commands)",
         [],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?))

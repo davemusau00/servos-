@@ -40,18 +40,19 @@ test('native shell mounts its fresh-install intake without runtime provider erro
   expect(errors).toEqual([]);
 });
 
-test('native checkout provides receipts and location stock count stays draft until confirmation', async ({ page }) => {
+test('native checkout, location count, and resumable scanner draft', async ({ page }) => {
   await page.addInitScript(() => {
-    const windowState = window as Window & { __SERVOS_CALLS?: string[]; __SERVOS_COMMANDS?: any[] };
+    const windowState = window as Window & { __SERVOS_CALLS?: string[]; __SERVOS_COMMANDS?: any[]; __SERVOS_COUNT_DRAFTS?: Record<string, any> };
     windowState.__SERVOS_CALLS = [];
     windowState.__SERVOS_COMMANDS = [];
+    windowState.__SERVOS_COUNT_DRAFTS = {};
     window.print = () => undefined;
     const order = { id: 'order-1', outletId: 'outlet-1', state: 'OPEN', orderNumber: 'SO-1001', subtotal: 100, taxTotal: 0, cateringLevyTotal: 0, grandTotal: 100, amountPaid: 0, items: [{ id: 'item-1', productName: 'Test Lager', quantity: 1, lineTotal: 100, courseStatus: 'HELD' }] };
     const record = (collection: string, id: string, data: Record<string, unknown>) => ({ collection, id, version: 1, archived: false, data });
     const snapshot = {
       terminalId: 'terminal-test', installationStage: 'LIVE', pendingCount: 0, lastSync: null, lastBackup: null,
       actor: { id: 'staff-1', name: 'Test Owner', role: 'Admin', permissions: ['pos.sell','kds.view','inventory.view','inventory.count','catalog.view','catalog.manage','mpesa.reconcile','payment.record','floorplan.view','till.close','reports.view','backup.create','help.view','sync.manual'] },
-      records: [record('organization','business',{name:'Test Bar'}),record('outlets','outlet-1',{name:'Main Bar',propertyId:'property-1',active:true}),record('orders','order-1',order),record('paymentConfig','main',{methods:['CASH']}),record('stockLocations','main',{id:'main',name:'Main Store',code:'MAIN'}),record('stockItems','whisky-350-stock',{id:'whisky-350-stock',name:'Whisky 350 stock',code:'WHISKY-350-STOCK',baseUnit:'ml',currentStock:{}}),record('stockItems','whisky-750-stock',{id:'whisky-750-stock',name:'Whisky 750 stock',code:'WHISKY-750-STOCK',baseUnit:'ml',currentStock:{}})],
+      records: [record('organization','business',{name:'Test Bar'}),record('outlets','outlet-1',{name:'Main Bar',propertyId:'property-1',active:true}),record('orders','order-1',order),record('paymentConfig','main',{methods:['CASH']}),record('stockLocations','main',{id:'main',name:'Main Store',code:'MAIN'}),record('stockItems','whisky-350-stock',{id:'whisky-350-stock',name:'Whisky 350 stock',code:'WHISKY-350-STOCK',baseUnit:'ml',scanUnitQuantity:350,currentStock:{}}),record('stockItems','whisky-750-stock',{id:'whisky-750-stock',name:'Whisky 750 stock',code:'WHISKY-750-STOCK',baseUnit:'ml',scanUnitQuantity:750,currentStock:{}})],
     };
     (window as Window & { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__ = {
       invoke: async (command: string, args?: any) => {
@@ -62,6 +63,9 @@ test('native checkout provides receipts and location stock count stays draft unt
         if (command === 'runtime_snapshot') return snapshot;
         if (command === 'runtime_guidance_progress') return [];
         if (command === 'runtime_guidance_save_progress') return args?.progress || {};
+        if (command === 'runtime_inventory_count_draft') return windowState.__SERVOS_COUNT_DRAFTS?.[args?.locationId] || null;
+        if (command === 'runtime_save_inventory_count_draft') { const saved={...args?.draft,updatedAt:new Date().toISOString()}; if(windowState.__SERVOS_COUNT_DRAFTS)windowState.__SERVOS_COUNT_DRAFTS[args?.locationId]=saved; return saved; }
+        if (command === 'runtime_clear_inventory_count_draft') { if(windowState.__SERVOS_COUNT_DRAFTS)delete windowState.__SERVOS_COUNT_DRAFTS[args?.locationId]; return; }
         if (command === 'runtime_command') {
           const request=args?.command;
           if(request?.operation==='record.save'){
@@ -187,6 +191,31 @@ test('native checkout provides receipts and location stock count stays draft unt
   const committedCounts = await countCalls();
   expect(committedCounts).toHaveLength(1);
   expect(committedCounts[0].payload.rows).toHaveLength(2);
+
+  await page.getByRole('button', {name:'Count stock'}).click();
+  const scannerCount = page.getByRole('dialog', {name:'Count stock by location'});
+  await scannerCount.getByRole('button', {name:/Main Store/}).click();
+  await scannerCount.getByRole('button', {name:/Continuous scanner session/}).click();
+  const scannerInput = scannerCount.getByLabel('Scan a barcode or stock code');
+  await scannerInput.pressSequentially('WHISKY-350-STOCK', {delay:8});
+  await scannerInput.press('Enter');
+  await expect(scannerCount.getByRole('status')).toContainText('Whisky 350 stock +350 ml');
+  await scannerInput.pressSequentially('UNKNOWN-BOTTLE-42', {delay:8});
+  await scannerInput.press('Enter');
+  await expect(scannerCount.getByRole('heading', {name:'Unknown barcodes'})).toBeVisible();
+  await scannerCount.getByLabel('Assign UNKNOWN-BOTTLE-42 to stock item').selectOption('whisky-750-stock');
+  await scannerCount.getByRole('button', {name:'Assign',exact:true}).click();
+  await expect(scannerCount.getByRole('status')).toContainText('Assigned 1 scan to Whisky 750 stock');
+  await page.waitForFunction(() => Boolean((window as any).__SERVOS_COUNT_DRAFTS?.main?.counts?.['whisky-350-stock'] === 350 && (window as any).__SERVOS_COUNT_DRAFTS?.main?.counts?.['whisky-750-stock'] === 750));
+  await scannerCount.getByRole('button', {name:'Close count'}).click();
+
+  await page.getByRole('button', {name:'Count stock'}).click();
+  const resumedCount = page.getByRole('dialog', {name:'Count stock by location'});
+  await resumedCount.getByRole('button', {name:/Main Store/}).click();
+  await resumedCount.getByRole('button', {name:/Continuous scanner session/}).click();
+  await expect(resumedCount.getByLabel('Scanner count for Whisky 350 stock')).toHaveValue('350');
+  await expect(resumedCount.getByLabel('Scanner count for Whisky 750 stock')).toHaveValue('750');
+  expect(await countCalls()).toHaveLength(1);
 });
 
 test('floorplan drafts are editable and preview cannot claim a saved layout', async ({ page }) => {
