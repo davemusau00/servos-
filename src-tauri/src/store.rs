@@ -2756,6 +2756,8 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
             let location_id=text(p,"locationId")?;
             let location=get(&tx,"stockLocations",location_id)?.1;
             let rows=p["rows"].as_array().filter(|rows|!rows.is_empty()&&rows.len()<=5000).ok_or("Count must include between 1 and 5000 stock items")?;
+            let active_stock_ids:Vec<String>=list(&tx,"stockItems")?.iter().filter_map(|record|record["id"].as_str().map(str::to_string)).collect();
+            if rows.len()!=active_stock_ids.len() { return Err("Count must include every active stock item".into()); }
             let reason=p.get("reason").and_then(Value::as_str).map(str::trim).filter(|reason|!reason.is_empty()).unwrap_or("Location stock count");
             if reason.len()>500 { return Err("Count note cannot exceed 500 characters".into()); }
             let mut seen=Vec::<String>::new();
@@ -2764,6 +2766,7 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
                 let stock_id=text(row,"stockItemId")?.to_string();
                 if seen.contains(&stock_id) { return Err("A stock item can appear only once in a location count".into()); }
                 seen.push(stock_id.clone());
+                if !active_stock_ids.contains(&stock_id) { return Err("Count includes a stock item that is not active".into()); }
                 let expected=quantity(row,"expectedQuantity")?;
                 let actual=quantity(row,"countedQuantity")?;
                 let (_,stock)=get(&tx,"stockItems",&stock_id)?;
@@ -2771,6 +2774,7 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
                 if (current-expected).abs()>0.000001 { return Err(format!("CONFLICT: {} changed while this count was open; review the location again",stock["name"].as_str().unwrap_or("Stock item"))); }
                 counted.push((stock_id,stock,expected,actual));
             }
+            if seen.len()!=active_stock_ids.len() { return Err("Count must include every active stock item".into()); }
             let count_id=id();
             let mut matches=0usize; let mut short=0usize; let mut over=0usize;
             let mut count_rows=Vec::with_capacity(counted.len());
