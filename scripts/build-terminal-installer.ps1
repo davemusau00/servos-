@@ -79,6 +79,10 @@ $tauri = Get-Content -LiteralPath (Join-Path $Repo 'src-tauri\tauri.conf.json') 
 if ($package.version -ne $tauri.version) {
     throw "package.json version $($package.version) does not match Tauri version $($tauri.version)."
 }
+$cargoManifest = Get-Content -LiteralPath (Join-Path $Repo 'src-tauri\Cargo.toml') -Raw
+$cargoVersion = [regex]::Match($cargoManifest, '(?m)^version\s*=\s*"([^"]+)"').Groups[1].Value
+if ($cargoVersion -ne $tauri.version) { throw 'Cargo, package.json and Tauri versions must match.' }
+if ($tauri.identifier -ne 'ke.servos.business') { throw 'Existing-terminal upgrades must preserve ke.servos.business.' }
 
 if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
     $OutputRoot = Join-Path $Repo 'release'
@@ -92,6 +96,7 @@ Write-Host "Version: $($tauri.version)"
 Write-Host "Format:  $(if ($Msi) { 'MSI' } else { 'NSIS EXE' })"
 
 Write-Section 'Validated Tauri package build'
+$buildStarted = (Get-Date).ToUniversalTime()
 $deployArgs = @(
     '-NoProfile',
     '-ExecutionPolicy', 'Bypass',
@@ -113,6 +118,7 @@ $installer = Get-ChildItem -LiteralPath $bundleRoot -File -Recurse -ErrorAction 
         if ($Msi) { $_.Extension -eq '.msi' }
         else { $_.Extension -eq '.exe' -and $_.Name -match '(?i)setup' }
     } |
+    Where-Object { $_.LastWriteTimeUtc -ge $buildStarted } |
     Sort-Object LastWriteTime -Descending |
     Select-Object -First 1
 
@@ -144,6 +150,7 @@ Copy-Item -LiteralPath $sidecar -Destination $releaseDir
 Copy-Item -LiteralPath (Join-Path $Repo 'scripts\install-windows-pos.ps1') -Destination $releaseDir
 Copy-Item -LiteralPath (Join-Path $Repo 'scripts\servos-terminal-doctor.ps1') -Destination $releaseDir
 Copy-Item -LiteralPath (Join-Path $Repo 'scripts\run-terminal-tests.ps1') -Destination $releaseDir
+Copy-Item -LiteralPath (Join-Path $Repo 'docs\EXISTING_TERMINAL_UPGRADE.md') -Destination $releaseDir
 
 $manifest = [ordered]@{
     Product = $tauri.productName
@@ -155,6 +162,12 @@ $manifest = [ordered]@{
     BuiltAt = (Get-Date).ToUniversalTime().ToString('o')
     BundleFormat = if ($Msi) { 'msi' } else { 'nsis' }
     TestsSkipped = [bool]$SkipTests
+    SQLiteSchema = 12
+    MigrationCompatibility = 'Additive forward migration through schema 12; old binaries cannot open upgraded databases.'
+    ExistingEnrollmentPreserved = $true
+    PhysicalAcceptance = 'PENDING: requires existing POS and peripherals'
+    HostedAcceptance = 'PENDING: retained Supabase project and approved Remote Manager accounts'
+    WebView2Mode = $tauri.bundle.windows.webviewInstallMode.type
     Installer = $installer.Name
     InstallerSha256 = $actualHash
     BuilderComputer = $env:COMPUTERNAME
@@ -186,11 +199,14 @@ INSTALL
    powershell -ExecutionPolicy Bypass -File .\run-terminal-tests.ps1 -DeploymentFolder .
 3. For an NSIS release, install with:
    powershell -ExecutionPolicy Bypass -File .\install-windows-pos.ps1 -InstallerPath ".\$($installer.Name)"
-4. Launch ServOS and complete Business Admin > Physical terminal acceptance.
+4. For an existing business, follow EXISTING_TERMINAL_UPGRADE.md BEFORE installation.
+   Preserve the Windows user, application data and terminal enrollment. Do not repeat Intake.
+5. Launch ServOS and complete Business Admin > Physical terminal acceptance.
 
 IMPORTANT
 ---------
-No .env.local, Supabase key, SQLite database, backup, operator PIN, or other credential is included in this package.
+No .env.local file, business SQLite database, backup, operator PIN, or privileged cloud credential belongs in this package.
+Browser assets may include the configured Supabase URL and publishable key. Existing native synchronization uses its stored connection.
 "@
 Set-Content -LiteralPath (Join-Path $releaseDir 'INSTALL.txt') -Value $instructions -Encoding UTF8
 

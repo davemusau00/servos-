@@ -205,7 +205,7 @@ test('native checkout, location count, and resumable scanner draft', async ({ pa
   await expect(scannerCount.getByRole('heading', {name:'Unknown barcodes'})).toBeVisible();
   await scannerCount.getByLabel('Assign UNKNOWN-BOTTLE-42 to stock item').selectOption('whisky-750-stock');
   await scannerCount.getByRole('button', {name:'Assign',exact:true}).click();
-  await expect(scannerCount.getByRole('status').filter({hasText:'Whisky 350 stock'})).toContainText('Assigned 1 scan to Whisky 750 stock');
+  await expect(scannerCount.getByRole('status').filter({hasText:'Assigned'})).toContainText('Assigned 1 scan to Whisky 750 stock');
   await page.waitForFunction(() => Boolean((window as any).__SERVOS_COUNT_DRAFTS?.main?.counts?.['whisky-350-stock'] === 350 && (window as any).__SERVOS_COUNT_DRAFTS?.main?.counts?.['whisky-750-stock'] === 750));
   await scannerCount.getByRole('button', {name:'Close count'}).click();
 

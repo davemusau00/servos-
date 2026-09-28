@@ -1,5 +1,7 @@
 param(
-    [string]$OutputPath = ""
+    [string]$OutputPath = "",
+    [switch]$ExistingInstallation,
+    [string]$LocalAuditPath = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -27,6 +29,42 @@ $checks = [ordered]@{
     NairobiUtcOffset = ($utcOffset -eq 3)
     PrintSpoolerRunning = ((Try-Value { (Get-Service Spooler).Status.ToString() }) -eq "Running")
 }
+$appDataPath = Join-Path $env:APPDATA 'ke.servos.business'
+$databasePath = Join-Path $appDataPath 'servos.sqlite'
+$installation = [ordered]@{
+    WindowsUser = [Environment]::UserName
+    Identifier = 'ke.servos.business'
+    ApplicationDataPath = $appDataPath
+    DatabasePresent = (Test-Path -LiteralPath $databasePath -PathType Leaf)
+    ServOSRunning = [bool](Get-Process -Name servos -ErrorAction SilentlyContinue)
+    DatabaseRead = $false
+    Audit = $null
+}
+if ($ExistingInstallation) {
+    $checks.ExistingDatabasePresent = $installation.DatabasePresent
+    $checks.LocalAuditProvided = -not [string]::IsNullOrWhiteSpace($LocalAuditPath)
+}
+if ($LocalAuditPath) {
+    $audit = Get-Content -LiteralPath $LocalAuditPath -Raw | ConvertFrom-Json
+    if ($audit.mode -ne 'READ_ONLY_LOCAL_AUDIT') { throw 'Expected an exported ServOS read-only local audit.' }
+    # Only an explicit safe subset is copied into the hardware report.
+    $installation.Audit = [ordered]@{
+        GeneratedAt = $audit.generatedAt
+        AppVersion = $audit.appVersion
+        SchemaVersion = $audit.database.schemaVersion
+        QuickCheck = $audit.database.quickCheck
+        TerminalId = $audit.installation.terminalId
+        Stage = $audit.installation.stage
+        ProjectHostname = $audit.installation.projectHostname
+        LastSync = $audit.installation.lastSync
+        PendingOutbox = $audit.operations.outboxPending
+        LastOutboxSequence = $audit.operations.lastOutboxSequence
+    }
+    $checks.AuditHasTerminalIdentity = -not [string]::IsNullOrWhiteSpace($audit.installation.terminalId)
+    $checks.AuditDatabaseHealthy = $audit.database.quickCheck -eq 'ok'
+    $checks.AuditIsLive = $audit.installation.stage -eq 'LIVE'
+    $checks.AuditRecent = ((Get-Date).ToUniversalTime() - [datetime]$audit.generatedAt).TotalHours -le 24
+}
 
 $report = [ordered]@{
     GeneratedAt = (Get-Date).ToString("o")
@@ -42,7 +80,8 @@ $report = [ordered]@{
     Printers = @($printers)
     ActiveNetworkAdapters = @($adapters)
     Checks = $checks
-    OverallPass = -not ($checks.Values -contains $false)
+    ExistingInstallation = $installation
+    OverallPass = -not ($checks.Values -contains $false) -and -not ($checks.Values -contains $null)
     Note = "Read-only diagnostic. It changes no Windows, ServOS, printer, network or power settings."
 }
 

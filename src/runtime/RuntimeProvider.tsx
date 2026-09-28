@@ -84,12 +84,12 @@ export const RuntimeProvider = ({ children }: { children: React.ReactNode }) => 
   useEffect(() => {
     if (!isNative) return;
     let allowClose = false, disposed = false;
-    const registered = getCurrentWindow().onCloseRequested(async event => {
+    const registered = Promise.resolve().then(() => getCurrentWindow().onCloseRequested(async event => {
       if (allowClose) return;
       event.preventDefault();
       try { await flushLocalWork(); allowClose = true; await getCurrentWindow().close(); }
       catch (cause) { allowClose = false; window.alert(`Local work could not be saved: ${String(cause)}`); }
-    });
+    }));
     void registered.then(unlisten => { if (disposed) unlisten(); }).catch(() => {});
     return () => { disposed = true; void registered.then(unlisten => { if (!disposed) return; unlisten(); }).catch(() => {}); };
   }, []);

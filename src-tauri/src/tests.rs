@@ -163,6 +163,55 @@ fn ad_hoc_delivery_is_atomic_authorized_and_idempotent() {
     for collection in ["purchaseOrders","goodsReceipts","supplierPayables","journalEntries","stockMovements"] { assert_eq!(list(&db,collection).unwrap().len(),1,"{collection}"); }
     assert_eq!(list(&db,"supplierPayables").unwrap()[0]["data"]["amount"],600.0);
 }
+
+#[test]
+fn simple_rooms_and_property_share_existing_domain_safeguards() {
+    let (_dir,mut db,admin)=setup();
+    let command=cmd("room.quickCreate",json!({"numbers":["104","105"],"newType":{"name":"Standard","capacity":2,"nightlyPrice":3500}}));
+    let first=execute(&mut db,&admin.token,command.clone()).unwrap();
+    assert_eq!(execute(&mut db,&admin.token,command).unwrap(),first);
+    assert_eq!(list(&db,"rooms").unwrap().len(),2);
+    assert_eq!(list(&db,"roomTypes").unwrap().len(),1);
+    assert_eq!(list(&db,"ratePlans").unwrap().len(),1);
+    assert!(execute(&mut db,&admin.token,cmd("room.quickCreate",json!({"numbers":["106","104"],"newType":{"name":"Must rollback","capacity":2,"nightlyPrice":100}}))).is_err());
+    assert_eq!(list(&db,"rooms").unwrap().len(),2);
+    assert_eq!(list(&db,"roomTypes").unwrap().len(),1);
+    // Validation late in the orchestration also rolls back the new type and rate.
+    assert!(execute(&mut db,&admin.token,cmd("room.quickCreate",json!({"numbers":["106"],"newType":{"name":"Invalid room","capacity":2,"nightlyPrice":100},"details":{"capacity":3}}))).is_err());
+    assert_eq!(list(&db,"roomTypes").unwrap().len(),1);
+    let room_id=list(&db,"rooms").unwrap()[0]["id"].as_str().unwrap().to_string();
+    run(&mut db,&admin,"asset.quickCreate",json!({"name":"Samsung TV","roomId":room_id}));
+    let assets=list(&db,"assets").unwrap();
+    assert_eq!(assets.len(),1);
+    assert!(assets[0]["data"]["tag"].as_str().unwrap().starts_with("PROP-"));
+    assert_eq!(assets[0]["data"]["custodianId"],Value::Null);
+    assert!(list(&db,"stockMovements").unwrap().is_empty());
+    assert!(list(&db,"journalEntries").unwrap().is_empty());
+    run(&mut db,&admin,"maintenance.report",json!({"id":"room-problem","roomId":room_id,"description":"Tap leaking","priority":"MEDIUM"}));
+    assert_eq!(get(&db,"maintenanceOrders","room-problem").unwrap().1["status"],"REPORTED");
+}
+
+#[test]
+fn schema_eleven_upgrade_preserves_enrollment_ledger_and_legacy_drafts() {
+    let (dir,db,admin)=setup();
+    set_meta(&db,"cloud_url","https://retained.supabase.co").unwrap();
+    set_meta(&db,"device_token","fixture-device-token").unwrap();
+    db.execute("INSERT INTO inventory_count_drafts(staff_id,location_id,payload,updated_at) VALUES(?,'main',?,?)",rusqlite::params![admin.staff_id,json!({"locationId":"main","counts":{},"scanCounts":{},"unknownScans":[]}).to_string(),"2026-09-28T00:00:00Z"]).unwrap();
+    let records=list(&db,"products").unwrap();
+    let outbox:i64=db.query_row("SELECT COUNT(*) FROM outbox",[],|r|r.get(0)).unwrap();
+    db.execute_batch("DROP TABLE inventory_count_closed_sessions; PRAGMA user_version=11;").unwrap();
+    drop(db);
+    let upgraded=open(&dir.path().join("test.sqlite")).unwrap();
+    assert_eq!(meta(&upgraded,"terminal_id").unwrap().as_deref(),Some("terminal-test"));
+    assert_eq!(meta(&upgraded,"device_token").unwrap().as_deref(),Some("fixture-device-token"));
+    assert_eq!(installation_stage(&upgraded).unwrap(),"LIVE");
+    assert_eq!(list(&upgraded,"products").unwrap(),records);
+    assert_eq!(upgraded.query_row::<i64,_,_>("SELECT COUNT(*) FROM outbox",[],|r|r.get(0)).unwrap(),outbox);
+    assert_eq!(inventory_count_draft(&upgraded,&admin.token,"main").unwrap()["counts"],json!({}));
+    let audit=production_health_audit(&upgraded,&admin.token).unwrap();
+    assert_eq!(audit["installation"]["projectHostname"],"retained.supabase.co");
+    assert!(!audit.to_string().contains("fixture-device-token"));
+}
 fn order(db: &mut rusqlite::Connection, s: &Session) -> String {
     let product = Uuid::new_v4().to_string();
     run(
