@@ -41,6 +41,7 @@ do $$declare session jsonb;progress jsonb;begin
   if jsonb_array_length(public.servos_v2_guidance_progress())<>0 then raise exception 'Guidance leaked across actors';end if;
   perform set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000001',true);
 end$$;
+update servos_v2.members set permissions=array['records.view'] where user_id=auth.uid();
 set local role authenticated;
 do $$declare page jsonb;begin
  page:=public.servos_v2_snapshot();if jsonb_array_length(page->'records')<>2 then raise exception 'Snapshot leaked private employee';end if;
