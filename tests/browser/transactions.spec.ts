@@ -68,6 +68,7 @@ test.describe('transactional browser with PostgreSQL',()=>{
   await bridge(page);await page.goto('/');await page.getByRole('button',{name:'Remote management',exact:true}).click();
   await page.getByLabel('Email',{exact:true}).fill(email);await page.getByLabel('Password',{exact:true}).fill('test-only');await page.getByRole('button',{name:'Sign in',exact:true}).click();
   await expect(page.getByRole('button',{name:'POS',exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'POS',exact:true}).click();
   await expect(page.getByRole('heading',{name:'Point of Sale',exact:true})).toBeVisible();
   await expect(page.locator('body')).not.toContainText(String.raw`\n`);
  };
@@ -76,6 +77,12 @@ test.describe('transactional browser with PostgreSQL',()=>{
   await signIn(page,'first@example.test');
   await page.getByRole('button',{name:'Procurement',exact:true}).click();
   await expect(page.locator('main')).not.toBeEmpty();
+   for(const tab of ['Front Desk','Guest Accounts','Housekeeping']){
+    await expect(page.getByRole('button',{name:tab,exact:true})).toBeVisible();
+    await page.getByRole('button',{name:tab,exact:true}).click();
+    await expect(page.locator('main')).not.toBeEmpty();
+   }
+   await page.getByRole('button',{name:'Procurement',exact:true}).click();
   await expect(page.getByRole('heading',{name:'Procurement',exact:true})).toBeVisible();
    await page.getByRole('button',{name:'Master Data',exact:true}).click();
    await expect(page.locator('main')).not.toBeEmpty();
