@@ -11,6 +11,8 @@ This document sequences the two existing product plans without replacing them:
 - `# ServOS Guidance System.md` owns guide definitions and rendering, staff training progress, contextual assistance, the offline Help Center connection, and guidance validation.
 - This delivery plan owns dependencies, implementation order, and cross-plan acceptance evidence. Detailed UI or domain contracts stay in their source plan.
 
+The web/native operational parity inventory and the first documentation-first execution step are maintained in [Web parity execution plan](WEB_PARITY_EXECUTION_PLAN.md). That plan extends this coordination layer with the production web lifecycle, platform intake, Help, staff welcome, and tour parity requirements alongside the operational workspace gaps.
+
 Both source documents describe the reviewed `4035337e5d63ba8785e87ba344565cc69c69e68d` checkout. Treat that hash as their original planning baseline, not the current checkout. Verify all proposed capabilities against current source and [release state](CURRENT_RELEASE_STATE.md) before implementation; source presence and staged database tests do not establish production acceptance.
 
 ## External review reconciliation — 2026-09-28

@@ -6,6 +6,8 @@ The current native shell now has permission-filtered task groups, a Home screen 
 
 This is a foundation slice, not completion of the full Simple Operations UX or Guidance roadmap. Product/catalog, stock, rooms/property, imports, task-specific training guides, target-hardware interaction, and the broader production acceptance remain open. See [completion ledger](COMPLETION_LEDGER.md) and [test evidence](TEST_EVIDENCE.md) for executed checks.
 
+The next web parity work is documented in [Web parity execution plan](WEB_PARITY_EXECUTION_PLAN.md). It records the native/web differences in platform intake, business setup, Help, staff welcome, tour behavior, and operational workspaces. The plan's first execution artifact is documentation; no web intake or lifecycle implementation is claimed by this entry.
+
 Updated: 2026-09-25. **Bar-first source implementation substantially expanded. Production acceptance is still required on a supported target device.**
 
 ## Expansion update — 2026-09-26
