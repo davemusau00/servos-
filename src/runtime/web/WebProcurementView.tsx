@@ -242,7 +242,7 @@ export function WebProcurementView({
 
   return <section className="space-y-5">
     <div className="flex flex-wrap items-start justify-between gap-3">
-      <div><h2 className="flex items-center gap-2 text-xl font-bold"><Truck className="h-5 w-5 text-amber-300"/>Procurement</h2><p className="mt-1 max-w-3xl text-sm text-slate-400">PO → GRN → stock/expense/asset treatment → supplier payable → invoice match → manually confirmed settlement. Posted receipts and payments are immutable.</p></div>
+      <div><h2 className="flex items-center gap-2 text-xl font-bold"><Truck className="h-5 w-5 text-amber-300"/>Purchasing</h2><p className="mt-1 max-w-3xl text-sm text-slate-400">Create an order, check what arrived, and record supplier payments only after the money has actually been sent.</p></div>
       <div className="flex gap-2">{canManage&&<><button disabled={disabled} className={button} onClick={()=>openSupplier()}>New supplier</button><button disabled={disabled||!suppliers.length} className={primary} onClick={()=>{setPoSupplier(suppliers[0]?.id||'');setPoLines([]);setStockId(stockItems[0]?.id||'');setAssetCategoryId(categories[0]?.id||'');setPoOpen(true)}}><Plus className="mr-1 inline h-4 w-4"/>New PO</button></>}</div>
     </div>
 

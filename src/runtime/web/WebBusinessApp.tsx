@@ -71,14 +71,14 @@ export function WebBusinessApp({initialSession,rpc,onSignOut}:{initialSession:We
  const submit=async(operation:string,collection:string,id:string,payload:Record<string,unknown>):Promise<boolean>=>{
   if(!store.current||!ready)return false;setBusy(true);setError('');setNotice('');
   try{
-   if(!navigator.onLine){await store.current.saveDraft(crypto.randomUUID(),operation,payload);setNotice('Draft saved on this browser. It has not been finalized.');await refresh();setEditor(null);return false}
+    if(!navigator.onLine){await store.current.saveDraft(crypto.randomUUID(),operation,payload);setNotice('Saved on this browser. It will be sent when you are back online.');await refresh();setEditor(null);return false}
    const baselines=records.map(({collection,id,version})=>({collection,id,version}));
    for(const target of [collection,...(operation.startsWith('stay.')?['folios','stays']:[])])if(!baselines.some(r=>r.collection===target&&r.id===id))baselines.push({collection:target,id,version:0});
-   const command=await store.current.enqueue(operation,payload,baselines);setEditor(null);setNotice('Saved on this browser; awaiting server validation.');await refresh();
+    const command=await store.current.enqueue(operation,payload,baselines);setEditor(null);setNotice('Saved on this browser; waiting to sync.');await refresh();
    try{await syncRef.current()}catch(e){setError(`${String(e)}. The queued command is retained for retry.`);return false}
    const result=(await store.current.queue()).find(q=>q.id===command.id)?.result;
    if(result?.status==='SYNCHRONIZED'){setNotice('Saved and synchronized.');return true}
-   setNotice('');setError(result?.error?.message||'Waiting for server confirmation. See Activity.');return false
+    setNotice('');setError(result?.error?.message||'This change is waiting to sync. See Saved changes.');return false
   }catch(e){setError(String(e));return false}finally{setBusy(false)}
  };
  const action=(title:string,operation:string,collection:string,id:string,fields:Field[]=[],extra:Record<string,unknown>={})=>open({title,operation,collection,id,fields,payload:v=>({id,...extra,...v})});

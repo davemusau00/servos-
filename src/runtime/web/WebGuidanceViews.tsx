@@ -21,7 +21,7 @@ const quickActions = [
 const taskCards = [
   { id: 'POS', title: 'Make a sale', description: 'Open a tab, add items, and take payment.', permission: 'pos.sell', icon: ClipboardCheck },
   { id: 'Inventory', title: 'Count or move stock', description: 'Record a count, transfer, or waste movement.', permission: 'inventory.view', icon: Boxes },
-  { id: 'Procurement', action: 'receive-delivery', title: 'Receive a delivery', description: 'Check what arrived and save the delivery.', permission: 'procurement.receive', icon: Truck },
+  { id: 'Procurement', title: 'Receive a delivery', description: 'Check what arrived and save the delivery.', permission: 'procurement.receive', icon: Truck },
   { id: 'Rooms', title: 'Work with rooms', description: 'Open rooms and manage today’s guest work.', permission: 'rooms.view', icon: BedDouble },
 ] as const;
 
