@@ -5,7 +5,8 @@ select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000001'
 select public.servos_v2_register_device('10000000-0000-4000-8000-000000000001','Rooms desktop','DESKTOP');
 select public.servos_v2_register_device('10000000-0000-4000-8000-000000000002','Rooms web','WEB');
 update servos_v2.control set enabled=true;
-select servos_v2.put_record('roomTypes','double','{"name":"Double","maxGuests":2}');
+ select servos_v2.put_record('roomTypes','double','{"name":"Double","maxGuests":2}');
+ select servos_v2.put_record('property','property','{"name":"Property","roomStayRoomTypeId":"double","roomStayRatePlanId":"night","nightlyCheckoutTime":"10:00","dayStayCutoffTime":"18:00"}');
 select servos_v2.put_record('customers','guest','{"name":"Guest"}');
 create function pg_temp.room_command(op text,p jsonb,expected_status text default 'SYNCHRONIZED',expected_code text default null,device_key uuid default '10000000-0000-4000-8000-000000000001') returns jsonb language plpgsql as $$
 declare c jsonb;r jsonb;versions jsonb;target text;begin
@@ -20,13 +21,12 @@ declare c jsonb;r jsonb;versions jsonb;target text;begin
 end$$;
 select pg_temp.room_command('room.save','{"id":"101","data":{"number":"101","roomTypeId":"double","capacity":2,"turnaroundMinutes":30,"amenities":["WiFi"]}}');
 select pg_temp.room_command('ratePlan.save','{"id":"night","data":{"name":"Night","roomTypeId":"double","mode":"NIGHTLY","priceMinor":500000,"currency":"KES","taxBasisPoints":1600}}');
-select pg_temp.room_command('ratePlan.save','{"id":"day","data":{"name":"Day","roomTypeId":"double","mode":"DAY_USE","durationMinutes":240,"priceMinor":200000,"currency":"KES","taxBasisPoints":1600}}');
-select pg_temp.room_command('roomReservation.create','{"id":"booking","roomId":"101","ratePlanId":"night","customerId":"guest","guests":2,"startsAt":"2030-01-01T14:00:00+03:00","endsAt":"2030-01-03T10:00:00+03:00"}');
+ select pg_temp.room_command('roomReservation.create','{"id":"booking","roomId":"101","stayType":"NIGHTLY","customerId":"guest","guests":2,"startsAt":"2030-01-01T14:00:00+03:00","endsAt":"2030-01-03T10:00:00+03:00"}');
 -- A second registered client cannot book nightly/day-use overlap or turnaround.
-select pg_temp.room_command('roomReservation.create','{"id":"overlap","roomId":"101","ratePlanId":"day","customerId":"guest","guests":1,"startsAt":"2030-01-02T11:00:00+03:00","endsAt":"2030-01-02T15:00:00+03:00"}','REJECTED','ROOM_UNAVAILABLE','10000000-0000-4000-8000-000000000002');
-select pg_temp.room_command('roomReservation.create','{"id":"turnaround","roomId":"101","ratePlanId":"day","customerId":"guest","guests":1,"startsAt":"2030-01-03T10:29:00+03:00","endsAt":"2030-01-03T14:29:00+03:00"}','REJECTED','ROOM_UNAVAILABLE');
-select pg_temp.room_command('roomReservation.create','{"id":"next","roomId":"101","ratePlanId":"day","customerId":"guest","guests":1,"startsAt":"2030-01-03T10:30:00+03:00","endsAt":"2030-01-03T14:30:00+03:00"}');
-select pg_temp.room_command('roomReservation.create','{"id":"bad-duration","roomId":"101","ratePlanId":"day","customerId":"guest","guests":1,"startsAt":"2030-01-04T10:30:00+03:00","endsAt":"2030-01-04T15:30:00+03:00"}','REJECTED','VALIDATION_FAILED');
+ select pg_temp.room_command('roomReservation.create','{"id":"overlap","roomId":"101","stayType":"DAY","customerId":"guest","guests":1,"startsAt":"2030-01-02T11:00:00+03:00","endsAt":"2030-01-02T15:00:00+03:00"}','REJECTED','ROOM_UNAVAILABLE','10000000-0000-4000-8000-000000000002');
+ select pg_temp.room_command('roomReservation.create','{"id":"turnaround","roomId":"101","stayType":"DAY","customerId":"guest","guests":1,"startsAt":"2030-01-03T10:29:00+03:00","endsAt":"2030-01-03T14:29:00+03:00"}','REJECTED','ROOM_UNAVAILABLE');
+ select pg_temp.room_command('roomReservation.create','{"id":"next","roomId":"101","stayType":"DAY","customerId":"guest","guests":1,"startsAt":"2030-01-03T10:30:00+03:00","endsAt":"2030-01-03T14:30:00+03:00"}');
+ select pg_temp.room_command('roomReservation.create','{"id":"after-cutoff","roomId":"101","stayType":"DAY","customerId":"guest","guests":1,"startsAt":"2030-01-04T10:30:00+03:00","endsAt":"2030-01-04T18:30:00+03:00"}','REJECTED','VALIDATION_FAILED');
 select pg_temp.room_command('room.archive','{"id":"101"}','REJECTED','INVALID_STATE');
 select pg_temp.room_command('room.block','{"id":"collision","roomId":"101","startsAt":"2030-01-02T00:00:00Z","endsAt":"2030-01-04T00:00:00Z","reason":"Maintenance"}','REJECTED','ROOM_UNAVAILABLE');
 select pg_temp.room_command('room.block','{"id":"block","roomId":"101","startsAt":"2030-02-01T00:00:00Z","endsAt":"2030-02-04T00:00:00Z","reason":"Maintenance"}');

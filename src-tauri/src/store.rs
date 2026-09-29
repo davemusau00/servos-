@@ -1926,7 +1926,7 @@ fn room_execute(tx:&Transaction,user:&Session,cmd:&BusinessCommand,changes:&mut 
                 if current.as_ref().is_some_and(|v|v.2){return Err("INVALID_STATE: reactivate rate plan before editing".into());}
                 room_expect_version(current.as_ref(),cmd.target_version)?;
                 let data=p["data"].as_object().ok_or("Rate plan data is required")?;
-                for field in data.keys(){if !["name","roomTypeId","mode","priceMinor","currency","taxBasisPoints","durationMinutes","mealPlan","minNights","maxNights","notes"].contains(&field.as_str()){return Err(format!("VALIDATION_FAILED: rate field {field}"));}}
+                for field in data.keys(){if !["name","roomTypeId","mode","priceMinor","currency","taxBasisPoints","mealPlan","minNights","maxNights","notes"].contains(&field.as_str()){return Err(format!("VALIDATION_FAILED: rate field {field}"));}}
                 let name=data.get("name").and_then(Value::as_str).map(str::trim).filter(|v|!v.is_empty()).ok_or("Rate plan name is required")?;
                 let room_type=data.get("roomTypeId").and_then(Value::as_str).ok_or("Rate plan room type is required")?;
                 get(tx,"roomTypes",room_type)?;

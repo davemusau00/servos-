@@ -8,6 +8,7 @@ const button='rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm 
 const primary='rounded-lg bg-amber-400 px-3 py-2 text-sm font-bold text-slate-950 hover:bg-amber-300 disabled:opacity-40';
 const data=(record?:BusinessRecord)=>record?.data as Record<string,any>|undefined;
 const active=(records:BusinessRecord[],collection:string)=>records.filter(record=>record.collection===collection&&!record.archived);
+const money=(minor:unknown)=>new Intl.NumberFormat('en-KE',{style:'currency',currency:'KES'}).format(Number(minor||0)/100);
 
 export function WebAdministrationView({records,session,disabled,command,rpc}:{records:BusinessRecord[];session:WebSession;disabled:boolean;command:CommandFn;rpc:Rpc}){
  const [section,setSection]=useState<'IMPORT'|'REPORTS'|'SETTINGS'|'HEALTH'|'AUTH'>('IMPORT');
