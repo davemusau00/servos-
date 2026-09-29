@@ -1590,8 +1590,22 @@ fn folio_execute(tx:&Transaction,user:&Session,cmd:&BusinessCommand,changes:&mut
 
 fn room_execute(tx:&Transaction,user:&Session,cmd:&BusinessCommand,changes:&mut Vec<Value>)->Result<bool>{
     let op=cmd.operation.as_str();
-    if !(op.starts_with("roomType.")||op.starts_with("room.")||op.starts_with("ratePlan.")||op.starts_with("roomReservation.")||op.starts_with("stay.")){return Ok(false);}
+    if !(op.starts_with("roomType.")||op.starts_with("room.")||op.starts_with("ratePlan.")||op.starts_with("roomReservation.")||op.starts_with("stay.")||op=="roomStay.settings"){return Ok(false);}
     let p=&cmd.payload;
+
+    if op=="roomStay.settings"{
+        if !permissions(&user.role).contains(&"business.configure"){return Err("Permission required: business.configure".into());}
+        let (version,mut property)=get(tx,"property","property")?;
+        if cmd.target_version!=Some(version){return Err("CONFLICT: Room stay settings changed; reopen Settings".into());}
+        let room_type=text(p,"roomTypeId")?;let rate_id=text(p,"ratePlanId")?;
+        get(tx,"roomTypes",room_type)?;let (_,rate)=get(tx,"ratePlans",rate_id)?;
+        if rate["roomTypeId"].as_str()!=Some(room_type)||rate["mode"].as_str()!=Some("NIGHTLY"){return Err("VALIDATION_FAILED: configure one NIGHTLY room stay rate matching the room type".into());}
+        let checkout=text(p,"nightlyCheckoutTime")?;let cutoff=text(p,"dayStayCutoffTime")?;
+        let checkout_minutes=parse_clock(checkout).ok_or("VALIDATION_FAILED: nightly checkout time")?;let cutoff_minutes=parse_clock(cutoff).ok_or("VALIDATION_FAILED: day stay cutoff time")?;
+        if checkout_minutes>=cutoff_minutes{return Err("VALIDATION_FAILED: nightly checkout must be before day stay cutoff".into());}
+        property["roomStayRoomTypeId"]=json!(room_type);property["roomStayRatePlanId"]=json!(rate_id);property["nightlyCheckoutTime"]=json!(checkout);property["dayStayCutoffTime"]=json!(cutoff);property["updatedAt"]=json!(now());
+        put(tx,"property","property",property,changes)?;return Ok(true);
+    }
 
 // SERVOS_PATCH_06_FRONT_DESK
     if op.starts_with("stay."){
@@ -1795,15 +1809,21 @@ fn room_execute(tx:&Transaction,user:&Session,cmd:&BusinessCommand,changes:&mut 
                 let end=room_parse_time(text(p,"endsAt")?)?;
                 room_validate_interval(start,end)?;
                 let (checkout,cutoff)=room_stay_policy(&property)?;
-                let stay_type=p.get("stayType").and_then(Value::as_str).unwrap_or("NIGHTLY");
+                let explicit_stay_type=p.get("stayType").and_then(Value::as_str);
+                let stay_type=explicit_stay_type.unwrap_or("NIGHTLY");
                 if rate["mode"].as_str()==Some("DAY_USE"){return Err("VALIDATION_FAILED: configure the room stay rate as NIGHTLY".into());}
                 let checkout_minutes=parse_clock(&checkout).unwrap();let cutoff_minutes=parse_clock(&cutoff).unwrap();
-                let units=match stay_type{
-                    "DAY"=>{
+                let units=match (explicit_stay_type,stay_type){
+                    (None,"NIGHTLY")=>{
+                        let units=room_nightly_units(start,end);
+                        if units<1||units>366{return Err("VALIDATION_FAILED: nightly arrival/departure dates".into());}
+                        units
+                    },
+                    (_,"DAY")=>{
                         if room_local_date(start)!=room_local_date(end)||room_local_minutes(end)>cutoff_minutes{return Err("VALIDATION_FAILED: day stay must end by the configured cutoff".into());}
                         1
                     },
-                    "NIGHTLY"=>{
+                    (_,"NIGHTLY")=>{
                         if room_local_minutes(end)!=checkout_minutes{return Err(format!("VALIDATION_FAILED: nightly departure must be at {checkout}"));}
                         let units=room_nightly_units(start,end);
                         if units<1||units>366{return Err("VALIDATION_FAILED: nightly arrival/departure dates".into());}
