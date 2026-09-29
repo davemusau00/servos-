@@ -71,12 +71,18 @@ test.describe('transactional browser with PostgreSQL',()=>{
   await expect(page.getByRole('heading',{name:'Point of Sale',exact:true})).toBeVisible();
   await expect(page.locator('body')).not.toContainText(String.raw`\n`);
  };
- test('authenticated workspace mounts Procurement, Settings, and KDS without blank panels or page errors',async({page})=>{
+ test('authenticated workspace mounts Procurement, Master Data, Refunds, Settings, and KDS without blank panels or page errors',async({page})=>{
   const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));
   await signIn(page,'first@example.test');
   await page.getByRole('button',{name:'Procurement',exact:true}).click();
   await expect(page.locator('main')).not.toBeEmpty();
   await expect(page.getByRole('heading',{name:'Procurement',exact:true})).toBeVisible();
+   await page.getByRole('button',{name:'Master Data',exact:true}).click();
+   await expect(page.locator('main')).not.toBeEmpty();
+   await expect(page.getByRole('heading',{name:'Master Data',exact:true})).toBeVisible();
+   await page.getByRole('button',{name:'Refunds',exact:true}).click();
+   await expect(page.locator('main')).not.toBeEmpty();
+   await expect(page.getByRole('heading',{name:'Payments & refunds',exact:true})).toBeVisible();
   await page.getByRole('button',{name:'Settings',exact:true}).click();
   await expect(page.locator('main')).not.toBeEmpty();
   await expect(page.getByRole('heading',{name:'Business master records',exact:true})).toBeVisible();
