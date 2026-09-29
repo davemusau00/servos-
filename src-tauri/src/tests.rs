@@ -301,6 +301,22 @@ fn business_identity_is_atomic_versioned_and_printer_policy_is_validated() {
     let mut invalid=cmd("record.save",json!({"collection":"tillPolicy","id":"main","data":policy}));invalid.target_version=Some(version);
     assert!(execute(&mut db,&s.token,invalid).is_err());assert_eq!(get(&db,"tillPolicy","main").unwrap().0,version);
 }
+
+#[test]
+fn room_stay_policy_uses_one_rate_and_enforces_nightly_checkout_and_day_cutoff() {
+    let (_dir,mut db,s)=setup();
+    run(&mut db,&s,"record.save",json!({"collection":"customers","id":"stay-guest","data":{"name":"Stay Guest"}}));
+    run(&mut db,&s,"roomType.save",json!({"id":"stay-type","data":{"name":"Stay room","code":"STAY","maxGuests":2}}));
+    run(&mut db,&s,"ratePlan.save",json!({"id":"stay-rate","data":{"name":"Room stay","roomTypeId":"stay-type","mode":"NIGHTLY","priceMinor":10000,"currency":"KES","taxBasisPoints":0}}));
+    run(&mut db,&s,"room.save",json!({"id":"stay-room","data":{"number":"STAY-1","roomTypeId":"stay-type","capacity":2,"turnaroundMinutes":0}}));
+    let property_version=get(&db,"property","property").unwrap().0;
+    run(&mut db,&s,"roomStay.settings",json!({"propertyVersion":property_version,"roomTypeId":"stay-type","ratePlanId":"stay-rate","nightlyCheckoutTime":"10:00","dayStayCutoffTime":"18:00"}));
+    run(&mut db,&s,"roomReservation.create",json!({"id":"night-stay","roomId":"stay-room","customerId":"stay-guest","guests":1,"stayType":"NIGHTLY","startsAt":"2030-01-01T14:00:00+03:00","endsAt":"2030-01-02T10:00:00+03:00"}));
+    let bad_night=execute(&mut db,&s.token,cmd("roomReservation.create",json!({"id":"bad-night","roomId":"stay-room","customerId":"stay-guest","guests":1,"stayType":"NIGHTLY","startsAt":"2030-01-03T14:00:00+03:00","endsAt":"2030-01-04T11:00:00+03:00"}))).unwrap_err();
+    assert!(bad_night.contains("nightly departure"));
+    let bad_day=execute(&mut db,&s.token,cmd("roomReservation.create",json!({"id":"bad-day","roomId":"stay-room","customerId":"stay-guest","guests":1,"stayType":"DAY","startsAt":"2030-01-03T14:00:00+03:00","endsAt":"2030-01-03T18:30:00+03:00"}))).unwrap_err();
+    assert!(bad_day.contains("day stay"));
+}
 #[test]
 fn invalid_split_rolls_back_every_effect() {
     let (_, mut db, s) = setup();

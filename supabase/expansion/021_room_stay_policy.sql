@@ -36,7 +36,8 @@ begin
  if op='roomReservation.create' and current_data is not null then raise exception 'DUPLICATE_REFERENCE: reservation';end if;
  if op='roomReservation.update' and (current_data is null or current_data->>'status' is distinct from 'RESERVED') then raise exception 'INVALID_STATE: only reserved bookings can be edited';end if;
  room_key:=servos_v2.required_text(p,'roomId');customer_key:=servos_v2.required_text(p,'customerId');room_data:=servos_v2.read_record('rooms',room_key);perform servos_v2.read_record('customers',customer_key);
- property:=servos_v2.read_record('property','property');rate_key:=coalesce(nullif(property->>'roomStayRatePlanId',''),nullif(p->>'ratePlanId',''));
+ select data into property from servos_v2.records where collection='property' and id='property' and not archived;
+ property:=coalesce(property,'{}'::jsonb);rate_key:=coalesce(nullif(property->>'roomStayRatePlanId',''),nullif(p->>'ratePlanId',''));
  if rate_key is null then raise exception 'VALIDATION_FAILED: configure the room stay rate in Settings';end if;
  rate:=servos_v2.read_record('ratePlans',rate_key);
  if rate->>'roomTypeId' is distinct from room_data->>'roomTypeId' or rate->>'mode' is distinct from 'NIGHTLY' then raise exception 'VALIDATION_FAILED: configure one NIGHTLY room stay rate matching the room type';end if;

@@ -11,7 +11,7 @@ Screen: Rooms Studio
 
 Rooms Studio provides the native room-domain controls for room types, physical rooms, rate plans, room blocks, housekeeping state, room condition, and reservations.
 
-Reservations use half-open occupancy intervals and hold the room through its configured turnaround period. Existing reservations retain a snapshot of the selected rate and quoted amount, so later rate edits do not silently reprice a booking.
+Reservations use half-open occupancy intervals and hold the room through its configured turnaround period. Configure one room type and one `NIGHTLY` room-stay rate in Settings. Nightly stays end at the configured local checkout time (default `10:00`); day stays use that same rate, remain on one local calendar date, and must end by the configured cutoff (default `18:00`). Existing reservations retain their rate snapshot and quoted amount, so later rate edits do not silently reprice a booking.
 
 Patch 05 deliberately stops before check-in and checkout. The staged ServOS contract requires reservation, stay, and folio state to move together when a guest checks in or out. That financial boundary is implemented with the stay/folio integration rather than through a non-financial shortcut.
 
@@ -42,14 +42,14 @@ Inspection can return a room to `DIRTY`.
 
 Room condition is independent from housekeeping. `OUT_OF_ORDER` rooms cannot accept reservations.
 
-### Configure rate plans
+### Configure the room-stay rate
 
-1. Choose **Rate plan**.
-2. Select the room type.
-3. Choose `NIGHTLY` or `DAY_USE`.
-4. Enter the KES rate and tax basis points.
-5. For day use, enter the fixed duration.
-6. Set meal plan and applicable stay limits.
+1. Create or edit the single `NIGHTLY` rate for the configured room type.
+2. Enter the KES rate and tax basis points.
+3. Open **Business settings → Room stays**.
+4. Select the one room type and rate, then set nightly checkout and day-stay cutoff times.
+5. Do not create a separate day rate: day stays use the configured room-stay rate.
+6. Set meal plan and applicable nightly stay limits.
 7. Save the rate plan.
 
 A reservation snapshots the selected rate plan. Editing the master rate later does not alter existing reservation quotes.
@@ -57,10 +57,10 @@ A reservation snapshots the selected rate plan. Editing the master rate later do
 ### Create a reservation
 
 1. Choose **New reservation**.
-2. Select the guest, room, and compatible rate plan.
-3. Enter the number of guests.
-4. Enter arrival and departure.
-5. Review the interval and save.
+2. Select the guest and room.
+3. Choose `Nightly` or `Day stay`.
+4. Enter the number of guests, arrival, and departure.
+5. Review the displayed checkout/cutoff rule and save.
 
 ServOS rejects:
 

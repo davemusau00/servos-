@@ -1596,7 +1596,7 @@ fn room_execute(tx:&Transaction,user:&Session,cmd:&BusinessCommand,changes:&mut 
     if op=="roomStay.settings"{
         if !permissions(&user.role).contains(&"business.configure"){return Err("Permission required: business.configure".into());}
         let (version,mut property)=get(tx,"property","property")?;
-        if cmd.target_version!=Some(version){return Err("CONFLICT: Room stay settings changed; reopen Settings".into());}
+        if p["propertyVersion"].as_i64()!=Some(version){return Err("CONFLICT: Room stay settings changed; reopen Settings".into());}
         let room_type=text(p,"roomTypeId")?;let rate_id=text(p,"ratePlanId")?;
         get(tx,"roomTypes",room_type)?;let (_,rate)=get(tx,"ratePlans",rate_id)?;
         if rate["roomTypeId"].as_str()!=Some(room_type)||rate["mode"].as_str()!=Some("NIGHTLY"){return Err("VALIDATION_FAILED: configure one NIGHTLY room stay rate matching the room type".into());}
