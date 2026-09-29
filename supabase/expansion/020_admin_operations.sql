@@ -26,6 +26,7 @@ begin
  raise exception 'PROTOCOL_UNSUPPORTED: administration operation';
 end$$;
 
+alter function servos_v2.can_read_collection(text) rename to can_read_collection_before_admin;
 create or replace function servos_v2.can_read_collection(collection_name text)
 returns boolean language plpgsql stable set search_path='' as $$
 declare grants text[];
@@ -52,6 +53,6 @@ begin
  return servos_v2.dispatch_before_admin(command);
 end$$;
 
-revoke all on function servos_v2.apply_admin_operations(jsonb),servos_v2.can_read_collection(text),servos_v2.dispatch(jsonb),public.servos_v2_auth_lifecycle(text,text,text) from public,anon,authenticated;
+revoke all on function servos_v2.apply_admin_operations(jsonb),servos_v2.can_read_collection_before_admin(text),servos_v2.can_read_collection(text),servos_v2.dispatch(jsonb),public.servos_v2_auth_lifecycle(text,text,text) from public,anon,authenticated;
 grant execute on function public.servos_v2_auth_lifecycle(text,text,text) to authenticated;
 commit;
