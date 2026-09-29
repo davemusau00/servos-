@@ -21,31 +21,37 @@ begin
   if not exists(select 1 from servos_v2.records where collection=collection_name and id=record_key) then versions:=versions||jsonb_build_array(jsonb_build_object('collection',collection_name,'id',record_key,'version',0));end if;
   select last_sequence+1 into seq from servos_v2.devices where id=device_key;
   c:=jsonb_build_object('id',gen_random_uuid(),'schemaVersion',2,'deviceId',device_key,'actorId',auth.uid(),'clientSequence',seq,'operation',op,'payload',p,'expectedVersions',versions);
-  r:=public.servos_v2_execute(c);return r;
+  r:=public.servos_v2_execute(c);if r->>'status' is distinct from 'SYNCHRONIZED' then raise exception 'Financial command % rejected: %',op,r;end if;return r;
 end$$;
 
 set local role authenticated;
 select public.servos_v2_register_device('10000000-0000-4000-8000-000000000081','Financial controls workstation','WEB');
 select pg_temp.financial_command('credit.account.save','customerCreditAccounts','account-credit','{"id":"account-credit","customerId":"customer-credit","creditLimitMinor":100000}');
 select pg_temp.financial_command('credit.charge','orders','credit-order','{"orderId":"credit-order","customerId":"customer-credit","amountMinor":50000}');
+reset role;
 do $$begin
   if (select data->>'paymentMethod' from servos_v2.records where collection='orders' and id='credit-order')<>'CUSTOMER_CREDIT' then raise exception 'Credit charge did not mark internal receivable';end if;
   if (select data->>'amountPaidMinor' from servos_v2.records where collection='orders' and id='credit-order')<>'50000' then raise exception 'Credit charge did not conserve order balance';end if;
   if (select sum((data->>'balanceDeltaMinor')::bigint) from servos_v2.records where collection='customerCreditEntries')<>50000 then raise exception 'Credit ledger balance is wrong';end if;
 end$$;
 
+set local role authenticated;
 select pg_temp.financial_command('credit.settle','customerCreditEntries','settlement-test','{"customerId":"customer-credit","amountMinor":20000,"paymentMethod":"CASH","notes":"Cash settlement"}');
+reset role;
 do $$begin if (select sum((data->>'balanceDeltaMinor')::bigint) from servos_v2.records where collection='customerCreditEntries')<>30000 then raise exception 'Settlement did not reduce receivable';end if;end$$;
 
+set local role authenticated;
 select pg_temp.financial_command('mpesa.receipt','mpesaReceipts','receipt-test','{"id":"receipt-test","code":"MPESA-001","account":"123456","receivedAmountMinor":10000,"receivedAt":"2026-09-29T10:00:00Z"}');
 select pg_temp.financial_command('mpesa.discrepancy','mpesaDiscrepancies','discrepancy-test','{"id":"discrepancy-test","receiptId":"receipt-test","statementAmountMinor":9000,"statementReference":"STMT-001","reason":"Statement variance"}');
 select pg_temp.financial_command('mpesa.discrepancy.resolve','mpesaDiscrepancies','discrepancy-test','{"discrepancyId":"discrepancy-test","outcome":"ACCEPTED_VARIANCE","resolution":"Manager accepted documented variance"}');
 select pg_temp.financial_command('mpesa.reconcile','mpesaReceipts','receipt-test','{"receiptId":"receipt-test","statementAmountMinor":9000,"statementReference":"STMT-001","notes":"Reviewed manually"}');
+reset role;
 do $$begin
   if (select data->>'reconciliationStatus' from servos_v2.records where collection='mpesaReceipts' and id='receipt-test')<>'RECONCILED_WITH_DISCREPANCY' then raise exception 'M-Pesa reconciliation status is wrong';end if;
   if (select data->>'providerInitiated' from servos_v2.records where collection='mpesaReceipts' and id='receipt-test') is not null then raise exception 'M-Pesa receipt invented provider settlement';end if;
 end$$;
 
+set local role authenticated;
 select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000002',true);
 do $$declare failed boolean:=false;r jsonb;begin
   select public.servos_v2_register_device('10000000-0000-4000-8000-000000000082','Restricted finance workstation','WEB');
