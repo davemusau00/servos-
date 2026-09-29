@@ -46,7 +46,8 @@ test('transactional browser waits for authorized snapshot before permission-gate
   assert.notEqual(signInStart,-1,'signIn helper missing');
   assert.notEqual(firstTest,-1,'transactional browser test missing');
   const signIn=spec.slice(signInStart,firstTest);
-  assert.match(signIn,/Authorized business records/);
+  assert.match(signIn,/heading',\{name:'Point of Sale',exact:true\}/);
+  assert.match(signIn,/String\.raw/);
   assert.match(signIn,/getByRole\('button',\{name:'POS',exact:true\}\)/);
   assert.match(spec,/getByRole\('heading',\{name:'Business master records',exact:true\}\)/);
 });
