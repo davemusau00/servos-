@@ -8,7 +8,7 @@ alter function servos_v2.apply_rooms(jsonb) rename to apply_rooms_before_room_st
 create or replace function servos_v2.apply_rooms(command jsonb)
 returns jsonb language plpgsql set search_path='' as $$
 declare
- op text:=command->>'operation';p jsonb:=command->'payload';key text:=servos_v2.required_text(p,'id');
+ op text:=command->>'operation';p jsonb:=command->'payload';key text;
  current_data jsonb;room_data jsonb;rate jsonb;property jsonb;next_data jsonb;
  room_key text;rate_key text;customer_key text;stay_type text;start_at timestamptz;end_at timestamptz;
  blocked_until timestamptz;turnaround integer;guests integer;units integer;price bigint;checkout time;cutoff time;
@@ -26,6 +26,7 @@ begin
   return servos_v2.put_record('property','property',property||jsonb_build_object('roomStayRoomTypeId',room_key,'roomStayRatePlanId',rate_key,'nightlyCheckoutTime',to_char(checkout,'HH24:MI'),'dayStayCutoffTime',to_char(cutoff,'HH24:MI'),'updatedAt',now()));
  end if;
 
+ key:=servos_v2.required_text(p,'id');
  if op='ratePlan.save' and coalesce(p->'data'->>'mode','NIGHTLY') is distinct from 'NIGHTLY' then raise exception 'VALIDATION_FAILED: room stay rates must be NIGHTLY';end if;
  if op not in ('roomReservation.create','roomReservation.update') then return servos_v2.apply_rooms_before_room_stay_policy(command);end if;
 
@@ -58,4 +59,12 @@ begin
 end$$;
 
 revoke all on function servos_v2.apply_rooms(jsonb) from public,anon,authenticated;
+
+alter function servos_v2.dispatch(jsonb) rename to dispatch_before_room_stay_policy;
+create function servos_v2.dispatch(command jsonb) returns jsonb language plpgsql set search_path='' as $$
+begin
+ if command->>'operation'='roomStay.settings' or command->>'operation' like 'roomReservation.%' or command->>'operation' like 'ratePlan.%' then return servos_v2.apply_rooms(command);end if;
+ return servos_v2.dispatch_before_room_stay_policy(command);
+end$$;
+revoke all on function servos_v2.dispatch(jsonb) from public,anon,authenticated;
 commit;
