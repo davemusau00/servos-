@@ -152,13 +152,15 @@ export function WebPosView({records,session,disabled,command}:{records:BusinessR
    setRefundTarget(null);
  };
 
- return <section className="space-y-4">
-   <div className="flex flex-wrap items-start justify-between gap-3">
-     <div><h2 className="flex items-center gap-2 text-xl font-bold"><Utensils className="h-5 w-5 text-amber-300"/>Web POS</h2><p className="mt-1 text-sm text-slate-400">Staged v2 orders and online manual-tender settlement. Offline payment finalization is disabled.</p></div>
-     <div className="flex gap-2">
-       {canOpen&&<><button disabled={disabled||!currentOutlet} className={primary} onClick={()=>void createOrder({name:`Walk-in ${new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}`})}>Quick tab</button><button disabled={disabled||!currentOutlet} className={button} onClick={()=>setNewTab(true)}>Named tab</button></>}
+  return <section className="space-y-5">
+    <div className="flex flex-wrap items-start justify-between gap-3">
+      <div><h2 className="flex items-center gap-2 text-xl font-bold"><Utensils className="h-5 w-5 text-amber-300"/>Service workspace</h2><p className="mt-1 text-sm text-slate-400">Online orders and manually confirmed tenders · offline payment finalization is disabled.</p></div>
+      <div className="flex flex-wrap gap-2">
+        {canOpen&&<><button disabled={disabled||!currentOutlet} className={primary} onClick={()=>void createOrder({name:`Walk-in ${new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}`})}><Plus className="h-4 w-4"/>Quick tab</button><button disabled={disabled||!currentOutlet} className={button} onClick={()=>setNewTab(true)}>Named tab</button></>}
      </div>
    </div>
+
+    <div className="grid gap-3 sm:grid-cols-3"><PosMetric icon={<Receipt className="h-4 w-4"/>} label="Open tabs" value={String(openOrders.length)}/><PosMetric icon={<Search className="h-4 w-4"/>} label="Menu matches" value={String(visible.length)}/><PosMetric icon={<Banknote className="h-4 w-4"/>} label="Till" value={openTill?'OPEN':'CLOSED'} tone={openTill?'text-emerald-200':'text-amber-200'}/></div>
 
    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_390px]">
      <div className="space-y-4">
@@ -167,16 +169,18 @@ export function WebPosView({records,session,disabled,command}:{records:BusinessR
          <label className="relative"><Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-500"/><input data-barcode-capture="true" className={field+' pl-9'} value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search or scan barcode / SKU"/></label>
        </div>
 
-       <div className="flex gap-2 overflow-x-auto pb-1">
-         {tables.filter(table=>data(table)?.outletId===outletId).map(table=>{const d=data(table)!;const state=String(d.state||'AVAILABLE');return <button key={table.id} disabled={disabled||(!canOpen&&state==='AVAILABLE')||(!canTable&&state==='CLEANING')||!['AVAILABLE','CLEANING'].includes(state)} onClick={()=>state==='CLEANING'?void run('table.ready','tables',table.id,{tableId:table.id}):void createOrder({name:`Table ${String(d.label)}`,tableId:table.id})} className={`min-w-28 rounded-xl border p-3 text-left ${state==='AVAILABLE'?'border-emerald-700 bg-emerald-950/30':state==='CLEANING'?'border-amber-700 bg-amber-950/30':'border-slate-800 bg-slate-900 opacity-60'}`}><b className="block">{String(d.label)}</b><span className="text-xs text-slate-400">{state}</span></button>})}
+        {tables.some(table=>data(table)?.outletId===outletId)&&<div className="flex gap-2 overflow-x-auto pb-1">
+          {tables.filter(table=>data(table)?.outletId===outletId).map(table=>{const d=data(table)!;const state=String(d.state||'AVAILABLE');return <button key={table.id} disabled={disabled||(!canOpen&&state==='AVAILABLE')||(!canTable&&state==='CLEANING')||!['AVAILABLE','CLEANING'].includes(state)} onClick={()=>state==='CLEANING'?void run('table.ready','tables',table.id,{tableId:table.id}):void createOrder({name:`Table ${String(d.label)}`,tableId:table.id})} className={`min-w-28 rounded-xl border p-3 text-left ${state==='AVAILABLE'?'border-emerald-700 bg-emerald-950/30':state==='CLEANING'?'border-amber-700 bg-amber-950/30':'border-slate-800 bg-slate-900 opacity-60'}`}><b className="block">{String(d.label)}</b><span className="text-xs text-slate-400">{state}</span></button>})}
        </div>
+        }
 
        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
          {visible.map(product=>{const d=data(product)!;return <button key={product.id} disabled={disabled||!canSell||!activeOrder} onClick={()=>addProduct(product)} className="rounded-xl border border-slate-800 bg-slate-900 p-4 text-left hover:border-amber-500 disabled:opacity-40"><div className="text-[10px] font-black uppercase text-slate-500">{String(d.category||d.routeTo||'ITEM')}</div><div className="mt-1 font-bold">{String(d.name)}</div><div className="mt-2 text-amber-300">{money(d.priceMinor)}</div>{d.barcode&&<div className="mt-2 flex items-center gap-1 font-mono text-[10px] text-slate-600"><Barcode className="h-3 w-3"/>{String(d.barcode)}</div>}</button>})}
        </div>
+        {visible.length===0&&<div className="rounded-2xl border border-dashed border-slate-700 bg-slate-950/60 px-6 py-10 text-center"><span className="mx-auto grid h-12 w-12 place-items-center rounded-xl bg-slate-800 text-amber-300"><Utensils className="h-6 w-6"/></span><h3 className="mt-3 font-bold">No menu items to show</h3><p className="mx-auto mt-1 max-w-md text-sm text-slate-400">{products.length?'Try a different search or select another outlet.':'Add products to the catalog and assign them to an outlet before opening for service.'}</p></div>}
      </div>
 
-     <aside className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+      <aside className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 shadow-lg shadow-black/10">
        {!openTill&&<div className="mb-4 rounded-lg border border-amber-800 bg-amber-950/30 p-3"><b className="text-sm">No open till</b>{allowed(session,'till.open')?<div className="mt-2 flex gap-2"><label className="sr-only" htmlFor="web-opening-float">Opening float in KES</label><input id="web-opening-float" aria-label="Opening float in KES" type="number" min="0" step="0.01" className={field} value={openingFloat} onChange={e=>setOpeningFloat(e.target.value)} placeholder="Opening float (KES)"/><button disabled={disabled||openingFloat==='' } className={primary} onClick={()=>void submitOpenTill().catch(e=>setNotice(String(e)))}>Open till</button></div>:<p className="mt-1 text-xs text-slate-400">A till operator must open a till before accepting payments.</p>}</div>}
        <div className="mb-4"><div className="text-[10px] font-black uppercase tracking-widest text-amber-400">Active tab / receipt history</div><select aria-label="Select order or receipt history" className={field} value={activeOrder?.id||''} onChange={e=>setActiveId(e.target.value)}><option value="">Select order</option>{recentOrders.map(order=><option key={order.id} value={order.id}>{String(data(order)?.tabName||data(order)?.orderNumber)} · {String(data(order)?.state)} · {money(data(order)?.grandTotalMinor)}</option>)}</select></div>
        {!activeOrder?<div className="rounded-xl border border-dashed border-slate-700 p-8 text-center text-sm text-slate-500">Open a quick tab, named tab or available table.</div>:<>
@@ -202,3 +206,4 @@ export function WebPosView({records,session,disabled,command}:{records:BusinessR
 }
 
 const Modal=({title,onClose,children}:{title:string;onClose:()=>void;children:React.ReactNode})=><div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 p-4"><section role="dialog" aria-modal="true" aria-label={title} className="mx-auto my-8 max-w-xl rounded-xl border border-slate-700 bg-slate-900 p-5"><div className="mb-4 flex items-center justify-between"><h3 className="text-lg font-bold">{title}</h3><button className={button} onClick={onClose}>Close</button></div>{children}</section></div>;
+const PosMetric=({icon,label,value,tone='text-white'}:{icon:React.ReactNode;label:string;value:string;tone?:string})=><div className="rounded-2xl border border-slate-800 bg-slate-900 p-4"><div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.14em] text-slate-500">{icon}{label}</div><div className={`mt-2 text-xl font-black ${tone}`}>{value}</div></div>;

@@ -67,8 +67,9 @@ test.describe('transactional browser with PostgreSQL',()=>{
  const signIn=async(page:Page,email:string)=>{
   await bridge(page);await page.goto('/');await page.getByRole('button',{name:'Remote management',exact:true}).click();
   await page.getByLabel('Email',{exact:true}).fill(email);await page.getByLabel('Password',{exact:true}).fill('test-only');await page.getByRole('button',{name:'Sign in',exact:true}).click();
-  await expect(page.getByText('Authorized business records',{exact:true})).toBeVisible();
   await expect(page.getByRole('button',{name:'POS',exact:true})).toBeVisible();
+  await expect(page.getByRole('heading',{name:'Point of Sale',exact:true})).toBeVisible();
+  await expect(page.locator('body')).not.toContainText(String.raw`\n`);
  };
  test('two operators see committed room and asset records; response-loss retry preserves one command',async({page,browser},info)=>{
   test.setTimeout(120000);const context2=await browser.newContext({viewport:info.project.use.viewport});const other=await context2.newPage();
