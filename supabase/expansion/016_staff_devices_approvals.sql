@@ -54,7 +54,8 @@ returns text[] language sql immutable set search_path='' as $$
  'customers.manage','suppliers.manage','assetCategories.manage','roomTypes.manage',
  'staff.view','staff.create','staff.update','staff.deactivate','staff.reset_pin','staff.change_role',
  'pos.sell','pos.open_tab','pos.manage_table','order.fire','order.transfer','order.merge','order.void','order.discount','order.comp','order.refund',
- 'payment.record','payment.split','payment.reverse','till.view','till.open','till.close','till.cashMovement','till.override_variance','mpesa.record','mpesa.reconcile',
+  'payment.record','payment.split','payment.reverse','till.view','till.open','till.close','till.cashMovement','till.override_variance','mpesa.record','mpesa.reconcile','mpesa.discrepancy',
+  'credit.view','credit.manage','credit.charge','credit.settle','credit.reconcile','credit.write_off','credit.override_limit',
  'catalog.view','catalog.manage','pricing.manage','inventory.view','inventory.receive','inventory.transfer','inventory.waste','inventory.count','inventory.adjust',
  'procurement.view','procurement.manage','procurement.receive','procurement.over_receive','procurement.pay',
  'floorplan.view','floorplan.manage','rooms.view','rooms.manage','rooms.operate','rooms.guests.view','folio.view','folio.manage','folio.reverse','folio.room_charge',
@@ -71,11 +72,11 @@ begin
  base:=case role_name
   when 'Admin' then all_permissions
   when 'Manager' then array(select p from unnest(all_permissions) p where p not in ('business.configure','business.tax.configure','staff.change_role','data.import.execute','backup.restore','system.configure','devices.manage'))
-  when 'Cashier' then array['business.view','staff.view','pos.sell','pos.open_tab','pos.manage_table','order.fire','payment.record','payment.split','till.open','till.close','mpesa.record','catalog.view','inventory.view','procurement.view','procurement.receive','floorplan.view','folio.room_charge','kds.view','kds.update','help.view','records.view']
-  when 'Server' then array['business.view','staff.view','pos.sell','pos.open_tab','pos.manage_table','order.fire','payment.record','mpesa.record','catalog.view','floorplan.view','folio.room_charge','kds.view','kds.update','help.view','records.view']
+  when 'Cashier' then array['business.view','staff.view','pos.sell','pos.open_tab','pos.manage_table','order.fire','payment.record','payment.split','till.open','till.close','mpesa.record','credit.view','credit.charge','catalog.view','inventory.view','procurement.view','procurement.receive','floorplan.view','folio.room_charge','kds.view','kds.update','help.view','records.view']
+  when 'Server' then array['business.view','staff.view','pos.sell','pos.open_tab','pos.manage_table','order.fire','payment.record','mpesa.record','credit.view','credit.charge','catalog.view','floorplan.view','folio.room_charge','kds.view','kds.update','help.view','records.view']
   when 'Chef' then array['business.view','kds.view','kds.update','help.view','records.view']
   when 'Housekeeper' then array['business.view','rooms.view','rooms.operate','help.view','records.view']
-  when 'Accountant' then array['business.view','accounting.view','reports.view','payments.view','audit.view','help.view','records.view']
+  when 'Accountant' then array['business.view','accounting.view','reports.view','payments.view','audit.view','credit.view','credit.settle','credit.reconcile','credit.write_off','mpesa.reconcile','help.view','records.view']
   when 'Custom' then array['business.view','help.view','records.view']
   else null end;
  if base is null or extras is null or not extras <@ all_permissions then raise exception 'VALIDATION_FAILED: unknown role or non-canonical permission';end if;

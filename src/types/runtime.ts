@@ -15,7 +15,7 @@ export type Permission =
   | 'order.fire' | 'order.transfer' | 'order.merge' | 'order.void' | 'order.discount' | 'order.comp' | 'order.refund'
   | 'payment.record' | 'payment.split' | 'payment.reverse'
   | 'till.open' | 'till.close' | 'till.cash_movement' | 'till.override_variance'
-  | 'mpesa.record' | 'mpesa.reconcile'
+  | 'mpesa.record' | 'mpesa.reconcile' | 'mpesa.discrepancy'
   | 'credit.view' | 'credit.manage' | 'credit.charge' | 'credit.settle' | 'credit.reconcile' | 'credit.write_off' | 'credit.override_limit'
   | 'catalog.view' | 'catalog.manage' | 'pricing.manage'
   | 'inventory.view' | 'inventory.receive' | 'inventory.transfer' | 'inventory.waste' | 'inventory.count' | 'inventory.adjust'
