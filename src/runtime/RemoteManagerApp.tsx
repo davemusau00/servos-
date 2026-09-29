@@ -94,7 +94,8 @@ export const RemoteManagerApp = ({ onBack }: { onBack: () => void }) => {
       if (!res.ok) { clearSession(); throw new Error('Session expired. Sign in again.'); }
       saveAuth(await res.json());
     }
-    const res = await fetch(`${url}/rest/v1/${path}`, { method: body === undefined ? 'GET' : 'POST', headers: { apikey: key, Authorization: `Bearer ${authRef.current!.access_token}`, 'Content-Type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) });
+    const endpoint=path.startsWith('functions/v1/')?`${url}/${path}`:`${url}/rest/v1/${path}`;
+    const res = await fetch(endpoint, { method: body === undefined ? 'GET' : 'POST', headers: { apikey: key, Authorization: `Bearer ${authRef.current!.access_token}`, 'Content-Type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) });
     if (!res.ok) {const detail=await res.json().catch(()=>({}));throw Object.assign(new Error(detail.message||`Server rejected the request (${res.status}). No change was confirmed.`),{status:res.status})}
     const text = await res.text(); return text ? JSON.parse(text) : null;
   };
