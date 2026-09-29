@@ -154,7 +154,7 @@ begin
     perform servos_v2.require_permission('mpesa.reconcile');
     discrepancy_key:=servos_v2.required_text(p,'discrepancyId');
     if p->>'outcome' not in ('STATEMENT_ERROR','MISSING_PAYMENT','MISSING_CHARGE','ACCEPTED_VARIANCE','WRITE_OFF_REQUIRED') then raise exception 'VALIDATION_FAILED: discrepancy outcome';end if;
-    select receipt_id,received_amount_minor,statement_amount_minor,variance_minor,statement_reference,reason into receipt_key,received,statement,variance,reference,reason from servos_v2.mpesa_discrepancies where id=discrepancy_key and business_id=business and status='OPEN' for update;
+    select d.receipt_id,d.received_amount_minor,d.statement_amount_minor,d.variance_minor,d.statement_reference,d.reason into receipt_key,received,statement,variance,reference,reason from servos_v2.mpesa_discrepancies d where d.id=discrepancy_key and d.business_id=business and d.status='OPEN' for update;
     if receipt_key is null then raise exception 'INVALID_STATE: open M-Pesa discrepancy not found';end if;
     update servos_v2.mpesa_discrepancies set status='RESOLVED',outcome=p->>'outcome',resolution=servos_v2.required_text(p,'resolution'),resolved_by=who,resolved_at=stamp where id=discrepancy_key and business_id=business and status='OPEN';
     return servos_v2.put_record('mpesaDiscrepancies',discrepancy_key,jsonb_build_object('id',discrepancy_key,'receiptId',receipt_key,'receivedAmountMinor',received,'statementAmountMinor',statement,'varianceMinor',variance,'statementReference',reference,'reason',reason,'status','RESOLVED','outcome',p->>'outcome','resolution',p->>'resolution'));
