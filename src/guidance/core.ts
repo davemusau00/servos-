@@ -7,6 +7,8 @@ export interface GuideStep {
   route?: { screen: string; resourceId?: string; tab?: string; action?: string };
   articleId?: string;
   successOperations?: string[];
+  /** Optional workspace tab to activate before this step is shown in web. */
+  webTab?: string;
 }
 
 export interface GuideDefinition {
@@ -25,10 +27,10 @@ export const CORE_GUIDE: GuideDefinition = {
   description: 'A short tour of your workspace and the tools that keep local operations moving.',
   permissions: ['help.view'],
   steps: [
-    { id: 'workspace', title: 'Your workspace', description: 'Your available workspaces are listed here. ServOS only shows areas your staff account can access.', target: 'navigation.home' },
-    { id: 'status', title: 'Local status', description: 'This status shows connectivity and queued changes. Sales and other enabled local operations continue when offline.', target: 'shell.status' },
-    { id: 'help', title: 'Help when you need it', description: 'Open searchable operating instructions and return to this tour from Help.', target: 'shell.help', articleId: 'getting-started' },
-    { id: 'staff', title: 'Staff session', description: 'Lock the terminal when handing it to another staff member. Each person signs in with their own PIN.', target: 'shell.lock', articleId: 'rbac' },
+    { id: 'workspace', title: 'Your workspace', description: 'Your available workspaces are listed here. ServOS only shows areas your staff account can access.', target: 'navigation.home', webTab: 'Home' },
+    { id: 'status', title: 'Local status', description: 'This status shows connectivity and queued changes. Sales and other enabled local operations continue when offline.', target: 'shell.status', webTab: 'Home' },
+    { id: 'help', title: 'Help when you need it', description: 'Open searchable operating instructions and return to this tour from Help.', target: 'shell.help', articleId: 'getting-started', webTab: 'Help' },
+    { id: 'staff', title: 'Staff session', description: 'Lock the terminal when handing it to another staff member. Each person signs in with their own PIN.', target: 'shell.lock', articleId: 'rbac', webTab: 'Home' },
   ],
 };
 
@@ -43,7 +45,11 @@ export const GUIDES: GuideDefinition[] = [CORE_GUIDE,
     { id: 'receive', title: 'Record a real delivery', description: 'Choose the supplier or an approved purchase order. Enter the reference, Storage Place, quantities and cost. Review and confirm only what arrived. This guide completes after that receipt commits.', interaction: 'practice', route: { screen: 'procurement', action: 'receive-delivery' }, target: 'stock.receive', articleId: '19-receiving', successOperations: ['purchaseOrder.receive', 'procurement.receiveDelivery'] },
   ] },
 ];
-export const GUIDE_ANCHORS = new Set(['navigation.home', 'shell.status', 'shell.help', 'shell.lock', 'quick-add.open', 'stock.receive', 'rooms.add', 'property.add']);
+export const GUIDE_ANCHORS = new Set([
+  'navigation.home', 'navigation.pos', 'navigation.inventory', 'navigation.procurement', 'navigation.help',
+  'shell.status', 'shell.help', 'shell.lock', 'quick-add.open', 'web.start', 'web.quick-add', 'web.help',
+  'pos.open-tab', 'pos.payment', 'pos.receipt-history', 'inventory.count', 'stock.receive', 'rooms.add', 'property.add',
+]);
 
 export function validateGuides(guides: GuideDefinition[], knownAnchors: ReadonlySet<string> = GUIDE_ANCHORS): string[] {
   const errors: string[] = [];
