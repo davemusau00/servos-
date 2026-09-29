@@ -2,7 +2,7 @@
 
 ## Safety boundary
 
-This runbook is for an **isolated, non-production staging project** only. It does not authorize a production migration or cutover. The installed production terminal currently uses SQLite plus the legacy Supabase uploader; it does not yet have the v2 desktop adapter. Never operate legacy and v2 business writers concurrently for the same business.
+This runbook is for an **isolated non-production Supabase project** only. It does not authorize a production migration or cutover. The installed production terminal currently uses SQLite plus the legacy Supabase uploader; it does not yet have the v2 desktop adapter. Never operate legacy and v2 business writers concurrently for the same business.
 
 Never point this rehearsal at the live business Supabase project or live terminal. Use synthetic records and dedicated test Auth users. Keep the production Vercel variables, Supabase project, local `.env.local`, and terminal database unchanged.
 

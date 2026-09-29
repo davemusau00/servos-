@@ -17,6 +17,28 @@ do $$declare session jsonb;page jsonb;failed boolean:=false;begin
  begin perform public.servos_v2_snapshot('','',null,session->>'policyVersion',1);exception when others then failed:=sqlerrm like '%SNAPSHOT_CHANGED%';end;
  if not failed then raise exception 'Snapshot ignored permission change';end if;
 end$$;
+
+-- Hosted lifecycle and guidance are authoritative, resumable, and isolated by actor.
+do $$declare session jsonb;progress jsonb;begin
+  update servos_v2.control set enabled=false,lifecycle_stage='INTAKE',setup_state='{}'::jsonb;
+  session:=public.servos_v2_web_lifecycle('intake.save',jsonb_build_object('profile',jsonb_build_object('tradingName','Hosted Test Business')));
+  if session->>'lifecycleStage'<>'SETUP' then raise exception 'Hosted intake did not enter setup';end if;
+  perform public.servos_v2_web_lifecycle('setup.complete',jsonb_build_object('step','business'));
+  perform public.servos_v2_web_lifecycle('setup.complete',jsonb_build_object('step','serviceAreas'));
+  perform public.servos_v2_web_lifecycle('setup.complete',jsonb_build_object('step','stockAreas'));
+  perform public.servos_v2_web_lifecycle('setup.complete',jsonb_build_object('step','catalog'));
+  perform public.servos_v2_web_lifecycle('setup.complete',jsonb_build_object('step','staff'));
+  session:=public.servos_v2_web_lifecycle('readiness.refresh','{}'::jsonb);
+  if session->>'lifecycleStage'<>'READY_FOR_GO_LIVE' then raise exception 'Hosted readiness did not become actionable';end if;
+  session:=public.servos_v2_web_lifecycle('go_live','{}'::jsonb);
+  if session->>'lifecycleStage'<>'LIVE' or session->>'enabled'<>'true' then raise exception 'Hosted Go Live failed';end if;
+  progress:=public.servos_v2_guidance_save(jsonb_build_object('guideId','servos.core','guideVersion',1,'state','IN_PROGRESS','currentStepId','status','completedStepIds',jsonb_build_array('start')));
+  if progress->>'currentStepId'<>'status' then raise exception 'Guidance progress was not saved';end if;
+  if jsonb_array_length(public.servos_v2_guidance_progress())<>1 then raise exception 'Guidance progress was not returned';end if;
+  perform set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000002',true);
+  if jsonb_array_length(public.servos_v2_guidance_progress())<>0 then raise exception 'Guidance leaked across actors';end if;
+  perform set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000001',true);
+end$$;
 set local role authenticated;
 do $$declare page jsonb;begin
  page:=public.servos_v2_snapshot();if jsonb_array_length(page->'records')<>2 then raise exception 'Snapshot leaked private employee';end if;
