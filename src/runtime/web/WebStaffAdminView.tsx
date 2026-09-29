@@ -5,7 +5,7 @@ type Device={id:string;name:string;class:string;ownerId:string;active:boolean;la
 const input='w-full rounded-lg border border-slate-600 bg-slate-950 p-2 text-white';
 const button='rounded-lg border border-slate-600 px-3 py-2 disabled:opacity-40';
 const roles=['Admin','Manager','Cashier','Server','Chef','Housekeeper','Accountant','Custom'];
-const permissions=['procurement.over_receive','order.discount','order.void','payment.reverse','till.override_variance','folio.reverse'];
+const permissions=['procurement.over_receive','order.discount','order.comp','order.void','payment.reverse','till.override_variance','folio.reverse','credit.write_off','credit.override_limit','mpesa.reconcile'];
 
 export function WebStaffAdminView({records,session,disabled,command,rpc,currentDeviceId}:{records:BusinessRecord[];session:WebSession;disabled:boolean;command:CommandFn;rpc:Rpc;currentDeviceId:string}){
  const [devices,setDevices]=useState<Device[]>([]);const [error,setError]=useState('');const [notice,setNotice]=useState('');

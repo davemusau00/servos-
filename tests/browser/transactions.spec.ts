@@ -20,9 +20,10 @@ test.describe('transactional browser with PostgreSQL',()=>{
    await new Promise(r=>setTimeout(r,1000));
   }
   if(!databaseReady)throw new Error('Disposable PostgreSQL did not accept SQL connections within 60 seconds.');
-  const files=['tests/supabase/bootstrap.sql',...['supabase/migrations','supabase/expansion'].flatMap(dir=>readdirSync(dir).filter(f=>f.endsWith('.sql')).sort().map(f=>`${dir}/${f}`))];
+   const files=['tests/supabase/bootstrap.sql',...['supabase/migrations','supabase/expansion'].flatMap(dir=>readdirSync(dir).filter(f=>f.endsWith('.sql')).sort().map(f=>`${dir}/${f}`)),'tests/supabase/financial-controls.sql'];
   sql(files.map(f=>readFileSync(f,'utf8')).join('\n'));
-  sql(`
+   sql(`
+   reset role;
    insert into servos_private.managers(user_id,role) values('00000000-0000-4000-8000-000000000001','owner'),('00000000-0000-4000-8000-000000000002','manager') on conflict(user_id) do update set role=excluded.role;
    insert into servos_v2.members values('00000000-0000-4000-8000-000000000001',true,array['*']),('00000000-0000-4000-8000-000000000002',true,array['*']) on conflict(user_id) do update set active=true,permissions=array['*'];
    insert into servos_v2.staff_profiles(auth_user_id,staff_id,name,role,created_by,updated_by) values
@@ -36,7 +37,7 @@ test.describe('transactional browser with PostgreSQL',()=>{
    select servos_v2.put_record('products','web-pos-soda','{"name":"Test Soda","code":"TESTSODA","priceMinor":1250,"category":"DRINKS","portions":[],"modifiers":[],"recipeIngredients":[],"outletIds":[]}');
    select servos_v2.put_record('paymentAccounts','web-pos-cash','{"name":"Cash","method":"CASH","accountCode":"CASH"}');
    update servos_v2.control set enabled=true;
-  `);
+   `);
  });
  test.afterAll(()=>{if(running)docker(['stop',container])});
  const bridge=async(page:Page)=>{
