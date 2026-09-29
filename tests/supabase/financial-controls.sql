@@ -54,7 +54,7 @@ end$$;
 set local role authenticated;
 select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000002',true);
 do $$declare failed boolean:=false;r jsonb;begin
-  select public.servos_v2_register_device('10000000-0000-4000-8000-000000000082','Restricted finance workstation','WEB');
+  perform public.servos_v2_register_device('10000000-0000-4000-8000-000000000082','Restricted finance workstation','WEB');
   begin perform pg_temp.financial_command('credit.write_off','customerCreditEntries','writeoff-denied','{"customerId":"customer-credit","amountMinor":1000,"reason":"Bad debt"}','10000000-0000-4000-8000-000000000082');exception when others then failed:=true;end;
   if not failed then raise exception 'Unauthorized write-off was accepted';end if;
 end$$;
