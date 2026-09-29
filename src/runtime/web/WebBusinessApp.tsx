@@ -84,7 +84,8 @@ export function WebBusinessApp({initialSession,rpc,onSignOut}:{initialSession:We
   try{
     if(!navigator.onLine){await store.current.saveDraft(crypto.randomUUID(),operation,payload);setNotice('Saved on this browser. It will be sent when you are back online.');await refresh();setEditor(null);return false}
    const baselines=records.map(({collection,id,version})=>({collection,id,version}));
-   for(const target of [collection,...(operation.startsWith('stay.')?['folios','stays']:[])])if(!baselines.some(r=>r.collection===target&&r.id===id))baselines.push({collection:target,id,version:0});
+    for(const target of [collection,...(operation.startsWith('stay.')?['folios','stays']:[])])if(!baselines.some(r=>r.collection===target&&r.id===id))baselines.push({collection:target,id,version:0});
+    for(const [target,targetId] of [['folios',String(payload.folioId||'')],['tables',String(payload.sourceTableId||'')],['tables',String(payload.targetTableId||'')],['orders',String(payload.targetOrderId||'')]] as Array<[string,string]>)if(targetId&&!baselines.some(r=>r.collection===target&&r.id===targetId)){const record=records.find(row=>row.collection===target&&row.id===targetId);baselines.push({collection:target,id:targetId,version:record?.version||0})}
     const command=await store.current.enqueue(operation,payload,baselines);setEditor(null);setNotice('Saved on this browser; waiting to sync.');await refresh();
    try{await syncRef.current()}catch(e){setError(`${String(e)}. The queued command is retained for retry.`);return false}
    const result=(await store.current.queue()).find(q=>q.id===command.id)?.result;
