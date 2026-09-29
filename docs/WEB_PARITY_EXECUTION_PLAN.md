@@ -662,4 +662,4 @@ This plan does not require:
 - [Current release state](CURRENT_RELEASE_STATE.md)
 - [Completion ledger](COMPLETION_LEDGER.md)
 - [Test evidence](TEST_EVIDENCE.md)
-- [Guidance System specification](../ServOS Guidance System.md)
+- Guidance System specification: `C:\Users\Admin\Downloads\servos\ServOS Guidance System.md`
