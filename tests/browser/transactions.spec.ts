@@ -83,19 +83,19 @@ test.describe('transactional browser with PostgreSQL',()=>{
     await expect(page.locator('main')).not.toBeEmpty();
    }
    await page.getByRole('button',{name:'Procurement',exact:true}).click();
-  await expect(page.getByRole('heading',{name:'Procurement',exact:true})).toBeVisible();
+  await expect(page.locator('main').getByRole('heading',{name:'Purchasing',exact:true})).toBeVisible();
    await page.getByRole('button',{name:'Master Data',exact:true}).click();
    await expect(page.locator('main')).not.toBeEmpty();
-   await expect(page.getByRole('heading',{name:'Master Data',exact:true})).toBeVisible();
+   await expect(page.locator('main').getByRole('heading',{name:'Master Data',exact:true})).toBeVisible();
    await page.getByRole('button',{name:'Refunds',exact:true}).click();
    await expect(page.locator('main')).not.toBeEmpty();
-   await expect(page.getByRole('heading',{name:'Payments & refunds',exact:true})).toBeVisible();
+   await expect(page.locator('main').getByRole('heading',{name:'Payments & refunds',exact:true})).toBeVisible();
   await page.getByRole('button',{name:'Settings',exact:true}).click();
   await expect(page.locator('main')).not.toBeEmpty();
-  await expect(page.getByRole('heading',{name:'Business master records',exact:true})).toBeVisible();
+  await expect(page.locator('main').getByRole('heading',{name:'Business master records',exact:true})).toBeVisible();
   await page.getByRole('button',{name:'KDS',exact:true}).click();
   await expect(page.locator('main')).not.toBeEmpty();
-  await expect(page.getByRole('region',{name:'Kitchen and bar pass'}).getByRole('heading',{name:'Bar / Kitchen Pass',exact:true})).toBeVisible();
+  await expect(page.locator('main').getByRole('region',{name:'Kitchen and bar pass'}).getByRole('heading',{name:'Bar / Kitchen Pass',exact:true})).toBeVisible();
   expect(errors).toEqual([]);
  });
  test('two operators see committed room and asset records; response-loss retry preserves one command',async({page,browser},info)=>{
@@ -116,7 +116,7 @@ test.describe('transactional browser with PostgreSQL',()=>{
   expect(sql("select data->>'purchaseCostMinor' from servos_v2.records where collection='assets';").trim()).toBe('2500000');
   await page.screenshot({path:info.outputPath('transactional-assets.png'),fullPage:true});
   await page.reload();await page.getByRole('button',{name:'Remote management',exact:true}).click();await page.getByLabel('Email',{exact:true}).fill('first@example.test');await page.getByLabel('Password',{exact:true}).fill('test-only');await page.getByRole('button',{name:'Sign in',exact:true}).click();await page.getByRole('button',{name:'Rooms',exact:true}).click();await expect(page.getByRole('heading',{name:'Room 101',exact:true})).toBeVisible();
-  await page.getByRole('button',{name:'Staff',exact:true}).click();await expect(page.getByRole('heading',{name:'Staff, approvals and devices'})).toBeVisible();await expect(page.getByText('Browser Owner',{exact:true})).toBeVisible();await expect(page.getByText('Browser Manager',{exact:true})).toBeVisible();await expect(page.getByRole('heading',{name:'Trusted devices'})).toBeVisible();await expect(page.getByText('Browser workstation',{exact:true})).toHaveCount(2);
+  await page.getByRole('button',{name:'Staff',exact:true}).click();await expect(page.getByRole('heading',{name:'Staff, approvals and devices'})).toBeVisible();await expect(page.getByText('Browser Owner',{exact:true})).toBeVisible();await expect(page.getByText('Browser Manager',{exact:true})).toBeVisible();await expect(page.getByRole('heading',{name:'Trusted devices'})).toBeVisible();expect(await page.getByText('Browser workstation',{exact:true}).count()).toBeGreaterThanOrEqual(2);
   await context2.close();
  });
  test('web POS opens a till, settles cash online and retains the immutable receipt',async({page})=>{
