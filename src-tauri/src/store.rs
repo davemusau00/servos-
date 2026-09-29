@@ -321,6 +321,7 @@ pub fn initialize_from_intake(
         "id":"property","organizationId":"business","name":business,"code":"MAIN",
         "currency":"KES","timezone":"Africa/Nairobi","kraPin":kra_pin,"etimsCuNumber":"",
         "phone":phone,"email":email,"address":address,
+        "roomStayRoomTypeId":null,"roomStayRatePlanId":null,"nightlyCheckoutTime":"10:00","dayStayCutoffTime":"18:00",
         "taxConfigured":false,"pricesIncludeTax":true,"vatRatePct":0,"levyRatePct":0,"receiptFooter":""
     }),&mut changes)?;
     put(&tx,"employees",&admin_id,json!({
@@ -840,6 +841,17 @@ fn room_nightly_units(start:chrono::DateTime<Utc>,end:chrono::DateTime<Utc>)->i6
     let local_end=(end+Duration::hours(3)).date_naive();
     (local_end-local_start).num_days()
 }
+fn room_stay_policy(property:&Value)->Result<(String,String)>{
+    let checkout=property["nightlyCheckoutTime"].as_str().unwrap_or("10:00").to_string();
+    let cutoff=property["dayStayCutoffTime"].as_str().unwrap_or("18:00").to_string();
+    if parse_clock(&checkout).is_none()||parse_clock(&cutoff).is_none(){return Err("VALIDATION_FAILED: room stay policy times".into());}
+    Ok((checkout,cutoff))
+}
+fn room_local_minutes(value:chrono::DateTime<Utc>)->i32{
+    let local=value+Duration::hours(3);
+    (local.hour() as i32)*60+local.minute() as i32
+}
+fn room_local_date(value:chrono::DateTime<Utc>)->chrono::NaiveDate{(value+Duration::hours(3)).date_naive()}
 fn room_validate_interval(start:chrono::DateTime<Utc>,end:chrono::DateTime<Utc>)->Result<()>{
     if end<=start{return Err("VALIDATION_FAILED: stay interval".into());}
     if end-start>Duration::days(366){return Err("VALIDATION_FAILED: stay cannot exceed 366 days".into());}
@@ -1769,9 +1781,10 @@ fn room_execute(tx:&Transaction,user:&Session,cmd:&BusinessCommand,changes:&mut 
                 }
                 room_expect_version(current.as_ref(),cmd.target_version)?;
                 let room_id=text(p,"roomId")?.to_string();
-                let rate_id=text(p,"ratePlanId")?.to_string();
                 let customer_id=text(p,"customerId")?.to_string();
                 let (_,room)=get(tx,"rooms",&room_id)?;
+                let (_,property)=get(tx,"property","property")?;
+                let rate_id=property["roomStayRatePlanId"].as_str().map(str::to_string).or_else(||p.get("ratePlanId").and_then(Value::as_str).map(str::to_string)).ok_or("Configure the room stay rate in Settings")?;
                 let (_,rate)=get(tx,"ratePlans",&rate_id)?;
                 get(tx,"customers",&customer_id)?;
                 if rate["roomTypeId"]!=room["roomTypeId"]{return Err("VALIDATION_FAILED: rate plan does not match room type".into());}
@@ -1781,18 +1794,22 @@ fn room_execute(tx:&Transaction,user:&Session,cmd:&BusinessCommand,changes:&mut 
                 let start=room_parse_time(text(p,"startsAt")?)?;
                 let end=room_parse_time(text(p,"endsAt")?)?;
                 room_validate_interval(start,end)?;
-                let mode=rate["mode"].as_str().unwrap_or("NIGHTLY");
-                let units=if mode=="DAY_USE"{
-                    let duration=rate["durationMinutes"].as_i64().unwrap_or(0);
-                    if duration<1||duration>1440||(end-start).num_minutes()!=duration{return Err("VALIDATION_FAILED: day-use duration must match rate".into());}
-                    1
-                }else{
-                    let units=room_nightly_units(start,end);
-                    if units<1||units>366{return Err("VALIDATION_FAILED: nightly arrival/departure dates".into());}
-                    let minimum=rate["minNights"].as_i64().unwrap_or(1);
-                    let maximum=rate["maxNights"].as_i64().unwrap_or(366);
-                    if units<minimum||units>maximum{return Err("VALIDATION_FAILED: stay length is outside the selected rate plan".into());}
-                    units
+                let (checkout,cutoff)=room_stay_policy(&property)?;
+                let stay_type=p.get("stayType").and_then(Value::as_str).unwrap_or("NIGHTLY");
+                if rate["mode"].as_str()==Some("DAY_USE"){return Err("VALIDATION_FAILED: configure the room stay rate as NIGHTLY".into());}
+                let checkout_minutes=parse_clock(&checkout).unwrap();let cutoff_minutes=parse_clock(&cutoff).unwrap();
+                let units=match stay_type{
+                    "DAY"=>{
+                        if room_local_date(start)!=room_local_date(end)||room_local_minutes(end)>cutoff_minutes{return Err("VALIDATION_FAILED: day stay must end by the configured cutoff".into());}
+                        1
+                    },
+                    "NIGHTLY"=>{
+                        if room_local_minutes(end)!=checkout_minutes{return Err(format!("VALIDATION_FAILED: nightly departure must be at {checkout}"));}
+                        let units=room_nightly_units(start,end);
+                        if units<1||units>366{return Err("VALIDATION_FAILED: nightly arrival/departure dates".into());}
+                        units
+                    },
+                    _=>return Err("VALIDATION_FAILED: stay type must be NIGHTLY or DAY".into())
                 };
                 let turnaround=room["turnaroundMinutes"].as_i64().unwrap_or(0);
                 if !(0..=1440).contains(&turnaround){return Err("VALIDATION_FAILED: room turnaround".into());}
@@ -1805,7 +1822,7 @@ fn room_execute(tx:&Transaction,user:&Session,cmd:&BusinessCommand,changes:&mut 
                 let stamp=now();
                 let created=current.as_ref().and_then(|(_,d,_)|d["createdAt"].as_str()).unwrap_or(&stamp).to_string();
                 put(tx,"roomReservations",&key,json!({
-                    "id":key,"roomId":room_id,"ratePlanId":rate_id,"customerId":customer_id,"guests":guests,
+                    "id":key,"roomId":room_id,"ratePlanId":rate_id,"stayType":stay_type,"customerId":customer_id,"guests":guests,
                     "startsAt":start.to_rfc3339(),"occupancyStartsAt":start.to_rfc3339(),"endsAt":end.to_rfc3339(),
                     "blockedUntil":blocked_until.to_rfc3339(),"turnaroundMinutes":turnaround,
                     "status":"RESERVED","rateSnapshot":rate,"units":units,"quotedAmountMinor":price*units,
@@ -1899,18 +1916,14 @@ fn room_execute(tx:&Transaction,user:&Session,cmd:&BusinessCommand,changes:&mut 
                 let tax=data.get("taxBasisPoints").and_then(Value::as_i64).unwrap_or(0);
                 if !(0..=10000).contains(&tax){return Err("VALIDATION_FAILED: rate tax".into());}
                 let mode=data.get("mode").and_then(Value::as_str).unwrap_or("NIGHTLY");
-                if !["NIGHTLY","DAY_USE"].contains(&mode){return Err("VALIDATION_FAILED: rate mode".into());}
-                if mode=="DAY_USE"{
-                    let duration=data.get("durationMinutes").and_then(Value::as_i64).unwrap_or(0);
-                    if !(1..=1440).contains(&duration){return Err("VALIDATION_FAILED: day-use duration".into());}
-                }
+                if mode!="NIGHTLY"{return Err("VALIDATION_FAILED: room stay rates must be NIGHTLY".into());}
                 let min_nights=data.get("minNights").and_then(Value::as_i64).unwrap_or(1);
                 let max_nights=data.get("maxNights").and_then(Value::as_i64).unwrap_or(366);
                 if min_nights<1||max_nights<min_nights||max_nights>366{return Err("VALIDATION_FAILED: rate stay limits".into());}
                 let mut next=current.as_ref().map(|(_,v,_)|v.clone()).unwrap_or_else(||json!({"createdAt":now()}));
                 next["name"]=json!(name);next["roomTypeId"]=json!(room_type);next["mode"]=json!(mode);
                 next["priceMinor"]=json!(price);next["currency"]=json!("KES");next["taxBasisPoints"]=json!(tax);
-                next["durationMinutes"]=data.get("durationMinutes").cloned().unwrap_or(Value::Null);
+                next["durationMinutes"]=Value::Null;
                 next["mealPlan"]=data.get("mealPlan").cloned().unwrap_or_else(||json!("ROOM_ONLY"));
                 next["minNights"]=json!(min_nights);next["maxNights"]=json!(max_nights);
                 let notes=data.get("notes").cloned().or_else(||next.get("notes").cloned()).unwrap_or(json!(""));
