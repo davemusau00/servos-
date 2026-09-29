@@ -137,7 +137,7 @@ export const RemoteManagerApp = ({ onBack }: { onBack: () => void }) => {
       const next: Auth = await res.json();
       if(webV2Enabled){
         const sessionResponse=await fetch(`${url}/rest/v1/rpc/servos_v2_session`,{method:'POST',headers:{apikey:key,Authorization:`Bearer ${next.access_token}`,'Content-Type':'application/json'},body:'{}'});
-        if(sessionResponse.ok){const session:WebSession=await sessionResponse.json();if(session.enabled){setCloudSession(session);setPassword('');saveAuth(next);return}}
+        if(sessionResponse.ok){const session:WebSession=await sessionResponse.json();if(session.enabled||session.lifecycleStage&&session.lifecycleStage!=='LIVE'){setCloudSession(session);setPassword('');saveAuth(next);return}}
         else if(sessionResponse.status!==404)throw new Error('Business membership could not be verified. Sign-in was not completed.');
       }
       const check = await fetch(`${url}/rest/v1/rpc/servos_is_manager`, { method: 'POST', headers: { apikey: key, Authorization: `Bearer ${next.access_token}`, 'Content-Type': 'application/json' }, body: '{}' });
@@ -155,6 +155,7 @@ export const RemoteManagerApp = ({ onBack }: { onBack: () => void }) => {
   </form></div>;
 
   if(cloudSession?.enabled)return <WebBusinessApp initialSession={cloudSession} rpc={request} onSignOut={()=>void signOut()}/>;
+  if(cloudSession?.lifecycleStage&&cloudSession.lifecycleStage!=='LIVE')return <WebBusinessApp initialSession={cloudSession} rpc={request} onSignOut={()=>void signOut()}/>;
 
   return <div className="min-h-screen bg-slate-950 text-slate-100">
     <header className="sticky top-0 z-20 border-b border-slate-800 bg-slate-950/95 px-4 py-4 backdrop-blur sm:px-6"><div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-3"><div><div className="text-[10px] font-black uppercase tracking-[0.24em] text-amber-400">ServOS Remote</div><h1 className="text-xl font-black">Business control</h1></div><div className="flex items-center gap-2"><button className={button} disabled={refreshing} onClick={() => void refresh()}><RefreshCw className={`mr-1 inline h-4 w-4 ${refreshing?'animate-spin':''}`}/>Refresh</button><button className={button} disabled={busy} onClick={() => void signOut()}>Sign out</button></div></div></header>

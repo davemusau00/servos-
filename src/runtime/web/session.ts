@@ -1,7 +1,14 @@
 import { BusinessStore } from './BusinessStore';
 import type { RecordVersion } from '../../types/transactions';
 
-export interface WebSession {businessId:string;actorId:string;enabled:boolean;permissions:string[];policyVersion:string}
+export type WebLifecycleStage='INTAKE'|'SETUP'|'READY_FOR_GO_LIVE'|'LIVE';
+export interface WebReadinessCheck {id:string;label:string;complete:boolean}
+export interface WebSession {
+ businessId:string;actorId:string;enabled:boolean;permissions:string[];policyVersion:string;
+ lifecycleStage?:WebLifecycleStage;intakeProfile?:Record<string,unknown>;setupState?:Record<string,unknown>;
+ readiness?:{ready:boolean;checks:WebReadinessCheck[]};
+}
+export interface WebGuidanceProgress {guideId:string;guideVersion:number;state:'IN_PROGRESS'|'COMPLETED'|'DISMISSED';currentStepId:string|null;completedStepIds:string[];updatedAt?:string}
 export type BusinessRecord=RecordVersion & {data:Record<string,unknown>;archived:boolean};
 export type Rpc=(path:string,body?:unknown)=>Promise<any>;
 interface SnapshotPage {cursor:number;policyVersion:string;records:BusinessRecord[];hasMore:boolean;afterCollection:string;afterId:string}

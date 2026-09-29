@@ -2,7 +2,7 @@ import React,{useEffect,useRef,useState} from 'react';
 import {Activity,BedDouble,Boxes,CheckCircle2,ChevronRight,ClipboardCheck,CreditCard,HelpCircle,Home,LockKeyhole,Martini,PackageSearch,RefreshCw,Settings,ShieldCheck,Truck,Users,Wifi,WifiOff} from 'lucide-react';
 import {BusinessStore,type QueuedCommand} from './BusinessStore';
 import {startAutomaticSync,synchronizeStore} from './sync';
-import {allowed,loadAuthorizedSnapshot,openWebDevice,type BusinessRecord,type Rpc,type WebSession} from './session';
+import {allowed,loadAuthorizedSnapshot,openWebDevice,type BusinessRecord,type Rpc,type WebGuidanceProgress,type WebSession} from './session';
 
 import {WebCatalogView,WebInventoryView} from './WebCatalogInventory';
 import {WebProcurementView} from './WebProcurementView';
@@ -13,6 +13,7 @@ import {WebKDSView} from './WebKDSView';
 import {WebRefundsView} from './WebRefundsView';
 import {WebMasterDataView} from './WebMasterDataView';
 import {WebGuidedTour,WebHelpView,WebStartHere} from './WebGuidanceViews';
+import {WebLifecycleView,WebStaffWelcome} from './WebLifecycleViews';
 type Values=Record<string,string>;
 type Field={key:string;label:string;type?:'text'|'number'|'money'|'datetime-local'|'select';options?:Array<{value:string;label:string}>;value?:string;optional?:boolean};
 type Editor={title:string;operation:string;collection:string;id:string;fields:Field[];payload:(values:Values)=>Record<string,unknown>};
@@ -38,31 +39,39 @@ const tabDescriptions:Record<WorkspaceTab,string>={
 export function WebBusinessApp({initialSession,rpc,onSignOut}:{initialSession:WebSession;rpc:Rpc;onSignOut:()=>void}){
  const [session,setSession]=useState(initialSession);const [records,setRecords]=useState<BusinessRecord[]>([]);const [queue,setQueue]=useState<QueuedCommand[]>([]);
  const [drafts,setDrafts]=useState<Array<{id:string;operation:string;payload:Record<string,unknown>;updatedAt:string}>>([]);
- const [tab,setTab]=useState<WorkspaceTab>('POS');const [helpQuery,setHelpQuery]=useState('');const [error,setError]=useState('');const [notice,setNotice]=useState('');const [ready,setReady]=useState(false);const [busy,setBusy]=useState(false);const [tourOpen,setTourOpen]=useState(false);
+ const [tab,setTab]=useState<WorkspaceTab>('Home');const [helpQuery,setHelpQuery]=useState('');const [error,setError]=useState('');const [notice,setNotice]=useState('');const [ready,setReady]=useState(false);const [busy,setBusy]=useState(false);const [tourOpen,setTourOpen]=useState(false);const [guidance,setGuidance]=useState<WebGuidanceProgress[]>([]);const [lifecycleRefresh,setLifecycleRefresh]=useState(0);
  const [editor,setEditor]=useState<Editor|null>(null);const [values,setValues]=useState<Values>({});
  const store=useRef<BusinessStore|null>(null);const rpcRef=useRef(rpc);rpcRef.current=rpc;const sessionRef=useRef(session);sessionRef.current=session;
  const syncRef=useRef<()=>Promise<void>>(async()=>{});
  const refresh=async()=>{if(!store.current)return;const [r,q,d]=await Promise.all([store.current.records(),store.current.queue(),store.current.drafts()]);setRecords(r);setQueue(q);setDrafts(d)};
- useEffect(()=>{
+  useEffect(()=>{
   let stopped=false;let needsSnapshot=true;let automatic:ReturnType<typeof startAutomaticSync>|undefined;let opened:BusinessStore|undefined;
   const run=async()=>{
-   if(!opened||stopped)return;
-   let latest:WebSession;try{latest=await rpcRef.current('rpc/servos_v2_session',{})}catch(error){if([401,403].includes((error as {status?:number}).status||0)){setReady(false);setRecords([])}throw error}
-   if(!latest.enabled||latest.businessId!==initialSession.businessId||latest.actorId!==initialSession.actorId){setReady(false);setRecords([]);throw new Error('This workspace is no longer enabled for this session. Sign in again.')}
+    let latest:WebSession;try{latest=await rpcRef.current('rpc/servos_v2_session',{})}catch(error){if([401,403].includes((error as {status?:number}).status||0)){setReady(false);setRecords([])}throw error}
+    if(latest.businessId!==initialSession.businessId||latest.actorId!==initialSession.actorId){setReady(false);setRecords([]);throw new Error('This workspace is no longer enabled for this session. Sign in again.')}
+    sessionRef.current=latest;if(!stopped)setSession(latest);
+    if(latest.lifecycleStage&&latest.lifecycleStage!=='LIVE'){
+      setReady(false);setRecords([]);return;
+    }
+    if(!latest.enabled){setReady(false);setRecords([]);throw new Error('This workspace is not enabled for this session. Sign in again.')}
+    if(!opened||stopped)return;
    if(needsSnapshot||latest.policyVersion!==await opened.policyVersion()){
     setReady(false);setRecords([]);await navigator.locks.request(`servos-v2-sync:${opened.scope}:${opened.deviceId}:${opened.actorId}`,()=>loadAuthorizedSnapshot(opened!,rpcRef.current,latest));needsSnapshot=false;
    }
-   sessionRef.current=latest;if(!stopped)setSession(latest);
    await synchronizeStore(opened,{execute:command=>rpcRef.current('rpc/servos_v2_execute',{command}),pull:cursor=>rpcRef.current('rpc/servos_v2_pull',{after_sequence:cursor,page_size:100})});
    if(!stopped){await refresh();setReady(true);setError('')}
   };
   syncRef.current=run;
   void(async()=>{try{
+   const latest=await rpcRef.current('rpc/servos_v2_session',{}) as WebSession;
+   if(latest.lifecycleStage&&latest.lifecycleStage!=='LIVE'){await run();return}
    opened=await openWebDevice(initialSession,rpcRef.current);if(stopped){opened.close();return}store.current=opened;
    automatic=startAutomaticSync(run,e=>{if(!stopped){setError(String(e));if((e as {status?:number}).status===403){setReady(false);setRecords([])}}});
   }catch(e){if(!stopped)setError(String(e))}})();
   return()=>{stopped=true;automatic?.stop();opened?.close();store.current=null};
- },[initialSession.businessId,initialSession.actorId]);
+ },[initialSession.businessId,initialSession.actorId,lifecycleRefresh]);
+ useEffect(()=>{let active=true;void rpcRef.current('rpc/servos_v2_guidance_progress',{}).then(rows=>{if(active)setGuidance(Array.isArray(rows)?rows:[])}).catch(()=>undefined);return()=>{active=false}},[session.businessId,session.actorId]);
+ const saveGuidance=async(next:WebGuidanceProgress)=>{setGuidance(rows=>[next,...rows.filter(row=>row.guideId!==next.guideId)]);try{const saved=await rpcRef.current('rpc/servos_v2_guidance_save',{progress:next});setGuidance(rows=>[saved,...rows.filter(row=>row.guideId!==saved.guideId)])}catch{ /* local progress keeps the tour usable during an outage */ }};
  const active=(collection:string)=>records.filter(r=>r.collection===collection&&!r.archived);
  const find=(collection:string,id:string)=>records.find(r=>r.collection===collection&&r.id===id);
  const choices=(collection:string)=>active(collection).map(r=>({value:r.id,label:label(r)}));
@@ -100,10 +109,10 @@ export function WebBusinessApp({initialSession,rpc,onSignOut}:{initialSession:We
   <div className="flex min-w-0 flex-1 flex-col"><header className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-slate-800 bg-slate-900 px-4 py-3 sm:px-6"><div className="min-w-0"><div className="text-[10px] font-black uppercase tracking-[.2em] text-amber-400 md:hidden">SERVOS WEB</div><h1 className="truncate text-lg font-bold sm:text-xl">{tab==='Home'?'Start here':tab==='Help'?'Help':tab==='POS'?'Point of Sale':tab==='KDS'?'Bar / Kitchen Pass':tab==='Inventory'?'Stock':tab==='Procurement'?'Purchasing':tab==='Rooms'?'Rooms and stays':tab==='Assets'?'Property assets':tab==='Finance'?'Finance and close day':tab==='Staff'?'Staff and devices':tab}</h1><div data-guide-anchor="web.status" className="mt-1 flex items-center gap-2 text-xs text-slate-400"><span className={`inline-flex h-2 w-2 rounded-full ${navigator.onLine?'bg-emerald-400':'bg-amber-400'}`}/>{navigator.onLine?'Online':'Offline · saved changes only'}<span className="text-slate-700">·</span><span>{headerStatus}</span></div></div><div className="flex items-center gap-2"><button data-guide-anchor="web.sync" aria-label="Synchronize" disabled={!ready||busy} className={button} onClick={()=>void syncRef.current().catch(e=>setError(String(e)))}><RefreshCw className={`h-4 w-4 ${busy?'animate-spin':''}`}/><span className="hidden sm:inline">Synchronize</span></button>{canSeeTab(session,'Help')&&<button data-guide-anchor="web.help-button" aria-label="Open Help" className={button} onClick={()=>setTab('Help')}><HelpCircle className="h-4 w-4"/><span className="hidden sm:inline">Help</span></button>}<button className={button} onClick={onSignOut}>Sign out</button></div></header>
    {renderNavigation(true)}<main className="min-h-0 flex-1 overflow-auto"><div className="mx-auto max-w-[1700px] p-4 sm:p-6"><div className="mb-5 flex flex-wrap items-end justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-[.16em] text-amber-300">{tab==='POS'?'OPERATIONS':'BUSINESS WORKSPACE'}</p><p className="mt-1 max-w-3xl text-sm text-slate-400">{tabDescriptions[tab]}</p></div>{pending&&<span className="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs font-semibold text-amber-200"><Activity className="h-3.5 w-3.5"/>{pendingCount} pending</span>}</div>
   {error&&<p role="alert" className="mb-4 rounded-xl border border-rose-800 bg-rose-950/60 p-3 text-sm text-rose-200"><WifiOff className="mr-2 inline h-4 w-4"/>{error}</p>}{notice&&<p role="status" className="mb-4 rounded-xl border border-emerald-800 bg-emerald-950/30 p-3 text-sm text-emerald-200"><CheckCircle2 className="mr-2 inline h-4 w-4"/>{notice}</p>}
-  {!ready&&<section className="rounded-2xl border border-slate-800 bg-slate-900 p-6"><div className="flex items-start gap-3"><Wifi className="mt-1 h-5 w-5 text-amber-300"/><div><h2 className="font-bold">Preparing your workspace</h2><p className="mt-1 text-sm text-slate-400">Online sign-in, device registration, and an authorized business snapshot are required before operations can begin.</p></div></div></section>}
+  {session.lifecycleStage&&session.lifecycleStage!=='LIVE'?<WebLifecycleView session={session} rpc={rpcRef.current} onUpdated={next=>{setSession(next);setLifecycleRefresh(value=>value+1)}}/>:<>{ready&&<WebStaffWelcome session={session} onDismiss={()=>undefined} onStartTour={()=>setTourOpen(true)}/>} {!ready&&<section className="rounded-2xl border border-slate-800 bg-slate-900 p-6"><div className="flex items-start gap-3"><Wifi className="mt-1 h-5 w-5 text-amber-300"/><div><h2 className="font-bold">Preparing your workspace</h2><p className="mt-1 text-sm text-slate-400">Online sign-in, device registration, and an authorized business snapshot are required before operations can begin.</p></div></div></section>}</>}
   <div className="rounded-2xl border border-slate-800 bg-slate-900/30 p-4 shadow-xl shadow-black/10 sm:p-5">
   {ready&&tab==='Home'&&<WebStartHere permissions={session.permissions} onNavigate={next=>setTab(next as WorkspaceTab)} onQuickAdd={quickAdd} onOpenHelp={query=>{setHelpQuery(query||'');setTab('Help')}} onStartTour={()=>setTourOpen(true)}/>}
-  {ready&&tab==='Help'&&<WebHelpView initialQuery={helpQuery} onStartTour={()=>setTourOpen(true)}/>}
+  {ready&&tab==='Help'&&<WebHelpView initialQuery={helpQuery} progress={guidance} onStartTour={()=>setTourOpen(true)} onRestartGuide={guideId=>void saveGuidance({guideId,guideVersion:1,state:'IN_PROGRESS',currentStepId:null,completedStepIds:[]})}/>}
   {ready&&tab==='POS'&&<WebPosView records={records} session={session} disabled={disabled} command={submit}/>}
   {ready&&tab==='KDS'&&<WebKDSView records={records} session={session} disabled={disabled} command={submit}/>}
   {ready&&tab==='Catalog'&&<WebCatalogView records={records} session={session} disabled={disabled} command={submit}/>}
@@ -125,5 +134,5 @@ export function WebBusinessApp({initialSession,rpc,onSignOut}:{initialSession:We
   {editor&&<div className="fixed inset-0 z-50 overflow-y-auto bg-black/75 p-4"><form role="dialog" aria-modal="true" aria-label={editor.title} className="mx-auto my-5 max-w-xl space-y-4 rounded-xl border border-slate-600 bg-slate-900 p-5" onSubmit={e=>{e.preventDefault();try{void submit(editor.operation,editor.collection,editor.id,editor.payload(values))}catch(error){setError(String(error))}}}><h2 className="text-xl font-bold">{editor.title}</h2>{editor.fields.length===0&&<p>Review the details, then choose Confirm. Your access and the latest business information are checked before saving.</p>}{editor.fields.map(f=><label key={f.key} className="block">{f.label}{f.type==='select'?<select required={!f.optional} className={input} value={values[f.key]||''} onChange={e=>setValues(v=>({...v,[f.key]:e.target.value}))}><option value="">Select…</option>{f.options?.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</select>:<input required={!f.optional} className={input} type={f.type==='money'?'number':f.type||'text'} min={f.type==='number'||f.type==='money'?0:undefined} step={f.type==='money'?'0.01':f.type==='number'?'1':undefined} value={values[f.key]||''} onChange={e=>setValues(v=>({...v,[f.key]:e.target.value}))}/>}</label>)}<div className="flex gap-2"><button disabled={busy} className={`${button} bg-amber-400 text-slate-950`}>Confirm</button><button type="button" className={button} onClick={()=>setEditor(null)}>Cancel</button></div></form></div>}
   {ready&&tab==='Master Data'&&<WebMasterDataView records={records} session={session} disabled={disabled} command={submit}/>}
   {ready&&tab==='Refunds'&&<WebRefundsView records={records} session={session} disabled={disabled} command={submit}/>}
-   </div></div></main></div>{tourOpen&&<WebGuidedTour onClose={()=>setTourOpen(false)}/>}</div>;
+   </div></div></main></div>{tourOpen&&<WebGuidedTour progress={guidance.find(row=>row.guideId==='servos.core')} onProgress={saveGuidance} onClose={()=>setTourOpen(false)}/>}</div>;
 }
