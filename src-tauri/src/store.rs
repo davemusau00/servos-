@@ -2558,6 +2558,24 @@ pub fn execute_as(db: &mut Connection, user: &Session, cmd: BusinessCommand) -> 
             put(&tx,"organization","business",organization,&mut changes)?;
             put(&tx,"property","property",property,&mut changes)?;
         }
+        "roomStay.settings" => {
+            authorize(&tx,user,"business.configure",p,None)?;
+            let (property_version,mut property)=get(&tx,"property","property")?;
+            if p["propertyVersion"].as_i64()!=Some(property_version){return Err("CONFLICT: Room stay settings changed; reopen Settings".into());}
+            let room_type=text(p,"roomTypeId")?;let rate_id=text(p,"ratePlanId")?;
+            get(&tx,"roomTypes",room_type)?;
+            let (_,rate)=get(&tx,"ratePlans",rate_id)?;
+            if rate["roomTypeId"].as_str()!=Some(room_type){return Err("VALIDATION_FAILED: configured rate must match configured room type".into());}
+            if rate["mode"].as_str()!=Some("NIGHTLY"){return Err("VALIDATION_FAILED: configured room stay rate must be NIGHTLY".into());}
+            let checkout=text(p,"nightlyCheckoutTime")?;let cutoff=text(p,"dayStayCutoffTime")?;
+            let checkout_minutes=parse_clock(checkout).ok_or("VALIDATION_FAILED: nightly checkout time")?;
+            let cutoff_minutes=parse_clock(cutoff).ok_or("VALIDATION_FAILED: day stay cutoff time")?;
+            if checkout_minutes>=cutoff_minutes{return Err("VALIDATION_FAILED: nightly checkout must be before day stay cutoff".into());}
+            property["roomStayRoomTypeId"]=json!(room_type);property["roomStayRatePlanId"]=json!(rate_id);
+            property["nightlyCheckoutTime"]=json!(checkout);property["dayStayCutoffTime"]=json!(cutoff);
+            property["updatedAt"]=json!(now());
+            put(&tx,"property","property",property,&mut changes)?;
+        }
         "record.save" | "record.archive" => {
             let collection = text(p, "collection")?;
             if !MASTER.contains(&collection) {
