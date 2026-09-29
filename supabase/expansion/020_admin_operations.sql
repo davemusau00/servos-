@@ -9,7 +9,7 @@ begin
  if op='admin.import.stage' then
    perform servos_v2.require_permission('data.import.stage');
    if length(coalesce(p->>'csvText',''))<1 or length(p->>'csvText')>10000000 then raise exception 'VALIDATION_FAILED: import file size';end if;
-   key:=coalesce(nullif(p->>'id',''),'import-'||command->>'id');row_count:=greatest(0,array_length(regexp_split_to_array(p->>'csvText',E'\r?\n'),1)-1);hash:=md5(p->>'csvText');
+   key:=coalesce(nullif(p->>'id',''),'import-'||(command->>'id'));row_count:=greatest(0,array_length(regexp_split_to_array(p->>'csvText',E'\r?\n'),1)-1);hash:=md5(p->>'csvText');
    changes:=changes||servos_v2.put_record('importBatches',key,jsonb_build_object('id',key,'fileName',servos_v2.required_text(p,'fileName'),'templateKey',servos_v2.required_text(p,'templateKey'),'status','STAGED','rowCount',row_count,'sourceHash',hash,'stagedBy',who,'stagedAt',now(),'validation','PENDING_SERVER_REVIEW'));
    return changes;
  elsif op='admin.import.apply' then
@@ -21,7 +21,7 @@ begin
    if jsonb_typeof(payload) is distinct from 'object' then raise exception 'VALIDATION_FAILED: business settings';end if;
    return servos_v2.put_record('organization',key,payload||jsonb_build_object('updatedBy',who,'updatedAt',now()));
  elsif op='backup.request' then
-   perform servos_v2.require_permission('backup.create');key:='backup-'||command->>'id';return servos_v2.put_record('backupRequests',key,jsonb_build_object('id',key,'status','REQUESTED','reason',servos_v2.required_text(p,'reason'),'requestedBy',who,'requestedAt',now(),'provider','HOSTED_BACKUP_REHEARSAL'));
+   perform servos_v2.require_permission('backup.create');key:='backup-'||(command->>'id');return servos_v2.put_record('backupRequests',key,jsonb_build_object('id',key,'status','REQUESTED','reason',servos_v2.required_text(p,'reason'),'requestedBy',who,'requestedAt',now(),'provider','HOSTED_BACKUP_REHEARSAL'));
  end if;
  raise exception 'PROTOCOL_UNSUPPORTED: administration operation';
 end$$;

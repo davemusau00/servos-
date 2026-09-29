@@ -38,7 +38,7 @@ begin
    if order_data is null or order_data->>'state' in ('COMPLETED','VOIDED') then raise exception 'INVALID_STATE: order closed';end if;
    total:=coalesce((order_data->>'grandTotalMinor')::bigint,0);paid:=coalesce((order_data->>'amountPaidMinor')::bigint,0);if paid>0 then raise exception 'INVALID_STATE: paid order cannot be discounted';end if;
    reason:=servos_v2.required_text(p,'reason');
-   if op='order.discount' then percent:=(p->>'percent')::numeric;if percent is null or percent<=0 or percent>100 then raise exception 'VALIDATION_FAILED: discount percent';end if;discount=round(total*percent/100);else discount:=total;end if;
+   if op='order.discount' then percent:=(p->>'percent')::numeric;if percent is null or percent<=0 or percent>100 then raise exception 'VALIDATION_FAILED: discount percent';end if;discount:=round(total*percent/100);else discount:=total;end if;
    if not exists(select 1 from servos_v2.staff_profiles s where s.auth_user_id=who and s.active and s.role in ('Admin','Manager')) then perform servos_v2.require_manager_approval((p->>'approvalToken')::uuid,case when op='order.discount' then 'order.discount' else 'order.comp' end,order_key,who);end if;
    changes:=changes||servos_v2.put_record('orders',order_key,order_data||jsonb_build_object('discountTotalMinor',discount,'grandTotalMinor',greatest(0,total-discount),'discountReason',reason,'discountType',case when op='order.discount' then 'DISCOUNT' else 'COMP' end,'discountedBy',who,'discountedAt',stamp));return changes;
  elsif op in ('order.transfer','order.merge') then
